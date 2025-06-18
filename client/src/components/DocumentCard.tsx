@@ -256,8 +256,8 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
         
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1">
-            {getStatusIcon(document.status)}
-            <span className="text-xs text-slate-600 capitalize">{document.status}</span>
+            {getStatusIcon(document.status || 'pending')}
+            <span className="text-xs text-slate-600 capitalize">{document.status || 'pending'}</span>
           </div>
           
           {document.isInVectorDb && (
@@ -359,12 +359,12 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
         </div>
         
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-800 truncate" title={document.originalName}>
-            {document.originalName}
+          <p className="text-sm font-medium text-slate-800 truncate" title={document.name || document.originalName}>
+            {document.name || document.originalName}
           </p>
           
           <div className="flex items-center justify-between">
-            {getStatusBadge(document.status)}
+            {getStatusBadge(document.status || 'processed')}
             {document.isInVectorDb && (
               <Badge variant="outline" className="text-xs">
                 <Database className="w-3 h-3 mr-1" />
@@ -379,13 +379,35 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
           </div>
           
           <div className="space-y-2">
-            {/* Category */}
+            {/* AI Category with color */}
+            {document.aiCategory && (
+              <div className="flex items-center gap-1">
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs font-medium"
+                  style={{ 
+                    backgroundColor: document.aiCategoryColor + '20',
+                    color: document.aiCategoryColor,
+                    borderColor: document.aiCategoryColor + '40'
+                  }}
+                >
+                  {document.aiCategory}
+                </Badge>
+                {document.summary && (
+                  <span className="text-xs text-slate-400 truncate" title={document.summary}>
+                    - {document.summary.substring(0, 40)}...
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* Manual Category */}
             {document.categoryId && categories && (
               <div className="flex items-center gap-1">
                 {(() => {
                   const category = categories.find(c => c.id === document.categoryId);
                   return category ? (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="outline" className="text-xs">
                       {category.name}
                     </Badge>
                   ) : null;
@@ -393,7 +415,7 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
               </div>
             )}
             
-            {/* Tags */}
+            {/* AI Generated Tags */}
             {document.tags && document.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {document.tags.slice(0, 3).map((tag, index) => (

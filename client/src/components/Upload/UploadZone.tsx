@@ -52,10 +52,17 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/msword': ['.doc'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
       'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
-      'image/gif': ['.gif']
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp']
     },
     maxFiles: 10,
     maxSize: 25 * 1024 * 1024, // 25MB
@@ -88,7 +95,10 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
       </p>
       
       <p className="text-sm text-gray-500">
-        Supports PDF, DOCX, TXT, and image files up to 25MB each
+        Supports PDF, DOCX, XLSX, PPTX, TXT, CSV, and image files up to 25MB each
+      </p>
+      <p className="text-xs text-gray-400 mt-1">
+        Files are automatically classified and tagged using AI
       </p>
       
       {uploadMutation.isPending && (
