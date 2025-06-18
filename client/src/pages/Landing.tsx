@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Upload, Search, MessageSquare, Shield, Zap } from "lucide-react";
+import { FileText, Upload, Search, MessageSquare, Shield, Zap } from "lucide-react";
 
 export default function Landing() {
   const handleLogin = () => {
@@ -8,146 +8,153 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-4 py-16">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-              <Brain className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">DocumentAI</h1>
             </div>
-            <h1 className="text-4xl font-bold text-slate-800">AI-KMS</h1>
+            <Button onClick={handleLogin} className="bg-blue-500 hover:bg-blue-600">
+              Sign In
+            </Button>
           </div>
-          <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
-            Intelligent Knowledge Management System powered by AI. Upload, classify, and discover your documents with ease.
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center">
+          <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 mb-6">
+            AI-Powered
+            <span className="text-blue-500"> Document Management</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Upload, organize, and search your documents with advanced AI capabilities. 
+            Get instant insights and chat with your documents like never before.
           </p>
-          <Button onClick={handleLogin} size="lg" className="px-8 py-3 text-lg">
-            Get Started
+          <Button 
+            onClick={handleLogin}
+            size="lg"
+            className="bg-blue-500 hover:bg-blue-600 text-lg px-8 py-3"
+          >
+            Get Started Free
           </Button>
         </div>
+      </section>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
+      {/* Features Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Everything you need to manage documents
+          </h2>
+          <p className="text-lg text-gray-600">
+            Powerful features to streamline your document workflow
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Card>
             <CardHeader>
-              <Upload className="w-8 h-8 text-primary mb-2" />
+              <Upload className="w-10 h-10 text-blue-500 mb-4" />
               <CardTitle>Smart Upload</CardTitle>
               <CardDescription>
-                Bulk upload documents with automatic classification and tagging using AI
+                Drag and drop multiple files with automatic processing and classification
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Multiple file format support</li>
-                <li>• Drag-and-drop interface</li>
-                <li>• Auto-classification</li>
-              </ul>
-            </CardContent>
           </Card>
 
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
+          <Card>
             <CardHeader>
-              <Search className="w-8 h-8 text-primary mb-2" />
-              <CardTitle>Semantic Search</CardTitle>
+              <Search className="w-10 h-10 text-green-500 mb-4" />
+              <CardTitle>Intelligent Search</CardTitle>
               <CardDescription>
-                Find documents using natural language queries and semantic understanding
+                Find documents instantly with AI-powered search across content and metadata
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Keyword & semantic search</li>
-                <li>• Relevance scoring</li>
-                <li>• Advanced filtering</li>
-              </ul>
-            </CardContent>
           </Card>
 
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
+          <Card>
             <CardHeader>
-              <MessageSquare className="w-8 h-8 text-primary mb-2" />
-              <CardTitle>AI Assistant</CardTitle>
+              <MessageSquare className="w-10 h-10 text-purple-500 mb-4" />
+              <CardTitle>AI Chat Assistant</CardTitle>
               <CardDescription>
-                Chat with your knowledge base and get instant answers from your documents
+                Ask questions about your documents and get intelligent responses
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Natural language queries</li>
-                <li>• Source citations</li>
-                <li>• Context-aware responses</li>
-              </ul>
-            </CardContent>
           </Card>
 
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
+          <Card>
             <CardHeader>
-              <Shield className="w-8 h-8 text-primary mb-2" />
-              <CardTitle>Access Control</CardTitle>
+              <Shield className="w-10 h-10 text-red-500 mb-4" />
+              <CardTitle>Secure & Private</CardTitle>
               <CardDescription>
-                Manage user roles and document permissions with fine-grained access control
+                Enterprise-grade security with role-based access control
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Role-based permissions</li>
-                <li>• Document-level access</li>
-                <li>• User management</li>
-              </ul>
-            </CardContent>
           </Card>
 
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
+          <Card>
             <CardHeader>
-              <Zap className="w-8 h-8 text-primary mb-2" />
-              <CardTitle>Vector Database</CardTitle>
-              <CardDescription>
-                Store document embeddings for lightning-fast semantic search and retrieval
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Document embeddings</li>
-                <li>• Similarity search</li>
-                <li>• Instant retrieval</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-slate-200 hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <Brain className="w-8 h-8 text-primary mb-2" />
+              <Zap className="w-10 h-10 text-yellow-500 mb-4" />
               <CardTitle>Auto-Classification</CardTitle>
               <CardDescription>
-                Automatically categorize and tag documents based on their content
+                AI automatically categorizes and tags your documents for better organization
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-slate-600 space-y-1">
-                <li>• AI-powered categorization</li>
-                <li>• Automatic tagging</li>
-                <li>• Content analysis</li>
-              </ul>
-            </CardContent>
           </Card>
-        </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">
-                Ready to revolutionize your document management?
-              </h2>
-              <p className="text-slate-600 mb-6">
-                Join thousands of users who have transformed their knowledge management with AI-KMS.
-              </p>
-              <Button onClick={handleLogin} size="lg" className="px-8 py-3">
-                Start Your Journey
-              </Button>
-            </CardContent>
+          <Card>
+            <CardHeader>
+              <FileText className="w-10 h-10 text-indigo-500 mb-4" />
+              <CardTitle>Multiple Formats</CardTitle>
+              <CardDescription>
+                Support for PDF, DOCX, TXT, and image files with content extraction
+              </CardDescription>
+            </CardHeader>
           </Card>
         </div>
-      </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-blue-500 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to revolutionize your document management?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of users who trust DocumentAI for their document needs
+          </p>
+          <Button 
+            onClick={handleLogin}
+            size="lg"
+            variant="secondary"
+            className="text-lg px-8 py-3"
+          >
+            Start Your Free Trial
+          </Button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-lg font-semibold text-gray-900">DocumentAI</span>
+          </div>
+          <p className="text-center text-gray-600 mt-4">
+            © 2025 DocumentAI. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

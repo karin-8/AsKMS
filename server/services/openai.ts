@@ -1,115 +1,128 @@
 import OpenAI from "openai";
+import fs from "fs";
+import { Document } from "@shared/schema";
 
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key" 
+  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
 });
 
-export class OpenAIService {
-  // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-  private model = "gpt-4o";
-
-  async classifyDocument(content: string, filename: string): Promise<{
-    category: string;
-    tags: string[];
-    summary: string;
-    confidence: number;
-  }> {
-    try {
-      const response = await openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: "system",
-            content: `You are a document classification expert. Analyze the document content and classify it into one of these categories: Financial, Legal, Technical, HR, Marketing, Operations, Research, or Other. Also generate relevant tags and a brief summary. Respond with JSON in this format: { "category": "string", "tags": ["string"], "summary": "string", "confidence": number }`,
-          },
-          {
-            role: "user",
-            content: `Please classify this document:\n\nFilename: ${filename}\n\nContent: ${content.substring(0, 4000)}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
-
-      const result = JSON.parse(response.choices[0].message.content!);
+export async function processDocument(filePath: string, mimeType: string): Promise<{
+  content: string;
+  summary: string;
+  tags: string[];
+}> {
+  try {
+    let content = "";
+    
+    // Extract content based on file type
+    if (mimeType === "text/plain") {
+      content = await fs.promises.readFile(filePath, "utf-8");
+    } else if (mimeType === "application/pdf" || mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      // For PDF and DOCX, we'll use a simple text extraction or OCR
+      // In a real implementation, you'd use libraries like pdf-parse or mammoth
+      content = "Content extraction not implemented for this file type.";
+    } else if (mimeType.startsWith("image/")) {
+      // For images, use GPT-4o vision capabilities
+      const imageBuffer = await fs.promises.readFile(filePath);
+      const base64Image = imageBuffer.toString('base64');
       
-      return {
-        category: result.category || "Other",
-        tags: Array.isArray(result.tags) ? result.tags : [],
-        summary: result.summary || "No summary available",
-        confidence: Math.max(0, Math.min(1, result.confidence || 0.5)),
-      };
-    } catch (error) {
-      console.error("Error classifying document:", error);
-      return {
-        category: "Other",
-        tags: [],
-        summary: "Classification failed",
-        confidence: 0,
-      };
-    }
-  }
-
-  async generateEmbedding(text: string): Promise<number[]> {
-    try {
-      const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: text,
-      });
-
-      return response.data[0].embedding;
-    } catch (error) {
-      console.error("Error generating embedding:", error);
-      throw new Error("Failed to generate embedding");
-    }
-  }
-
-  async generateChatResponse(
-    query: string,
-    context: Array<{ title: string; content: string; id: number }> = []
-  ): Promise<{
-    content: string;
-    sources: Array<{ title: string; id: number }>;
-  }> {
-    try {
-      const contextText = context
-        .map(c => `Document: ${c.title}\nContent: ${c.content}`)
-        .join("\n\n");
-
-      const response = await openai.chat.completions.create({
-        model: this.model,
+      const visionResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
         messages: [
           {
-            role: "system",
-            content: `You are a knowledgeable AI assistant that helps users find information in their document collection. Use the provided context to answer questions accurately. If you can't find relevant information in the context, say so clearly. Always cite which documents you're referencing.`,
-          },
-          {
             role: "user",
-            content: `Context:\n${contextText}\n\nQuestion: ${query}`,
+            content: [
+              {
+                type: "text",
+                text: "Extract all text and describe the content of this document image. Provide the extracted text and a summary of what's shown."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ],
           },
         ],
-        temperature: 0.3,
+        max_tokens: 1000,
       });
-
-      const sources = context.map(c => ({ title: c.title, id: c.id }));
-
-      return {
-        content: response.choices[0].message.content!,
-        sources,
-      };
-    } catch (error) {
-      console.error("Error generating chat response:", error);
-      return {
-        content: "I apologize, but I'm having trouble processing your request right now. Please try again later.",
-        sources: [],
-      };
+      
+      content = visionResponse.choices[0].message.content || "";
     }
-  }
 
-  async extractTextFromContent(content: string, fileType: string): Promise<string> {
-    // For now, assume content is already extracted
-    // In a real implementation, you would use specific libraries for each file type
-    return content;
+    if (!content || content.trim().length === 0) {
+      throw new Error("No content could be extracted from the document");
+    }
+
+    // Generate summary and tags using AI
+    const analysisResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a document analysis expert. Analyze the provided document content and return a JSON response with a concise summary (max 200 characters) and relevant tags (array of 3-8 keywords) for categorization and search."
+        },
+        {
+          role: "user",
+          content: `Please analyze this document content and provide a summary and tags:\n\n${content.substring(0, 4000)}`
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const analysis = JSON.parse(analysisResponse.choices[0].message.content || "{}");
+    
+    return {
+      content: content.substring(0, 10000), // Limit content length
+      summary: analysis.summary || "Document processed successfully",
+      tags: Array.isArray(analysis.tags) ? analysis.tags : ["document"]
+    };
+
+  } catch (error) {
+    console.error("Error processing document with AI:", error);
+    return {
+      content: "Error extracting content",
+      summary: "Document uploaded but could not be processed with AI",
+      tags: ["unprocessed"]
+    };
   }
 }
 
-export const openaiService = new OpenAIService();
+export async function generateChatResponse(userMessage: string, documents: Document[]): Promise<string> {
+  try {
+    // Prepare context from documents
+    const documentContext = documents
+      .filter(doc => doc.content && doc.content.trim().length > 0)
+      .slice(0, 5) // Limit to 5 most recent documents for context
+      .map(doc => `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 500)}`)
+      .join("\n\n");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an AI assistant helping users with their document management system. You have access to the user's documents and can answer questions about them, help with searches, provide summaries, and assist with document organization.
+
+Available documents context:
+${documentContext}
+
+Provide helpful, accurate responses based on the available documents. If you can't find relevant information in the documents, let the user know and suggest how they might upload or organize documents to get better assistance.`
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ],
+      max_tokens: 500,
+    });
+
+    return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
+
+  } catch (error) {
+    console.error("Error generating chat response:", error);
+    return "I'm experiencing some technical difficulties. Please try again later.";
+  }
+}

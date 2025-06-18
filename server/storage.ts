@@ -1,26 +1,24 @@
 import {
   users,
-  documents,
   categories,
-  conversations,
-  messages,
+  documents,
+  chatConversations,
+  chatMessages,
   documentAccess,
-  searchQueries,
   type User,
   type UpsertUser,
-  type Document,
-  type InsertDocument,
   type Category,
   type InsertCategory,
-  type Conversation,
-  type InsertConversation,
-  type Message,
-  type InsertMessage,
+  type Document,
+  type InsertDocument,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatMessage,
+  type InsertChatMessage,
   type DocumentAccess,
-  type SearchQuery,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, asc, ilike, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -29,50 +27,43 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Category operations
+  getCategories(userId: string): Promise<Category[]>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
+  deleteCategory(id: number, userId: string): Promise<void>;
+  
   // Document operations
+  getDocuments(userId: string, options?: { categoryId?: number; limit?: number; offset?: number }): Promise<Document[]>;
+  getDocument(id: number, userId: string): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
-  getDocument(id: number): Promise<Document | undefined>;
-  getDocuments(userId: string, limit?: number, offset?: number): Promise<Document[]>;
-  updateDocument(id: number, updates: Partial<Document>): Promise<Document>;
-  deleteDocument(id: number): Promise<void>;
-  getDocumentsByCategory(categoryId: number): Promise<Document[]>;
-  searchDocuments(query: string, userId: string): Promise<Document[]>;
-  getDocumentStats(userId: string): Promise<{
+  updateDocument(id: number, document: Partial<InsertDocument>, userId: string): Promise<Document>;
+  deleteDocument(id: number, userId: string): Promise<void>;
+  searchDocuments(userId: string, query: string): Promise<Document[]>;
+  toggleDocumentFavorite(id: number, userId: string): Promise<Document>;
+  
+  // Stats operations
+  getUserStats(userId: string): Promise<{
     totalDocuments: number;
-    processingQueue: number;
-    categoryCounts: Array<{ categoryId: number; count: number; categoryName: string }>;
+    processedToday: number;
+    storageUsed: number;
+    aiQueries: number;
   }>;
   
-  // Category operations
-  createCategory(category: InsertCategory): Promise<Category>;
-  getCategories(): Promise<Category[]>;
-  getCategory(id: number): Promise<Category | undefined>;
-  updateCategory(id: number, updates: Partial<Category>): Promise<Category>;
-  deleteCategory(id: number): Promise<void>;
+  // Chat operations
+  getChatConversations(userId: string): Promise<ChatConversation[]>;
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+  getChatMessages(conversationId: number, userId: string): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   
-  // Conversation operations
-  createConversation(conversation: InsertConversation): Promise<Conversation>;
-  getConversations(userId: string): Promise<Conversation[]>;
-  getConversation(id: number): Promise<Conversation | undefined>;
-  deleteConversation(id: number): Promise<void>;
-  
-  // Message operations
-  createMessage(message: InsertMessage): Promise<Message>;
-  getMessages(conversationId: number): Promise<Message[]>;
-  
-  // Access control
-  grantDocumentAccess(documentId: number, userId: string, accessLevel: string, grantedBy: string): Promise<void>;
-  checkDocumentAccess(documentId: number, userId: string): Promise<DocumentAccess | undefined>;
-  getUserDocuments(userId: string): Promise<Document[]>;
-  
-  // Search analytics
-  logSearchQuery(userId: string, query: string, queryType: string, resultsCount: number): Promise<void>;
-  getSearchStats(userId: string): Promise<{ totalQueries: number; recentQueries: SearchQuery[] }>;
+  // Access logging
+  logDocumentAccess(documentId: number, userId: string, accessType: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
   // User operations
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -93,239 +84,196 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Document operations
-  async createDocument(document: InsertDocument): Promise<Document> {
-    const [newDocument] = await db.insert(documents).values(document).returning();
-    return newDocument;
-  }
-
-  async getDocument(id: number): Promise<Document | undefined> {
-    const [document] = await db.select().from(documents).where(eq(documents.id, id));
-    return document;
-  }
-
-  async getDocuments(userId: string, limit = 50, offset = 0): Promise<Document[]> {
-    return await db
-      .select()
-      .from(documents)
-      .where(eq(documents.uploadedBy, userId))
-      .orderBy(desc(documents.createdAt))
-      .limit(limit)
-      .offset(offset);
-  }
-
-  async updateDocument(id: number, updates: Partial<Document>): Promise<Document> {
-    const [updatedDocument] = await db
-      .update(documents)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(documents.id, id))
-      .returning();
-    return updatedDocument;
-  }
-
-  async deleteDocument(id: number): Promise<void> {
-    await db.delete(documents).where(eq(documents.id, id));
-  }
-
-  async getDocumentsByCategory(categoryId: number): Promise<Document[]> {
-    return await db
-      .select()
-      .from(documents)
-      .where(eq(documents.categoryId, categoryId))
-      .orderBy(desc(documents.createdAt));
-  }
-
-  async searchDocuments(query: string, userId: string): Promise<Document[]> {
-    return await db
-      .select()
-      .from(documents)
-      .where(
-        and(
-          eq(documents.uploadedBy, userId),
-          or(
-            ilike(documents.originalName, `%${query}%`),
-            ilike(documents.content, `%${query}%`),
-            ilike(documents.summary, `%${query}%`)
-          )
-        )
-      )
-      .orderBy(desc(documents.createdAt));
-  }
-
-  async getDocumentStats(userId: string): Promise<{
-    totalDocuments: number;
-    processingQueue: number;
-    categoryCounts: Array<{ categoryId: number; count: number; categoryName: string }>;
-  }> {
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(documents)
-      .where(eq(documents.uploadedBy, userId));
-
-    const [processingResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(documents)
-      .where(
-        and(
-          eq(documents.uploadedBy, userId),
-          inArray(documents.status, ['pending', 'processing'])
-        )
-      );
-
-    const categoryCounts = await db
-      .select({
-        categoryId: documents.categoryId,
-        count: sql<number>`count(*)`,
-        categoryName: categories.name,
-      })
-      .from(documents)
-      .leftJoin(categories, eq(documents.categoryId, categories.id))
-      .where(eq(documents.uploadedBy, userId))
-      .groupBy(documents.categoryId, categories.name);
-
-    return {
-      totalDocuments: totalResult.count,
-      processingQueue: processingResult.count,
-      categoryCounts: categoryCounts.filter(c => c.categoryId !== null) as Array<{
-        categoryId: number;
-        count: number;
-        categoryName: string;
-      }>,
-    };
-  }
-
   // Category operations
+  async getCategories(userId: string): Promise<Category[]> {
+    return await db
+      .select({
+        ...categories,
+        documentCount: count(documents.id),
+      })
+      .from(categories)
+      .leftJoin(documents, eq(categories.id, documents.categoryId))
+      .where(eq(categories.userId, userId))
+      .groupBy(categories.id)
+      .orderBy(categories.name);
+  }
+
   async createCategory(category: InsertCategory): Promise<Category> {
     const [newCategory] = await db.insert(categories).values(category).returning();
     return newCategory;
   }
 
-  async getCategories(): Promise<Category[]> {
-    return await db.select().from(categories).orderBy(asc(categories.name));
-  }
-
-  async getCategory(id: number): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
-    return category;
-  }
-
-  async updateCategory(id: number, updates: Partial<Category>): Promise<Category> {
-    const [updatedCategory] = await db
+  async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category> {
+    const [updated] = await db
       .update(categories)
-      .set(updates)
+      .set(category)
       .where(eq(categories.id, id))
       .returning();
-    return updatedCategory;
+    return updated;
   }
 
-  async deleteCategory(id: number): Promise<void> {
-    await db.delete(categories).where(eq(categories.id, id));
+  async deleteCategory(id: number, userId: string): Promise<void> {
+    await db.delete(categories).where(and(eq(categories.id, id), eq(categories.userId, userId)));
   }
 
-  // Conversation operations
-  async createConversation(conversation: InsertConversation): Promise<Conversation> {
-    const [newConversation] = await db.insert(conversations).values(conversation).returning();
+  // Document operations
+  async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
+    const { categoryId, limit = 50, offset = 0 } = options;
+    
+    let query = db
+      .select()
+      .from(documents)
+      .where(eq(documents.userId, userId));
+
+    if (categoryId) {
+      query = query.where(and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)));
+    }
+
+    return await query
+      .orderBy(desc(documents.updatedAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getDocument(id: number, userId: string): Promise<Document | undefined> {
+    const [document] = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+    return document;
+  }
+
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const [newDocument] = await db.insert(documents).values(document).returning();
+    return newDocument;
+  }
+
+  async updateDocument(id: number, document: Partial<InsertDocument>, userId: string): Promise<Document> {
+    const [updated] = await db
+      .update(documents)
+      .set({ ...document, updatedAt: new Date() })
+      .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteDocument(id: number, userId: string): Promise<void> {
+    await db.delete(documents).where(and(eq(documents.id, id), eq(documents.userId, userId)));
+  }
+
+  async searchDocuments(userId: string, query: string): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(
+        and(
+          eq(documents.userId, userId),
+          or(
+            like(documents.name, `%${query}%`),
+            like(documents.description, `%${query}%`),
+            like(documents.content, `%${query}%`),
+            sql`${documents.tags} && ARRAY[${query}]`
+          )
+        )
+      )
+      .orderBy(desc(documents.updatedAt))
+      .limit(20);
+  }
+
+  async toggleDocumentFavorite(id: number, userId: string): Promise<Document> {
+    const document = await this.getDocument(id, userId);
+    if (!document) throw new Error("Document not found");
+    
+    const [updated] = await db
+      .update(documents)
+      .set({ isFavorite: !document.isFavorite })
+      .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  // Stats operations
+  async getUserStats(userId: string): Promise<{
+    totalDocuments: number;
+    processedToday: number;
+    storageUsed: number;
+    aiQueries: number;
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [stats] = await db
+      .select({
+        totalDocuments: count(documents.id),
+        storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+      })
+      .from(documents)
+      .where(eq(documents.userId, userId));
+
+    const [processedToday] = await db
+      .select({ count: count(documents.id) })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.userId, userId),
+          sql`${documents.processedAt} >= ${today}`
+        )
+      );
+
+    const [aiQueries] = await db
+      .select({ count: count(chatMessages.id) })
+      .from(chatMessages)
+      .innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id))
+      .where(
+        and(
+          eq(chatConversations.userId, userId),
+          sql`${chatMessages.createdAt} >= ${today}`
+        )
+      );
+
+    return {
+      totalDocuments: stats.totalDocuments,
+      processedToday: processedToday.count,
+      storageUsed: Math.round(stats.storageUsed / (1024 * 1024)), // Convert to MB
+      aiQueries: aiQueries.count,
+    };
+  }
+
+  // Chat operations
+  async getChatConversations(userId: string): Promise<ChatConversation[]> {
+    return await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.userId, userId))
+      .orderBy(desc(chatConversations.updatedAt));
+  }
+
+  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
+    const [newConversation] = await db.insert(chatConversations).values(conversation).returning();
     return newConversation;
   }
 
-  async getConversations(userId: string): Promise<Conversation[]> {
+  async getChatMessages(conversationId: number, userId: string): Promise<ChatMessage[]> {
     return await db
       .select()
-      .from(conversations)
-      .where(eq(conversations.userId, userId))
-      .orderBy(desc(conversations.updatedAt));
+      .from(chatMessages)
+      .innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id))
+      .where(and(eq(chatMessages.conversationId, conversationId), eq(chatConversations.userId, userId)))
+      .orderBy(chatMessages.createdAt);
   }
 
-  async getConversation(id: number): Promise<Conversation | undefined> {
-    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
-    return conversation;
-  }
-
-  async deleteConversation(id: number): Promise<void> {
-    await db.delete(conversations).where(eq(conversations.id, id));
-  }
-
-  // Message operations
-  async createMessage(message: InsertMessage): Promise<Message> {
-    const [newMessage] = await db.insert(messages).values(message).returning();
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [newMessage] = await db.insert(chatMessages).values(message).returning();
     return newMessage;
   }
 
-  async getMessages(conversationId: number): Promise<Message[]> {
-    return await db
-      .select()
-      .from(messages)
-      .where(eq(messages.conversationId, conversationId))
-      .orderBy(asc(messages.createdAt));
-  }
-
-  // Access control
-  async grantDocumentAccess(documentId: number, userId: string, accessLevel: string, grantedBy: string): Promise<void> {
+  // Access logging
+  async logDocumentAccess(documentId: number, userId: string, accessType: string): Promise<void> {
     await db.insert(documentAccess).values({
       documentId,
       userId,
-      accessLevel,
-      grantedBy,
+      accessType,
     });
-  }
-
-  async checkDocumentAccess(documentId: number, userId: string): Promise<DocumentAccess | undefined> {
-    const [access] = await db
-      .select()
-      .from(documentAccess)
-      .where(
-        and(
-          eq(documentAccess.documentId, documentId),
-          eq(documentAccess.userId, userId)
-        )
-      );
-    return access;
-  }
-
-  async getUserDocuments(userId: string): Promise<Document[]> {
-    // Get documents user has access to (either uploaded by them or granted access)
-    const accessibleDocs = await db
-      .select()
-      .from(documents)
-      .leftJoin(documentAccess, eq(documents.id, documentAccess.documentId))
-      .where(
-        or(
-          eq(documents.uploadedBy, userId),
-          eq(documentAccess.userId, userId)
-        )
-      )
-      .orderBy(desc(documents.createdAt));
-
-    return accessibleDocs.map(row => row.documents);
-  }
-
-  // Search analytics
-  async logSearchQuery(userId: string, query: string, queryType: string, resultsCount: number): Promise<void> {
-    await db.insert(searchQueries).values({
-      userId,
-      query,
-      queryType,
-      resultsCount,
-    });
-  }
-
-  async getSearchStats(userId: string): Promise<{ totalQueries: number; recentQueries: SearchQuery[] }> {
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(searchQueries)
-      .where(eq(searchQueries.userId, userId));
-
-    const recentQueries = await db
-      .select()
-      .from(searchQueries)
-      .where(eq(searchQueries.userId, userId))
-      .orderBy(desc(searchQueries.createdAt))
-      .limit(10);
-
-    return {
-      totalQueries: totalResult.count,
-      recentQueries,
-    };
   }
 }
 

@@ -5,13 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
-import Documents from "@/pages/Documents";
-import Upload from "@/pages/Upload";
-import Search from "@/pages/Search";
-import Settings from "@/pages/Settings";
-import Categories from "@/pages/Categories";
+import Landing from "@/pages/Landing";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,11 +18,6 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
-          <Route path="/documents" component={Documents} />
-          <Route path="/upload" component={Upload} />
-          <Route path="/search" component={Search} />
-          <Route path="/categories" component={Categories} />
-          <Route path="/settings" component={Settings} />
         </>
       )}
       <Route component={NotFound} />

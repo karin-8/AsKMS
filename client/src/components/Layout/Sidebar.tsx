@@ -1,0 +1,143 @@
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { 
+  Home, 
+  FileText, 
+  Clock, 
+  Star, 
+  Share2, 
+  Bot,
+  X
+} from "lucide-react";
+
+interface SidebarProps {
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
+  onOpenChat: () => void;
+}
+
+export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: SidebarProps) {
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/categories"],
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["/api/stats"],
+  });
+
+  const categoryColors = [
+    'bg-blue-500',
+    'bg-green-500', 
+    'bg-purple-500',
+    'bg-yellow-500',
+    'bg-red-500',
+    'bg-indigo-500'
+  ];
+
+  return (
+    <>
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onMobileClose} />
+      )}
+
+      {/* Sidebar */}
+      <aside className={cn(
+        "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-sm border-r border-gray-200 transition-transform duration-300 ease-in-out lg:translate-x-0",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full">
+          {/* Mobile Close Button */}
+          <div className="lg:hidden flex justify-end p-4">
+            <Button variant="ghost" size="sm" onClick={onMobileClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex-1 px-4 py-6 space-y-6">
+            {/* Navigation Menu */}
+            <nav className="space-y-2">
+              <Button variant="ghost" className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
+                <Home className="w-5 h-5 mr-3" />
+                <span>Dashboard</span>
+              </Button>
+              
+              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
+                <FileText className="w-5 h-5 mr-3" />
+                <span>All Documents</span>
+                <Badge variant="secondary" className="ml-auto">
+                  {stats?.totalDocuments || 0}
+                </Badge>
+              </Button>
+              
+              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
+                <Clock className="w-5 h-5 mr-3" />
+                <span>Recent</span>
+              </Button>
+              
+              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
+                <Star className="w-5 h-5 mr-3" />
+                <span>Favorites</span>
+              </Button>
+              
+              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
+                <Share2 className="w-5 h-5 mr-3" />
+                <span>Shared with me</span>
+              </Button>
+            </nav>
+
+            {/* Categories */}
+            <div>
+              <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Categories
+              </h3>
+              <nav className="space-y-1">
+                {categories.length === 0 ? (
+                  <p className="px-3 text-sm text-gray-500">No categories yet</p>
+                ) : (
+                  categories.map((category: any, index: number) => (
+                    <Button
+                      key={category.id}
+                      variant="ghost"
+                      className="w-full justify-between text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={cn(
+                          "w-3 h-3 rounded-full",
+                          categoryColors[index % categoryColors.length]
+                        )} />
+                        <span>{category.name}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {category.documentCount || 0}
+                      </span>
+                    </Button>
+                  ))
+                )}
+              </nav>
+            </div>
+
+            {/* AI Assistant */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="font-medium text-gray-900">AI Assistant</h4>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">Ask questions about your documents</p>
+              <Button 
+                className="w-full bg-blue-500 text-white hover:bg-blue-600"
+                onClick={onOpenChat}
+              >
+                Start Chat
+              </Button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}

@@ -34,7 +34,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default("user"), // user, admin
+  role: varchar("role").default("user").notNull(), // admin, user, viewer
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -42,165 +42,149 @@ export const users = pgTable("users", {
 // Document categories
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
-  name: varchar("name").notNull().unique(),
+  name: varchar("name").notNull(),
   description: text("description"),
-  color: varchar("color").notNull().default("#3b82f6"),
-  icon: varchar("icon").notNull().default("file"),
+  color: varchar("color").notNull().default("#3B82F6"),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Document table
+// Documents
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
-  filename: varchar("filename").notNull(),
-  originalName: varchar("original_name").notNull(),
-  fileType: varchar("file_type").notNull(),
-  fileSize: integer("file_size").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  fileName: varchar("file_name").notNull(),
   filePath: varchar("file_path").notNull(),
-  content: text("content"),
-  summary: text("summary"),
+  fileSize: integer("file_size").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  content: text("content"), // Extracted text content
+  summary: text("summary"), // AI-generated summary
+  tags: text("tags").array(), // AI-generated tags
   categoryId: integer("category_id").references(() => categories.id),
-  tags: text("tags").array(),
-  metadata: jsonb("metadata"),
-  status: varchar("status").notNull().default("pending"), // pending, processing, processed, failed
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  isPublic: boolean("is_public").default(false),
+  isFavorite: boolean("is_favorite").default(false),
   processedAt: timestamp("processed_at"),
-  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
-  isInVectorDb: boolean("is_in_vector_db").notNull().default(false),
-  vectorId: varchar("vector_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Document access control
-export const documentAccess = pgTable("document_access", {
+// Chat conversations
+export const chatConversations = pgTable("chat_conversations", {
   id: serial("id").primaryKey(),
-  documentId: integer("document_id").notNull().references(() => documents.id),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  accessLevel: varchar("access_level").notNull().default("read"), // read, write, admin
-  grantedBy: varchar("granted_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// AI chat conversations
-export const conversations = pgTable("conversations", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
   title: varchar("title").notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// AI chat messages
-export const messages = pgTable("messages", {
+// Chat messages
+export const chatMessages = pgTable("chat_messages", {
   id: serial("id").primaryKey(),
-  conversationId: integer("conversation_id").notNull().references(() => conversations.id),
+  conversationId: integer("conversation_id").references(() => chatConversations.id).notNull(),
   role: varchar("role").notNull(), // user, assistant
   content: text("content").notNull(),
-  sources: jsonb("sources"), // Referenced documents
+  documentIds: integer("document_ids").array(), // Referenced documents
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Search queries for analytics
-export const searchQueries = pgTable("search_queries", {
+// Document access logs
+export const documentAccess = pgTable("document_access", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  query: text("query").notNull(),
-  queryType: varchar("query_type").notNull(), // keyword, semantic
-  resultsCount: integer("results_count").notNull().default(0),
+  documentId: integer("document_id").references(() => documents.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  accessType: varchar("access_type").notNull(), // view, download, edit
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
-  conversations: many(conversations),
+  categories: many(categories),
+  chatConversations: many(chatConversations),
   documentAccess: many(documentAccess),
-  searchQueries: many(searchQueries),
+}));
+
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+  user: one(users, {
+    fields: [categories.userId],
+    references: [users.id],
+  }),
+  documents: many(documents),
 }));
 
 export const documentsRelations = relations(documents, ({ one, many }) => ({
+  user: one(users, {
+    fields: [documents.userId],
+    references: [users.id],
+  }),
   category: one(categories, {
     fields: [documents.categoryId],
     references: [categories.id],
   }),
-  uploadedByUser: one(users, {
-    fields: [documents.uploadedBy],
-    references: [users.id],
-  }),
-  access: many(documentAccess),
+  accessLogs: many(documentAccess),
 }));
 
-export const categoriesRelations = relations(categories, ({ many }) => ({
-  documents: many(documents),
-}));
-
-export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
   user: one(users, {
-    fields: [conversations.userId],
+    fields: [chatConversations.userId],
     references: [users.id],
   }),
-  messages: many(messages),
+  messages: many(chatMessages),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
-  conversation: one(conversations, {
-    fields: [messages.conversationId],
-    references: [conversations.id],
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
   }),
 }));
 
-// Schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  email: true,
-  firstName: true,
-  lastName: true,
-  profileImageUrl: true,
-  role: true,
+export const documentAccessRelations = relations(documentAccess, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentAccess.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentAccess.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertDocumentSchema = createInsertSchema(documents).pick({
-  filename: true,
-  originalName: true,
-  fileType: true,
-  fileSize: true,
-  filePath: true,
-  content: true,
-  summary: true,
-  categoryId: true,
-  tags: true,
-  metadata: true,
-  uploadedBy: true,
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  processedAt: true,
 });
 
-export const insertCategorySchema = createInsertSchema(categories).pick({
-  name: true,
-  description: true,
-  color: true,
-  icon: true,
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-export const insertConversationSchema = createInsertSchema(conversations).pick({
-  userId: true,
-  title: true,
-});
-
-export const insertMessageSchema = createInsertSchema(messages).pick({
-  conversationId: true,
-  role: true,
-  content: true,
-  sources: true,
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type InsertDocument = z.infer<typeof insertDocumentSchema>;
-export type Document = typeof documents.$inferSelect;
-export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
-export type InsertConversation = z.infer<typeof insertConversationSchema>;
-export type Conversation = typeof conversations.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type DocumentAccess = typeof documentAccess.$inferSelect;
-export type SearchQuery = typeof searchQueries.$inferSelect;
