@@ -95,30 +95,6 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                 </Button>
               </Link>
               
-              <Link href="/search" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/search") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
-                  <Search className="w-5 h-5 mr-3" />
-                  <span>Search</span>
-                </Button>
-              </Link>
-              
-              <Link href="/upload" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/upload") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
-                  <Upload className="w-5 h-5 mr-3" />
-                  <span>Upload</span>
-                </Button>
-              </Link>
-              
               <Link href="/categories" onClick={onMobileClose}>
                 <Button variant="ghost" className={cn(
                   "w-full justify-start",

@@ -215,6 +215,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/documents/:id/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id, userId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      // Return existing summary or content excerpt
+      const summary = document.summary || (document.content ? 
+        document.content.substring(0, 500) + "..." : 
+        "No content summary available for this document.");
+      
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error fetching document summary:", error);
+      res.status(500).json({ message: "Failed to fetch document summary" });
+    }
+  });
+
   app.post('/api/documents/upload', isAuthenticated, upload.array('files', 10), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
