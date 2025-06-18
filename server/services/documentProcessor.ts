@@ -1,132 +1,138 @@
-import { storage } from "../storage";
-import { openaiService } from "./openai";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-
-// Document processing utilities
+import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
+import textract from "textract";
+import { processDocument as aiProcessDocument } from "./openai";
+import { vectorService } from "./vectorService";
+import { storage } from "../storage";
 
 export class DocumentProcessor {
   async processDocument(documentId: number): Promise<void> {
     try {
-      const document = await storage.getDocument(documentId);
+      const document = await storage.getDocument(documentId, "");
       if (!document) {
         throw new Error("Document not found");
       }
 
-      // Update status to processing
-      await storage.updateDocument(documentId, { status: "processing" });
-
-      // Extract text content
-      const content = await this.extractTextFromFile(document.filePath, document.fileType);
+      const content = await this.extractTextFromFile(document.filePath, document.mimeType);
       
-      // Classify document using AI
-      const classification = await openaiService.classifyDocument(content, document.originalName);
+      // Process with AI for summary and tags
+      const { summary, tags } = await aiProcessDocument(document.filePath, document.mimeType);
       
-      // Find or create category
-      const categories = await storage.getCategories();
-      let category = categories.find(c => c.name.toLowerCase() === classification.category.toLowerCase());
-      
-      if (!category) {
-        category = await storage.createCategory({
-          name: classification.category,
-          description: `Auto-created category for ${classification.category} documents`,
-          color: this.getCategoryColor(classification.category),
-          icon: this.getCategoryIcon(classification.category),
-        });
-      }
-
-      // Update document with extracted content and classification
+      // Update document with extracted content
       await storage.updateDocument(documentId, {
         content,
-        summary: classification.summary,
-        categoryId: category.id,
-        tags: classification.tags,
-        status: "processed",
+        summary,
+        tags,
         processedAt: new Date(),
-        metadata: {
-          classification,
-          processingDate: new Date().toISOString(),
-        },
-      });
+      }, document.userId);
+
+      // Add to vector database if content exists
+      if (content && content.trim().length > 0) {
+        await vectorService.addDocument(
+          documentId.toString(),
+          content,
+          {
+            userId: document.userId,
+            documentName: document.name,
+            mimeType: document.mimeType,
+            tags: tags || [],
+          }
+        );
+      }
 
       console.log(`Document ${documentId} processed successfully`);
     } catch (error) {
       console.error(`Error processing document ${documentId}:`, error);
-      
-      // Update status to failed
-      await storage.updateDocument(documentId, { 
-        status: "failed",
-        metadata: {
-          error: error instanceof Error ? error.message : "Unknown error",
-          failedAt: new Date().toISOString(),
-        },
-      });
+      throw error;
     }
   }
 
   private async extractTextFromFile(filePath: string, fileType: string): Promise<string> {
     try {
-      const buffer = fs.readFileSync(filePath);
-
       switch (fileType) {
+        case "text/plain":
+          return await fs.promises.readFile(filePath, "utf-8");
+
         case "application/pdf":
-          // For now, return a placeholder for PDF processing
-          // In production, you would use a proper PDF parser
-          return "PDF content extraction - requires implementation";
+          return await this.extractFromPDF(filePath);
 
         case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-          const docxResult = await mammoth.extractRawText({ buffer });
-          return docxResult.value;
+          return await this.extractFromDOCX(filePath);
 
-        case "text/plain":
-        case "text/csv":
-        case "application/json":
-          return buffer.toString("utf-8");
+        case "application/msword":
+          return await this.extractWithTextract(filePath);
 
         default:
-          // For other file types, try to read as text
-          try {
-            return buffer.toString("utf-8");
-          } catch {
-            return "Content extraction not supported for this file type";
+          if (fileType.startsWith("image/")) {
+            // For images, we'll rely on AI processing
+            return "";
           }
+          return await this.extractWithTextract(filePath);
       }
     } catch (error) {
-      console.error("Error extracting text from file:", error);
-      return "Failed to extract text content";
+      console.error("Error extracting text:", error);
+      return "";
     }
   }
 
-  private getCategoryColor(category: string): string {
-    const colorMap: Record<string, string> = {
-      financial: "#3b82f6",
-      legal: "#10b981",
-      technical: "#f59e0b",
-      hr: "#8b5cf6",
-      marketing: "#ef4444",
-      operations: "#06b6d4",
-      research: "#84cc16",
-      other: "#6b7280",
-    };
+  private async extractFromPDF(filePath: string): Promise<string> {
+    try {
+      const dataBuffer = await fs.promises.readFile(filePath);
+      const data = await pdfParse(dataBuffer);
+      return data.text;
+    } catch (error) {
+      console.error("PDF extraction error:", error);
+      throw new Error("Failed to extract text from PDF");
+    }
+  }
 
-    return colorMap[category.toLowerCase()] || "#6b7280";
+  private async extractFromDOCX(filePath: string): Promise<string> {
+    try {
+      const result = await mammoth.extractRawText({ path: filePath });
+      return result.value;
+    } catch (error) {
+      console.error("DOCX extraction error:", error);
+      throw new Error("Failed to extract text from DOCX");
+    }
+  }
+
+  private async extractWithTextract(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      textract.fromFileWithPath(filePath, (error: any, text: string) => {
+        if (error) {
+          console.error("Textract extraction error:", error);
+          reject(new Error("Failed to extract text with textract"));
+        } else {
+          resolve(text || "");
+        }
+      });
+    });
+  }
+
+  private getCategoryColor(category: string): string {
+    const colors = {
+      "document": "#3B82F6",
+      "image": "#8B5CF6",
+      "text": "#10B981",
+      "report": "#F59E0B",
+      "contract": "#EF4444",
+      "presentation": "#6366F1"
+    };
+    return colors[category.toLowerCase() as keyof typeof colors] || "#6B7280";
   }
 
   private getCategoryIcon(category: string): string {
-    const iconMap: Record<string, string> = {
-      financial: "chart-line",
-      legal: "file-contract",
-      technical: "cogs",
-      hr: "users",
-      marketing: "bullhorn",
-      operations: "clipboard-list",
-      research: "flask",
-      other: "file",
+    const icons = {
+      "document": "📄",
+      "image": "🖼️",
+      "text": "📝",
+      "report": "📊",
+      "contract": "📋",
+      "presentation": "📊"
     };
-
-    return iconMap[category.toLowerCase()] || "file";
+    return icons[category.toLowerCase() as keyof typeof icons] || "📁";
   }
 }
 

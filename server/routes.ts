@@ -8,6 +8,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { processDocument, generateChatResponse } from "./services/openai";
+import { documentProcessor } from "./services/documentProcessor";
+import { vectorService } from "./services/vectorService";
 
 // File upload configuration
 const uploadDir = path.join(process.cwd(), "uploads");

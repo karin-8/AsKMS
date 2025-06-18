@@ -87,14 +87,9 @@ export class DatabaseStorage implements IStorage {
   // Category operations
   async getCategories(userId: string): Promise<Category[]> {
     return await db
-      .select({
-        ...categories,
-        documentCount: count(documents.id),
-      })
+      .select()
       .from(categories)
-      .leftJoin(documents, eq(categories.id, documents.categoryId))
       .where(eq(categories.userId, userId))
-      .groupBy(categories.id)
       .orderBy(categories.name);
   }
 
@@ -120,16 +115,20 @@ export class DatabaseStorage implements IStorage {
   async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
     const { categoryId, limit = 50, offset = 0 } = options;
     
-    let query = db
-      .select()
-      .from(documents)
-      .where(eq(documents.userId, userId));
-
     if (categoryId) {
-      query = query.where(and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)));
+      return await db
+        .select()
+        .from(documents)
+        .where(and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)!))
+        .orderBy(desc(documents.updatedAt))
+        .limit(limit)
+        .offset(offset);
     }
 
-    return await query
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.userId, userId))
       .orderBy(desc(documents.updatedAt))
       .limit(limit)
       .offset(offset);
@@ -255,7 +254,14 @@ export class DatabaseStorage implements IStorage {
 
   async getChatMessages(conversationId: number, userId: string): Promise<ChatMessage[]> {
     return await db
-      .select()
+      .select({
+        id: chatMessages.id,
+        conversationId: chatMessages.conversationId,
+        role: chatMessages.role,
+        content: chatMessages.content,
+        documentIds: chatMessages.documentIds,
+        createdAt: chatMessages.createdAt,
+      })
       .from(chatMessages)
       .innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id))
       .where(and(eq(chatMessages.conversationId, conversationId), eq(chatConversations.userId, userId)))
