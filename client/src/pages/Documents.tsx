@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useEffect } from "react";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/Layout/Sidebar";
 import TopBar from "@/components/TopBar";
 import DocumentCard from "@/components/DocumentCard";
+import ChatModal from "@/components/Chat/ChatModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,21 +17,26 @@ import {
   FileText, 
   Search, 
   Filter, 
-  Grid, 
+  Grid3X3, 
   List,
   SortAsc,
   SortDesc,
   Calendar,
-  Upload
+  Upload,
+  Tag
 } from "lucide-react";
 
 export default function Documents() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState<"keyword" | "semantic">("keyword");
   const [sortBy, setSortBy] = useState("newest");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterTag, setFilterTag] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,28 +53,47 @@ export default function Documents() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  // Enhanced search with semantic capabilities
   const { data: documents, isLoading: documentsLoading } = useQuery({
-    queryKey: ["/api/documents"],
+    queryKey: ["/api/documents/search", searchQuery, searchType],
+    queryFn: async () => {
+      if (!searchQuery.trim()) {
+        const response = await fetch("/api/documents");
+        return await response.json();
+      }
+      
+      const params = new URLSearchParams({
+        q: searchQuery,
+        type: searchType
+      });
+      
+      const response = await fetch(`/api/documents/search?${params}`);
+      return await response.json();
+    },
     retry: false,
-  });
+  }) as { data: Array<any>; isLoading: boolean };
 
   const { data: categories } = useQuery({
     queryKey: ["/api/categories"],
     retry: false,
-  });
+  }) as { data: Array<{ id: number; name: string }> | undefined };
 
   if (isLoading || !isAuthenticated) {
     return null;
   }
 
+  // Get unique AI categories and tags for filtering
+  const aiCategories = documents ? Array.from(new Set(documents.map((doc: any) => doc.aiCategory).filter(Boolean))) : [];
+  const allTags = documents ? Array.from(new Set(documents.flatMap((doc: any) => doc.tags || []))) : [];
+
   // Filter and sort documents
   const filteredDocuments = documents ? documents.filter((doc: any) => {
-    const matchesSearch = doc.originalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doc.content?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === "all" || 
+                           doc.aiCategory === filterCategory ||
                            (categories && categories.find((c: any) => c.id === doc.categoryId)?.name === filterCategory);
+    const matchesTag = filterTag === "all" || (doc.tags && doc.tags.includes(filterTag));
     
-    return matchesSearch && matchesCategory;
+    return matchesCategory && matchesTag;
   }).sort((a: any, b: any) => {
     switch (sortBy) {
       case "newest":
@@ -76,7 +101,7 @@ export default function Documents() {
       case "oldest":
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       case "name":
-        return a.originalName.localeCompare(b.originalName);
+        return (a.name || a.originalName).localeCompare(b.name || b.originalName);
       case "size":
         return b.fileSize - a.fileSize;
       default:
@@ -85,8 +110,12 @@ export default function Documents() {
   }) : [];
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar 
+        isMobileOpen={isMobileMenuOpen} 
+        onMobileClose={() => setIsMobileMenuOpen(false)}
+        onOpenChat={() => setIsChatModalOpen(true)}
+      />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />

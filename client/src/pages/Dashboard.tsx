@@ -49,12 +49,12 @@ export default function Dashboard() {
   const { data: documents = [] } = useQuery({
     queryKey: ["/api/documents"],
     enabled: isAuthenticated,
-  });
+  }) as { data: Array<any> };
 
   const { data: stats } = useQuery({
     queryKey: ["/api/stats"],
     enabled: isAuthenticated,
-  });
+  }) as { data: { totalDocuments: number } | undefined };
 
   // Upload mutation with progress tracking
   const uploadMutation = useMutation({
@@ -169,7 +169,7 @@ export default function Dashboard() {
     return null;
   }
 
-  const recentDocuments = documents.slice(0, 5);
+  const recentDocuments = Array.isArray(documents) ? documents.slice(0, 5) : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
