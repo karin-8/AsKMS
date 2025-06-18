@@ -212,7 +212,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const files = req.files as Express.Multer.File[];
       
+      console.log('Upload request received:', {
+        userId,
+        filesCount: files?.length || 0,
+        bodyKeys: Object.keys(req.body || {}),
+        hasFiles: !!files
+      });
+      
       if (!files || files.length === 0) {
+        console.log('No files in request, body:', req.body);
         return res.status(400).json({ message: "No files uploaded" });
       }
 
