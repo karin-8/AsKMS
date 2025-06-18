@@ -11,6 +11,7 @@ import {
   type InsertCategory,
   type Document,
   type InsertDocument,
+  type UpdateDocument,
   type ChatConversation,
   type InsertChatConversation,
   type ChatMessage,
@@ -37,7 +38,7 @@ export interface IStorage {
   getDocuments(userId: string, options?: { categoryId?: number; limit?: number; offset?: number }): Promise<Document[]>;
   getDocument(id: number, userId: string): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
-  updateDocument(id: number, document: Partial<InsertDocument>, userId: string): Promise<Document>;
+  updateDocument(id: number, document: UpdateDocument, userId: string): Promise<Document>;
   deleteDocument(id: number, userId: string): Promise<void>;
   searchDocuments(userId: string, query: string): Promise<Document[]>;
   toggleDocumentFavorite(id: number, userId: string): Promise<Document>;
@@ -147,7 +148,7 @@ export class DatabaseStorage implements IStorage {
     return newDocument;
   }
 
-  async updateDocument(id: number, document: Partial<InsertDocument>, userId: string): Promise<Document> {
+  async updateDocument(id: number, document: UpdateDocument, userId: string): Promise<Document> {
     const [updated] = await db
       .update(documents)
       .set({ ...document, updatedAt: new Date() })

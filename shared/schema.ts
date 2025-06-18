@@ -162,8 +162,12 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  processedAt: true,
 });
+
+export const updateDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+}).partial();
 
 export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
   id: true,
@@ -183,6 +187,7 @@ export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type UpdateDocument = z.infer<typeof updateDocumentSchema>;
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;

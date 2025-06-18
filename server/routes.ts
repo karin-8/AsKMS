@@ -152,12 +152,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const query = req.query.q as string;
+      const type = req.query.type as string || 'keyword'; // 'keyword' or 'semantic'
       
       if (!query) {
         return res.status(400).json({ message: "Search query is required" });
       }
       
-      const documents = await storage.searchDocuments(userId, query);
+      let documents;
+      
+      if (type === 'semantic') {
+        // Use vector search for semantic similarity
+        const vectorResults = await vectorService.searchDocuments(query, userId, 10);
+        const documentIds = vectorResults.map(result => parseInt(result.document.id));
+        
+        if (documentIds.length > 0) {
+          documents = await storage.getDocuments(userId, { limit: 50 });
+          documents = documents.filter(doc => documentIds.includes(doc.id))
+            .sort((a, b) => {
+              const aIndex = documentIds.indexOf(a.id);
+              const bIndex = documentIds.indexOf(b.id);
+              return aIndex - bIndex;
+            });
+        } else {
+          documents = [];
+        }
+      } else {
+        // Use keyword search
+        documents = await storage.searchDocuments(userId, query);
+      }
+      
       res.json(documents);
     } catch (error) {
       console.error("Error searching documents:", error);
