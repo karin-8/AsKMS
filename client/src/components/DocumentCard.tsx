@@ -33,15 +33,21 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 interface DocumentCardProps {
   document: {
     id: number;
-    originalName: string;
-    fileType: string;
+    name: string;
+    originalName?: string;
+    fileName: string;
+    fileType?: string;
+    mimeType: string;
     fileSize: number;
-    status: string;
+    status?: string;
     createdAt: string;
     categoryId?: number;
     categoryName?: string;
-    isInVectorDb: boolean;
+    aiCategory?: string;
+    aiCategoryColor?: string;
+    isInVectorDb?: boolean;
     tags?: string[];
+    summary?: string;
   };
   viewMode?: "grid" | "list";
   categories?: Array<{ id: number; name: string; color: string; icon: string }>;
@@ -51,18 +57,20 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const getFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) return FilePen;
-    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return FileSpreadsheet;
-    if (fileType.includes('image')) return FileImage;
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('pdf')) return FilePen;
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return FileSpreadsheet;
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return FileText;
+    if (mimeType.includes('image')) return FileImage;
     return FileText;
   };
 
-  const getFileIconColor = (fileType: string) => {
-    if (fileType.includes('pdf')) return 'text-red-500 bg-red-50';
-    if (fileType.includes('word')) return 'text-blue-500 bg-blue-50';
-    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return 'text-green-500 bg-green-50';
-    if (fileType.includes('image')) return 'text-purple-500 bg-purple-50';
+  const getFileIconColor = (mimeType: string) => {
+    if (mimeType.includes('pdf')) return 'text-red-500 bg-red-50';
+    if (mimeType.includes('word')) return 'text-blue-500 bg-blue-50';
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'text-green-500 bg-green-50';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'text-orange-500 bg-orange-50';
+    if (mimeType.includes('image')) return 'text-purple-500 bg-purple-50';
     return 'text-slate-500 bg-slate-50';
   };
 
@@ -184,8 +192,8 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
     },
   });
 
-  const FileIcon = getFileIcon(document.fileType);
-  const iconColorClass = getFileIconColor(document.fileType);
+  const FileIcon = getFileIcon(document.mimeType || '');
+  const iconColorClass = getFileIconColor(document.mimeType || '');
 
   if (viewMode === "list") {
     return (
@@ -196,25 +204,40 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
         
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-800 truncate">
-            {document.originalName}
+            {document.name || document.originalName}
           </p>
           <div className="flex items-center space-x-4 mt-1">
             <span className="text-xs text-slate-500">{formatDate(document.createdAt)}</span>
             <span className="text-xs text-slate-500">{formatFileSize(document.fileSize)}</span>
             <div className="flex items-center space-x-2">
-              {/* Category in list view */}
+              {/* AI Category with color */}
+              {document.aiCategory && (
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs"
+                  style={{ 
+                    backgroundColor: document.aiCategoryColor + '20',
+                    color: document.aiCategoryColor,
+                    borderColor: document.aiCategoryColor + '40'
+                  }}
+                >
+                  {document.aiCategory}
+                </Badge>
+              )}
+              
+              {/* Manual Category */}
               {document.categoryId && categories && (
                 (() => {
                   const category = categories.find(c => c.id === document.categoryId);
                   return category ? (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="outline" className="text-xs">
                       {category.name}
                     </Badge>
                   ) : null;
                 })()
               )}
               
-              {/* Tags in list view */}
+              {/* AI Tags */}
               {document.tags && document.tags.length > 0 && (
                 <div className="flex items-center space-x-1">
                   {document.tags.slice(0, 2).map((tag, index) => (

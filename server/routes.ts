@@ -236,8 +236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const file of files) {
         try {
-          // Process the document with AI
-          const { content, summary, tags } = await processDocument(file.path, file.mimetype);
+          // Process the document with enhanced AI classification
+          const { content, summary, tags, category, categoryColor } = await processDocument(file.path, file.mimetype);
           
           const documentData = {
             name: file.originalname,
@@ -248,12 +248,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             content,
             summary,
             tags,
+            aiCategory: category,
+            aiCategoryColor: categoryColor,
             userId,
             processedAt: new Date(),
           };
 
           const document = await storage.createDocument(documentData);
           uploadedDocuments.push(document);
+          
+          console.log(`Document processed: ${file.originalname} -> Category: ${category}, Tags: ${tags?.join(', ')}`);
         } catch (error) {
           console.error(`Error processing file ${file.originalname}:`, error);
           // Still create document without AI processing
@@ -263,6 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             filePath: file.path,
             fileSize: file.size,
             mimeType: file.mimetype,
+            aiCategory: "Uncategorized",
+            aiCategoryColor: "#6B7280",
             userId,
           };
           const document = await storage.createDocument(documentData);
