@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema } from "@shared/schema";
+import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema, type Document as DocType } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -158,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
       
-      let documents;
+      let documents: DocType[];
       
       if (type === 'semantic') {
         // Use vector search for semantic similarity
@@ -166,15 +166,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const documentIds = vectorResults.map(result => parseInt(result.document.id));
         
         if (documentIds.length > 0) {
-          documents = await storage.getDocuments(userId, { limit: 50 });
-          documents = documents.filter(doc => documentIds.includes(doc.id))
+          const allDocuments = await storage.getDocuments(userId, { limit: 50 });
+          documents = allDocuments.filter(doc => documentIds.includes(doc.id))
             .sort((a, b) => {
               const aIndex = documentIds.indexOf(a.id);
               const bIndex = documentIds.indexOf(b.id);
               return aIndex - bIndex;
-            });
+            }) as DocType[];
         } else {
-          documents = [];
+          documents = [] as DocType[];
         }
       } else {
         // Use keyword search
@@ -361,6 +361,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing chat message:", error);
       res.status(500).json({ message: "Failed to process chat message" });
+    }
+  });
+
+  // Vector database management routes
+  app.get('/api/vector/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userDocuments = vectorService.getDocumentsByUser(userId);
+      const totalDocuments = vectorService.getDocumentCount();
+      
+      res.json({
+        userDocuments: userDocuments.length,
+        totalDocuments,
+        vectorized: userDocuments.map(doc => ({
+          id: doc.id,
+          name: doc.metadata.documentName,
+          type: doc.metadata.mimeType
+        }))
+      });
+    } catch (error) {
+      console.error("Error getting vector stats:", error);
+      res.status(500).json({ message: "Failed to get vector database stats" });
+    }
+  });
+
+  app.post('/api/documents/:id/reprocess', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documentId = parseInt(req.params.id);
+      
+      const document = await storage.getDocument(documentId, userId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      // Remove from vector database first
+      await vectorService.removeDocument(documentId.toString());
+      
+      // Reprocess document
+      await documentProcessor.processDocument(documentId);
+      
+      res.json({ message: "Document reprocessed successfully" });
+    } catch (error) {
+      console.error("Error reprocessing document:", error);
+      res.status(500).json({ message: "Failed to reprocess document" });
     }
   });
 
