@@ -181,6 +181,75 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
     },
   });
 
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('PUT', `/api/documents/${document.id}/favorite`);
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsFavorite(!isFavorite);
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      toast({
+        title: isFavorite ? "Removed from favorites" : "Added to favorites",
+        description: `Document ${isFavorite ? 'removed from' : 'added to'} favorites.`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update favorite status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleViewSummary = () => {
+    setShowSummary(true);
+  };
+
+  const handleDownload = () => {
+    const link = window.document.createElement('a');
+    link.href = `/api/documents/${document.id}/download`;
+    link.download = document.originalName || document.name;
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
+    toast({
+      title: "Download started",
+      description: "Document download has started.",
+    });
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: document.name || document.originalName,
+        url: window.location.origin + `/documents/${document.id}`
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.origin + `/documents/${document.id}`);
+      toast({
+        title: "Link copied",
+        description: "Document link copied to clipboard.",
+      });
+    }
+  };
+
+  const handleView = () => {
+    window.open(`/api/documents/${document.id}/view`, '_blank');
+  };
+
   const deleteDocumentMutation = useMutation({
     mutationFn: async () => {
       await apiRequest('DELETE', `/api/documents/${document.id}`);
@@ -295,17 +364,28 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleView}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleViewSummary}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                Content Summary
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
                 Download
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShare}>
                 <Share className="mr-2 h-4 w-4" />
                 Share
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => toggleFavoriteMutation.mutate()}
+                disabled={toggleFavoriteMutation.isPending}
+              >
+                {isFavorite ? <StarOff className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
+                {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
               </DropdownMenuItem>
               {!document.isInVectorDb && document.status === 'processed' && (
                 <DropdownMenuItem 
