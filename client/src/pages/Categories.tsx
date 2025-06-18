@@ -213,17 +213,17 @@ export default function Categories() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar 
         isMobileOpen={isMobileMenuOpen} 
         onMobileClose={() => setIsMobileMenuOpen(false)}
         onOpenChat={() => setIsChatModalOpen(true)}
       />
       
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />
         
-        <main className="p-6">
+        <main className="flex-1 overflow-auto p-6">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-slate-800 mb-2">Categories & Tags</h1>

@@ -172,14 +172,14 @@ export default function Dashboard() {
   const recentDocuments = Array.isArray(documents) ? documents.slice(0, 5) : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar 
         isMobileOpen={isMobileMenuOpen} 
         onMobileClose={() => setIsMobileMenuOpen(false)}
         onOpenChat={() => setIsChatModalOpen(true)}
       />
       
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />
         
         <main className="p-6">
