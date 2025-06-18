@@ -7,6 +7,7 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import * as fsSync from "fs";
 import { processDocument, generateChatResponse } from "./services/openai";
 import { documentProcessor } from "./services/documentProcessor";
 import { vectorService } from "./services/vectorService";
@@ -305,7 +306,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/documents/:id/favorite', isAuthenticated, async (req: any, res) => {
+  app.get('/api/documents/:id/download', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id, userId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      const filePath = path.join(process.cwd(), 'uploads', document.fileName);
+      
+      if (!fsSync.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      // Log access
+      await storage.logDocumentAccess(id, userId, 'download');
+      
+      // Set proper headers to prevent corruption
+      res.setHeader('Content-Type', document.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+      res.setHeader('Content-Length', fsSync.statSync(filePath).size);
+      
+      const fileStream = fsSync.createReadStream(filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      res.status(500).json({ message: "Failed to download document" });
+    }
+  });
+
+  app.post('/api/documents/:id/favorite', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);

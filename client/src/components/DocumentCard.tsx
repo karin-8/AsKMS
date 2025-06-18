@@ -98,9 +98,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Delete document mutation
   const deleteDocumentMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/documents/${doc.id}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/documents/${doc.id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
