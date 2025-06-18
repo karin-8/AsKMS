@@ -453,6 +453,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat conversation endpoints
+  app.get("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const conversations = await storage.getChatConversations(userId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  app.post("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title } = req.body;
+      
+      const conversation = await storage.createChatConversation({
+        userId,
+        title: title || "New Conversation",
+      });
+      
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+
+  app.get("/api/chat/conversations/:id/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const conversationId = parseInt(req.params.id);
+      
+      const messages = await storage.getChatMessages(conversationId, userId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/chat/conversations/:id/message", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const conversationId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      // Store user message
+      const userMessage = await storage.createChatMessage({
+        conversationId,
+        role: 'user',
+        content,
+      });
+      
+      // Get user's documents for context
+      const documents = await storage.getDocuments(userId);
+      
+      // Generate AI response using OpenAI
+      const aiResponse = await generateChatResponse(content, documents);
+      
+      // Store AI message
+      const aiMessage = await storage.createChatMessage({
+        conversationId,
+        role: 'assistant',
+        content: aiResponse,
+      });
+      
+      res.json({ userMessage, aiMessage });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
