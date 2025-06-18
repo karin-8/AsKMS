@@ -162,6 +162,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchDocuments(userId: string, query: string): Promise<Document[]> {
+    const lowerQuery = query.toLowerCase();
     return await db
       .select()
       .from(documents)
@@ -169,10 +170,12 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(documents.userId, userId),
           or(
-            like(documents.name, `%${query}%`),
-            like(documents.description, `%${query}%`),
-            like(documents.content, `%${query}%`),
-            sql`${documents.tags} && ARRAY[${query}]`
+            sql`LOWER(${documents.name}) LIKE ${'%' + lowerQuery + '%'}`,
+            sql`LOWER(${documents.description}) LIKE ${'%' + lowerQuery + '%'}`,
+            sql`LOWER(${documents.content}) LIKE ${'%' + lowerQuery + '%'}`,
+            sql`LOWER(${documents.summary}) LIKE ${'%' + lowerQuery + '%'}`,
+            sql`LOWER(${documents.aiCategory}) LIKE ${'%' + lowerQuery + '%'}`,
+            sql`EXISTS (SELECT 1 FROM unnest(${documents.tags}) AS tag WHERE LOWER(tag) LIKE ${'%' + lowerQuery + '%'})`
           )
         )
       )

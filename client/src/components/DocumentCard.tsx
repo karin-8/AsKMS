@@ -53,12 +53,20 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
   // Fetch document summary when needed
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
     queryKey: ["/api/documents", doc.id, "summary"],
     enabled: showSummary,
+    retry: false,
+  });
+
+  // Fetch document details when needed
+  const { data: documentDetails, isLoading: detailsLoading } = useQuery({
+    queryKey: ["/api/documents", doc.id],
+    enabled: showDetails,
     retry: false,
   });
 
@@ -119,9 +127,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/documents/${doc.id}/favorite`, {
-        method: "POST",
-      });
+      await apiRequest(`/api/documents/${doc.id}/favorite`, "POST");
     },
     onSuccess: () => {
       setIsFavorite(!isFavorite);
@@ -143,9 +149,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Add to vector database mutation
   const addToVectorMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/documents/${doc.id}/vectorize`, {
-        method: "POST",
-      });
+      await apiRequest(`/api/documents/${doc.id}/vectorize`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
@@ -508,9 +512,9 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 <span className="ml-2 text-gray-600">Generating summary...</span>
               </div>
-            ) : summaryData?.summary ? (
+            ) : (summaryData as any)?.summary ? (
               <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 leading-relaxed">{summaryData.summary}</p>
+                <p className="text-gray-700 leading-relaxed">{(summaryData as any).summary}</p>
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">

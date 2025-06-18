@@ -63,10 +63,21 @@ export class DocumentProcessor {
         case "application/msword":
           return await this.extractWithTextract(filePath);
 
+        case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+        case "application/vnd.ms-powerpoint":
+          return await this.extractWithTextract(filePath);
+
+        case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        case "application/vnd.ms-excel":
+          return await this.extractWithTextract(filePath);
+
+        case "text/csv":
+          return await fs.promises.readFile(filePath, "utf-8");
+
         default:
           if (fileType.startsWith("image/")) {
-            // For images, we'll rely on AI processing
-            return "";
+            // For images, we'll rely on AI processing for OCR
+            return await this.extractWithTextract(filePath);
           }
           return await this.extractWithTextract(filePath);
       }
