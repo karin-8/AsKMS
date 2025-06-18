@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import fs from "fs";
 import { Document } from "@shared/schema";
 import mammoth from "mammoth";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -23,9 +23,23 @@ export async function processDocument(filePath: string, mimeType: string): Promi
     if (mimeType === "text/plain") {
       content = await fs.promises.readFile(filePath, "utf-8");
     } else if (mimeType === "application/pdf") {
-      // For PDF files, we'll use OCR via OpenAI vision
-      // Convert PDF to image and analyze with GPT-4o vision
-      content = `PDF document: ${filePath.split('/').pop()}. Processing PDF content with AI vision capabilities.`;
+      // For PDF files, use textract for text extraction
+      try {
+        const textract = require('textract');
+        content = await new Promise((resolve, reject) => {
+          textract.fromFileWithPath(filePath, (error: any, text: string) => {
+            if (error) {
+              console.error("PDF textract error:", error);
+              resolve(`PDF document: ${filePath.split('/').pop()}. Text extraction failed, analyzing file metadata for classification.`);
+            } else {
+              resolve(text || `PDF document: ${filePath.split('/').pop()}. No extractable text found.`);
+            }
+          });
+        });
+      } catch (error) {
+        console.error("PDF processing error:", error);
+        content = `PDF document: ${filePath.split('/').pop()}. Processing PDF content for classification.`;
+      }
     } else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
       // Extract text from DOCX
       const docxBuffer = await fs.promises.readFile(filePath);
@@ -34,19 +48,44 @@ export async function processDocument(filePath: string, mimeType: string): Promi
     } else if (mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || 
                mimeType === "application/vnd.ms-excel") {
       // Extract text from Excel files
-      const workbook = XLSX.readFile(filePath);
-      const sheets = workbook.SheetNames;
-      let allText = "";
-      sheets.forEach(sheet => {
-        const worksheet = workbook.Sheets[sheet];
-        const sheetText = XLSX.utils.sheet_to_txt(worksheet);
-        allText += `Sheet: ${sheet}\n${sheetText}\n\n`;
-      });
-      content = allText;
+      try {
+        const workbook = XLSX.readFile(filePath);
+        const sheets = workbook.SheetNames;
+        let allText = "";
+        sheets.forEach(sheet => {
+          const worksheet = workbook.Sheets[sheet];
+          const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+          allText += `Sheet: ${sheet}\n`;
+          sheetData.forEach((row: any) => {
+            if (Array.isArray(row) && row.length > 0) {
+              allText += row.join('\t') + '\n';
+            }
+          });
+          allText += '\n';
+        });
+        content = allText || `Excel file: ${filePath.split('/').pop()}. Contains ${sheets.length} sheets.`;
+      } catch (error) {
+        console.error("Excel processing error:", error);
+        content = `Excel file: ${filePath.split('/').pop()}. Content extraction failed, analyzing file metadata.`;
+      }
     } else if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
-      // For PPTX, we'll extract what we can - this is a simplified approach
-      // In production, you'd use a proper PPTX parser
-      content = `PowerPoint presentation file: ${filePath.split('/').pop()}. Content extraction from PPTX requires specialized parsing.`;
+      // For PPTX files, use textract for text extraction
+      try {
+        const textract = require('textract');
+        content = await new Promise((resolve, reject) => {
+          textract.fromFileWithPath(filePath, (error: any, text: string) => {
+            if (error) {
+              console.error("PPTX textract error:", error);
+              resolve(`PowerPoint presentation: ${filePath.split('/').pop()}. Text extraction failed, analyzing file metadata for classification.`);
+            } else {
+              resolve(text || `PowerPoint presentation: ${filePath.split('/').pop()}. No extractable text found.`);
+            }
+          });
+        });
+      } catch (error) {
+        console.error("PPTX processing error:", error);
+        content = `PowerPoint presentation: ${filePath.split('/').pop()}. Processing presentation content for classification.`;
+      }
     } else if (mimeType.startsWith("image/")) {
       // For images, use GPT-4o vision capabilities
       const imageBuffer = await fs.promises.readFile(filePath);
