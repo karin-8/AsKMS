@@ -1,0 +1,12 @@
+This is a test document for the AI Knowledge Management System.
+
+The document contains information about artificial intelligence, machine learning, and natural language processing.
+
+Key topics include:
+- Document processing and text extraction
+- Semantic search using vector embeddings
+- AI-powered chatbots and question answering
+- Knowledge base management
+- Document classification and tagging
+
+This text will be processed by the system to extract content, generate summaries, create tags, and enable semantic search functionality.
