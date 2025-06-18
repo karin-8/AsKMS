@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Link, useLocation } from "wouter";
 import { 
   Home, 
   FileText, 
@@ -9,7 +10,11 @@ import {
   Star, 
   Share2, 
   Bot,
-  X
+  X,
+  Upload,
+  Search,
+  Settings,
+  FolderOpen
 } from "lucide-react";
 
 interface SidebarProps {
@@ -19,13 +24,15 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: SidebarProps) {
+  const [location] = useLocation();
+  
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
-  });
+  }) as { data: Array<{ id: number; name: string; documentCount?: number }> };
 
   const { data: stats } = useQuery({
     queryKey: ["/api/stats"],
-  });
+  }) as { data: { totalDocuments: number } | undefined };
 
   const categoryColors = [
     'bg-blue-500',
@@ -35,6 +42,8 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
     'bg-red-500',
     'bg-indigo-500'
   ];
+
+  const isActiveRoute = (path: string) => location === path;
 
   return (
     <>
@@ -59,33 +68,80 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
           <div className="flex-1 px-4 py-6 space-y-6">
             {/* Navigation Menu */}
             <nav className="space-y-2">
-              <Button variant="ghost" className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
-                <Home className="w-5 h-5 mr-3" />
-                <span>Dashboard</span>
-              </Button>
+              <Link href="/" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <Home className="w-5 h-5 mr-3" />
+                  <span>Dashboard</span>
+                </Button>
+              </Link>
               
-              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                <FileText className="w-5 h-5 mr-3" />
-                <span>All Documents</span>
-                <Badge variant="secondary" className="ml-auto">
-                  {stats?.totalDocuments || 0}
-                </Badge>
-              </Button>
+              <Link href="/documents" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/documents") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <FileText className="w-5 h-5 mr-3" />
+                  <span>All Documents</span>
+                  <Badge variant="secondary" className="ml-auto">
+                    {stats?.totalDocuments || 0}
+                  </Badge>
+                </Button>
+              </Link>
               
-              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                <Clock className="w-5 h-5 mr-3" />
-                <span>Recent</span>
-              </Button>
+              <Link href="/search" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/search") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <Search className="w-5 h-5 mr-3" />
+                  <span>Search</span>
+                </Button>
+              </Link>
               
-              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                <Star className="w-5 h-5 mr-3" />
-                <span>Favorites</span>
-              </Button>
+              <Link href="/upload" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/upload") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <Upload className="w-5 h-5 mr-3" />
+                  <span>Upload</span>
+                </Button>
+              </Link>
               
-              <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                <Share2 className="w-5 h-5 mr-3" />
-                <span>Shared with me</span>
-              </Button>
+              <Link href="/categories" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/categories") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <FolderOpen className="w-5 h-5 mr-3" />
+                  <span>Categories</span>
+                </Button>
+              </Link>
+              
+              <Link href="/settings" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/settings") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <Settings className="w-5 h-5 mr-3" />
+                  <span>Settings</span>
+                </Button>
+              </Link>
             </nav>
 
             {/* Categories */}
@@ -97,7 +153,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                 {categories.length === 0 ? (
                   <p className="px-3 text-sm text-gray-500">No categories yet</p>
                 ) : (
-                  categories.map((category: any, index: number) => (
+                  categories.map((category, index: number) => (
                     <Button
                       key={category.id}
                       variant="ghost"
