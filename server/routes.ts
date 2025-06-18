@@ -350,6 +350,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/documents/:id/vectorize', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id, userId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      if (document.content && document.content.trim().length > 0) {
+        await vectorService.addDocument(
+          id.toString(),
+          document.content,
+          {
+            userId,
+            documentName: document.name,
+            mimeType: document.mimeType,
+            tags: document.tags || [],
+          }
+        );
+        
+        // Update document to mark as in vector DB
+        await storage.updateDocument(id, { isInVectorDb: true }, userId);
+        
+        res.json({ success: true, message: "Document added to vector database" });
+      } else {
+        res.status(400).json({ message: "Document has no extractable content for vectorization" });
+      }
+    } catch (error) {
+      console.error("Error adding document to vector database:", error);
+      res.status(500).json({ message: "Failed to add document to vector database" });
+    }
+  });
+
   app.delete('/api/documents/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

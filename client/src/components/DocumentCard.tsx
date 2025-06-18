@@ -168,10 +168,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   });
 
   const handleView = () => {
-    toast({
-      title: "View Details",
-      description: "Document details will be displayed here.",
-    });
+    setShowDetails(true);
   };
 
   const handleViewSummary = () => {
@@ -535,6 +532,109 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                     </Badge>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Details Dialog */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Eye className="w-5 h-5" />
+              <span>Document Details</span>
+            </DialogTitle>
+            <DialogDescription>
+              Complete information and content for {doc.name || doc.originalName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {detailsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-2 text-gray-600">Loading document details...</span>
+              </div>
+            ) : documentDetails ? (
+              <>
+                {/* Document Info */}
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">File Name</label>
+                    <p className="text-sm text-gray-900">{(documentDetails as any).name}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">File Size</label>
+                    <p className="text-sm text-gray-900">{formatFileSize((documentDetails as any).fileSize)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">File Type</label>
+                    <p className="text-sm text-gray-900">{(documentDetails as any).mimeType}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Created</label>
+                    <p className="text-sm text-gray-900">{format(new Date((documentDetails as any).createdAt), 'PPP')}</p>
+                  </div>
+                </div>
+
+                {/* AI Classification */}
+                {(documentDetails as any).aiCategory && (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">AI Classification</h4>
+                    <Badge 
+                      variant="outline" 
+                      className="text-sm"
+                      style={{ 
+                        backgroundColor: (documentDetails as any).aiCategoryColor ? `${(documentDetails as any).aiCategoryColor}15` : undefined,
+                        borderColor: (documentDetails as any).aiCategoryColor || undefined,
+                        color: (documentDetails as any).aiCategoryColor || undefined
+                      }}
+                    >
+                      {(documentDetails as any).aiCategory}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Tags */}
+                {(documentDetails as any).tags && (documentDetails as any).tags.length > 0 && (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(documentDetails as any).tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          <Hash className="w-2 h-2 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {(documentDetails as any).summary && (
+                  <div className="p-4 bg-yellow-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Summary</h4>
+                    <p className="text-sm text-gray-700 leading-relaxed">{(documentDetails as any).summary}</p>
+                  </div>
+                )}
+
+                {/* Content */}
+                {(documentDetails as any).content && (
+                  <div className="p-4 bg-white border rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Document Content</h4>
+                    <div className="max-h-64 overflow-y-auto">
+                      <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+                        {(documentDetails as any).content}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Eye className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>Document details not available.</p>
               </div>
             )}
           </div>
