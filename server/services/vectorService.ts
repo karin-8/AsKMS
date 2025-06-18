@@ -1,7 +1,11 @@
-import { openaiService } from "./openai";
+import OpenAI from "openai";
+import { Document } from "@shared/schema";
 
-// Simple in-memory vector store for demo purposes
-// In production, you would use Pinecone, Weaviate, or similar
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY 
+});
+
 interface VectorDocument {
   id: string;
   content: string;
@@ -15,26 +19,30 @@ export class VectorService {
   async addDocument(id: string, content: string, metadata: Record<string, any>): Promise<string> {
     try {
       // Generate embedding for the document content
-      const embedding = await openaiService.generateEmbedding(content);
-      
-      // Store the document with its embedding
+      const response = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: content.substring(0, 8000), // Limit content for embedding
+      });
+
+      const embedding = response.data[0].embedding;
+
+      // Remove existing document if it exists
+      this.removeDocument(id);
+
+      // Add new document
       const vectorDoc: VectorDocument = {
         id,
         content,
         embedding,
-        metadata,
+        metadata
       };
 
-      // Remove existing document if it exists
-      this.documents = this.documents.filter(doc => doc.id !== id);
-      
-      // Add new document
       this.documents.push(vectorDoc);
-
-      return id;
+      
+      return `Document ${id} added to vector database`;
     } catch (error) {
-      console.error("Error adding document to vector store:", error);
-      throw new Error("Failed to add document to vector store");
+      console.error("Error adding document to vector database:", error);
+      throw new Error("Failed to add document to vector database");
     }
   }
 
@@ -43,68 +51,45 @@ export class VectorService {
   }
 
   async searchDocuments(
-    query: string,
-    options: {
-      userId?: string;
-      limit?: number;
-      threshold?: number;
-    } = {}
-  ): Promise<Array<{ id: string; content: string; score: number; metadata: Record<string, any> }>> {
+    query: string, 
+    userId: string, 
+    limit: number = 5
+  ): Promise<Array<{ document: VectorDocument; similarity: number }>> {
     try {
-      const { userId, limit = 10, threshold = 0.7 } = options;
+      if (this.documents.length === 0) {
+        return [];
+      }
 
-      // Generate embedding for the query
-      const queryEmbedding = await openaiService.generateEmbedding(query);
+      // Generate embedding for the search query
+      const response = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: query,
+      });
 
-      // Calculate similarity scores
+      const queryEmbedding = response.data[0].embedding;
+
+      // Calculate similarities and sort by relevance
       const results = this.documents
+        .filter(doc => doc.metadata.userId === userId)
         .map(doc => ({
-          id: doc.id,
-          content: doc.content,
-          metadata: doc.metadata,
-          score: this.cosineSimilarity(queryEmbedding, doc.embedding),
+          document: doc,
+          similarity: this.cosineSimilarity(queryEmbedding, doc.embedding)
         }))
-        .filter(result => {
-          // Filter by user if specified
-          if (userId && result.metadata.uploadedBy !== userId) {
-            return false;
-          }
-          // Filter by similarity threshold
-          return result.score >= threshold;
-        })
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
 
       return results;
     } catch (error) {
-      console.error("Error searching documents:", error);
+      console.error("Error searching vector database:", error);
       return [];
     }
   }
 
   private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) {
-      throw new Error("Vectors must have the same length");
-    }
-
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-
-    normA = Math.sqrt(normA);
-    normB = Math.sqrt(normB);
-
-    if (normA === 0 || normB === 0) {
-      return 0;
-    }
-
-    return dotProduct / (normA * normB);
+    const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+    const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+    const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+    return dotProduct / (magnitudeA * magnitudeB);
   }
 
   getDocumentCount(): number {
@@ -112,7 +97,7 @@ export class VectorService {
   }
 
   getDocumentsByUser(userId: string): VectorDocument[] {
-    return this.documents.filter(doc => doc.metadata.uploadedBy === userId);
+    return this.documents.filter(doc => doc.metadata.userId === userId);
   }
 }
 
