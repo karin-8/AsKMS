@@ -132,16 +132,26 @@ export default function Documents() {
           {/* Filters and Search */}
           <Card className="border border-slate-200 mb-6">
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="md:col-span-2 relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
-                    placeholder="Search documents..."
+                    placeholder="Search documents, content, or tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                   />
                 </div>
+                
+                <Select value={searchType} onValueChange={(value: "keyword" | "semantic") => setSearchType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keyword">Keyword Search</SelectItem>
+                    <SelectItem value="semantic">AI Semantic Search</SelectItem>
+                  </SelectContent>
+                </Select>
                 
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
                   <SelectTrigger>
@@ -149,9 +159,24 @@ export default function Documents() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories?.map((category: any) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
+                    {aiCategories.map((category: string) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {allTags.map((tag: string) => (
+                      <SelectItem key={tag} value={tag}>
+                        <Tag className="w-3 h-3 mr-1" />
+                        {tag}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -175,7 +200,7 @@ export default function Documents() {
                     size="sm"
                     onClick={() => setViewMode("grid")}
                   >
-                    <Grid className="w-4 h-4" />
+                    <Grid3X3 className="w-4 h-4" />
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "outline"}
@@ -221,7 +246,7 @@ export default function Documents() {
                     : "space-y-2"
                 }>
                   {filteredDocuments.map((doc: any) => (
-                    <DocumentCard key={doc.id} document={doc} viewMode={viewMode} categories={categories} />
+                    <DocumentCard key={doc.id} document={doc} viewMode={viewMode} />
                   ))}
                 </div>
               ) : (
@@ -249,6 +274,11 @@ export default function Documents() {
           </Card>
         </main>
       </div>
+      
+      <ChatModal 
+        isOpen={isChatModalOpen} 
+        onClose={() => setIsChatModalOpen(false)} 
+      />
     </div>
   );
 }
