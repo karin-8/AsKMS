@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import textract from "textract";
 import { processDocument as aiProcessDocument } from "./openai";
@@ -79,12 +78,10 @@ export class DocumentProcessor {
 
   private async extractFromPDF(filePath: string): Promise<string> {
     try {
-      const dataBuffer = await fs.promises.readFile(filePath);
-      const data = await pdfParse(dataBuffer);
-      return data.text;
+      return await this.extractWithTextract(filePath);
     } catch (error) {
       console.error("PDF extraction error:", error);
-      throw new Error("Failed to extract text from PDF");
+      return "";
     }
   }
 
