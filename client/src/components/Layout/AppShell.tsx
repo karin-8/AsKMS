@@ -13,7 +13,7 @@ import UploadModal from "@/components/Upload/UploadModal";
 import ChatModal from "@/components/Chat/ChatModal";
 
 export default function AppShell() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: { profileImageUrl?: string; firstName?: string; lastName?: string; role?: string } | undefined };
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -75,20 +75,11 @@ export default function AppShell() {
             {/* User Actions */}
             <div className="flex items-center space-x-4">
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative">
+              <Button variant="ghost" size="sm" className="relative p-2">
                 <Bell className="h-5 w-5 text-gray-600" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500">
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500 flex items-center justify-center">
                   3
                 </Badge>
-              </Button>
-
-              {/* Upload Button */}
-              <Button
-                className="hidden sm:flex items-center space-x-2 bg-blue-500 text-white hover:bg-blue-600"
-                onClick={() => setIsUploadModalOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                <span>Upload</span>
               </Button>
 
               {/* User Profile */}
