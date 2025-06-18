@@ -186,12 +186,14 @@ export default function Categories() {
   };
 
   const getDocumentCountForCategory = (categoryId: number) => {
-    return documents?.filter((doc: any) => doc.categoryId === categoryId).length || 0;
+    if (!documents || !Array.isArray(documents)) return 0;
+    return documents.filter((doc: any) => doc.categoryId === categoryId).length;
   };
 
   const getAllTags = () => {
+    if (!documents || !Array.isArray(documents)) return [];
     const allTags = new Set<string>();
-    documents?.forEach((doc: any) => {
+    documents.forEach((doc: any) => {
       if (doc.tags && Array.isArray(doc.tags)) {
         doc.tags.forEach((tag: string) => allTags.add(tag));
       }
@@ -200,9 +202,10 @@ export default function Categories() {
   };
 
   const getDocumentCountForTag = (tag: string) => {
-    return documents?.filter((doc: any) => 
+    if (!documents || !Array.isArray(documents)) return 0;
+    return documents.filter((doc: any) => 
       doc.tags && Array.isArray(doc.tags) && doc.tags.includes(tag)
-    ).length || 0;
+    ).length;
   };
 
   if (isLoading || !isAuthenticated) {
@@ -210,13 +213,17 @@ export default function Categories() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar 
+        isMobileOpen={isMobileMenuOpen} 
+        onMobileClose={() => setIsMobileMenuOpen(false)}
+        onOpenChat={() => setIsChatModalOpen(true)}
+      />
       
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="lg:pl-64">
         <TopBar />
         
-        <main className="flex-1 overflow-auto p-6">
+        <main className="p-6">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-slate-800 mb-2">Categories & Tags</h1>
@@ -289,7 +296,7 @@ export default function Categories() {
                       </div>
                     ))}
                   </div>
-                ) : categories && categories.length > 0 ? (
+                ) : categories && Array.isArray(categories) && categories.length > 0 ? (
                   <div className="space-y-3">
                     {categories.map((category: any) => (
                       <div key={category.id} className="border border-slate-200 rounded-lg p-4">
@@ -429,6 +436,11 @@ export default function Categories() {
           </DialogContent>
         </Dialog>
       )}
+
+      <ChatModal 
+        isOpen={isChatModalOpen} 
+        onClose={() => setIsChatModalOpen(false)} 
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
 import Settings from "@/pages/Settings";
 import Landing from "@/pages/Landing";
+import AIAssistant from "@/pages/AIAssistant";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +24,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/documents" component={Documents} />
           <Route path="/categories" component={Categories} />
+          <Route path="/ai-assistant" component={AIAssistant} />
           <Route path="/settings" component={Settings} />
         </>
       )}
