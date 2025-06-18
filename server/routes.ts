@@ -40,15 +40,23 @@ const upload = multer({
     const allowedMimes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/msword',
+      'application/vnd.ms-excel',
+      'application/vnd.ms-powerpoint',
       'text/plain',
+      'text/csv',
       'image/jpeg',
+      'image/jpg',
       'image/png',
-      'image/gif'
+      'image/gif',
+      'image/webp'
     ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only PDF, DOCX, TXT, and image files are allowed.'));
+      cb(new Error('Invalid file type. Supported: PDF, DOCX, XLSX, PPTX, TXT, CSV, and image files.'));
     }
   },
   limits: {

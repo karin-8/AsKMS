@@ -61,6 +61,8 @@ export const documents = pgTable("documents", {
   content: text("content"), // Extracted text content
   summary: text("summary"), // AI-generated summary
   tags: text("tags").array(), // AI-generated tags
+  aiCategory: varchar("ai_category", { length: 50 }), // AI-classified category
+  aiCategoryColor: varchar("ai_category_color", { length: 10 }), // Category color
   categoryId: integer("category_id").references(() => categories.id),
   userId: varchar("user_id").references(() => users.id).notNull(),
   isPublic: boolean("is_public").default(false),

@@ -11,6 +11,8 @@ export async function processDocument(filePath: string, mimeType: string): Promi
   content: string;
   summary: string;
   tags: string[];
+  category: string;
+  categoryColor: string;
 }> {
   try {
     let content = "";
@@ -53,31 +55,84 @@ export async function processDocument(filePath: string, mimeType: string): Promi
     }
 
     if (!content || content.trim().length === 0) {
-      throw new Error("No content could be extracted from the document");
+      return {
+        content: "",
+        summary: "No content could be extracted from this document.",
+        tags: ["empty"],
+        category: "Uncategorized",
+        categoryColor: "#6B7280"
+      };
     }
 
-    // Generate summary and tags using AI
+    // Enhanced AI analysis for intelligent classification and tagging
     const analysisResponse = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "You are a document analysis expert. Analyze the provided document content and return a JSON response with a concise summary (max 200 characters) and relevant tags (array of 3-8 keywords) for categorization and search."
+          content: `You are an expert document classifier and analyzer for a Knowledge Management System. Analyze documents and provide:
+
+1. CATEGORY CLASSIFICATION - Classify into ONE of these categories:
+   - HR: Resumes, CVs, job applications, employee documents, recruitment materials
+   - Finance: Invoices, budgets, financial reports, expense reports, accounting documents
+   - Legal: Contracts, agreements, legal documents, compliance, terms of service
+   - Marketing: Campaigns, brochures, presentations, promotional materials, brand assets
+   - Technical: Manuals, specifications, code documentation, IT procedures, technical guides
+   - Operations: SOPs, workflows, operational guidelines, process documentation
+   - Research: Studies, analysis, whitepapers, academic papers, research reports
+   - Personal: Personal notes, diaries, personal correspondence, private documents
+   - Administrative: Forms, applications, administrative documents, general paperwork
+   - Uncategorized: Documents that don't clearly fit the above categories
+
+2. INTELLIGENT TAGGING - Generate 4-8 specific, relevant tags that describe:
+   - Document type/format
+   - Subject matter/topic
+   - Purpose/use case
+   - Key themes or concepts
+
+3. SUMMARY - Create a concise 2-3 sentence summary highlighting the document's main purpose and key information
+
+Respond with JSON in this exact format:
+{
+  "category": "category_name",
+  "summary": "concise summary here",
+  "tags": ["specific_tag1", "topic_tag2", "type_tag3", "purpose_tag4"]
+}`
         },
         {
           role: "user",
-          content: `Please analyze this document content and provide a summary and tags:\n\n${content.substring(0, 4000)}`
+          content: `Analyze and classify this document content:\n\n${content.substring(0, 4000)}`
         }
       ],
       response_format: { type: "json_object" },
+      max_tokens: 800,
     });
 
     const analysis = JSON.parse(analysisResponse.choices[0].message.content || "{}");
     
+    // Category color mapping for visual identification
+    const categoryColors: Record<string, string> = {
+      "HR": "#10B981",           // Green - Human resources
+      "Finance": "#F59E0B",      // Amber - Financial documents  
+      "Legal": "#EF4444",        // Red - Legal/compliance
+      "Marketing": "#8B5CF6",    // Purple - Marketing materials
+      "Technical": "#3B82F6",    // Blue - Technical documentation
+      "Operations": "#6366F1",   // Indigo - Operational procedures
+      "Research": "#06B6D4",     // Cyan - Research and analysis
+      "Personal": "#EC4899",     // Pink - Personal documents
+      "Administrative": "#84CC16", // Lime - Administrative forms
+      "Uncategorized": "#6B7280"  // Gray - Uncategorized items
+    };
+    
+    const category = analysis.category || "Uncategorized";
+    const categoryColor = categoryColors[category] || "#6B7280";
+    
     return {
-      content: content.substring(0, 10000), // Limit content length
+      content: content.substring(0, 10000),
       summary: analysis.summary || "Document processed successfully",
-      tags: Array.isArray(analysis.tags) ? analysis.tags : ["document"]
+      tags: Array.isArray(analysis.tags) ? analysis.tags : ["document"],
+      category,
+      categoryColor
     };
 
   } catch (error) {
@@ -85,7 +140,9 @@ export async function processDocument(filePath: string, mimeType: string): Promi
     return {
       content: "Error extracting content",
       summary: "Document uploaded but could not be processed with AI",
-      tags: ["unprocessed"]
+      tags: ["unprocessed"],
+      category: "Uncategorized",
+      categoryColor: "#6B7280"
     };
   }
 }
