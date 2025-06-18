@@ -1,4 +1,11 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { 
+  FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
+  Eye, Trash2, MoreHorizontal, Calendar, HardDrive, Hash, Star, StarOff,
+  BookOpen, Database, Plus
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,33 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { 
-  FileText, 
-  MoreHorizontal, 
-  Download, 
-  Share, 
-  Trash2,
-  Eye,
-  Database,
-  FilePen,
-  FileSpreadsheet,
-  FileImage,
-  File,
-  CheckCircle,
-  Clock,
-  XCircle,
-  AlertCircle,
-  BookOpen,
-  Hash,
-  Star,
-  StarOff
-} from "lucide-react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface DocumentCardProps {
   document: {
@@ -65,7 +49,7 @@ interface DocumentCardProps {
   categories?: Array<{ id: number; name: string; color: string; icon: string }>;
 }
 
-export default function DocumentCard({ document, viewMode = "grid", categories }: DocumentCardProps) {
+export default function DocumentCard({ document: doc, viewMode = "grid", categories }: DocumentCardProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
@@ -73,7 +57,7 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
 
   // Fetch document summary when needed
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ["/api/documents", document.id, "summary"],
+    queryKey: ["/api/documents", doc.id, "summary"],
     enabled: showSummary,
     retry: false,
   });
@@ -81,150 +65,124 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
   const getFileIcon = (mimeType: string) => {
     if (mimeType.includes('pdf')) return FilePen;
     if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return FileSpreadsheet;
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return FileText;
     if (mimeType.includes('image')) return FileImage;
+    if (mimeType.includes('video')) return FileVideo;
     return FileText;
   };
 
   const getFileIconColor = (mimeType: string) => {
-    if (mimeType.includes('pdf')) return 'text-red-500 bg-red-50';
-    if (mimeType.includes('word')) return 'text-blue-500 bg-blue-50';
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'text-green-500 bg-green-50';
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'text-orange-500 bg-orange-50';
-    if (mimeType.includes('image')) return 'text-purple-500 bg-purple-50';
-    return 'text-slate-500 bg-slate-50';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'processed':
-        return <CheckCircle className="w-3 h-3 text-emerald-500" />;
-      case 'processing':
-        return <Clock className="w-3 h-3 text-amber-500 animate-pulse" />;
-      case 'failed':
-        return <XCircle className="w-3 h-3 text-red-500" />;
-      case 'pending':
-        return <AlertCircle className="w-3 h-3 text-blue-500" />;
-      default:
-        return <Clock className="w-3 h-3 text-slate-400" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'processed':
-        return <Badge className="bg-emerald-100 text-emerald-800">Processed</Badge>;
-      case 'processing':
-        return <Badge className="bg-amber-100 text-amber-800">Processing</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
-      case 'pending':
-        return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
+    if (mimeType.includes('pdf')) return 'bg-red-100 text-red-600';
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'bg-green-100 text-green-600';
+    if (mimeType.includes('image')) return 'bg-purple-100 text-purple-600';
+    if (mimeType.includes('video')) return 'bg-blue-100 text-blue-600';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'bg-blue-100 text-blue-600';
+    return 'bg-gray-100 text-gray-600';
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const formatDate = (dateString: string) => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) {
-      return `${Math.floor(diffInHours * 60)} minutes ago`;
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)} hours ago`;
-    } else if (diffInHours < 48) {
-      return '1 day ago';
-    } else {
-      return `${Math.floor(diffInHours / 24)} days ago`;
-    }
-  };
-
-  const addToVectorMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('PUT', `/api/documents/${document.id}/vector`);
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
       toast({
-        title: "Added to Vector Database",
-        description: "Document is now available for semantic search and AI queries.",
+        title: "Copied to clipboard",
+        description: "Share link has been copied.",
+      });
+    });
+  };
+
+  // Delete document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest(`/api/documents/${doc.id}`, {
+        method: "DELETE",
       });
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      toast({
+        title: "Document deleted",
+        description: "Document has been successfully deleted.",
+      });
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to delete document.",
         variant: "destructive",
       });
     },
   });
 
+  // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('PUT', `/api/documents/${document.id}/favorite`);
-      return response.json();
+      await apiRequest(`/api/documents/${doc.id}/favorite`, {
+        method: "POST",
+      });
     },
     onSuccess: () => {
       setIsFavorite(!isFavorite);
-      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       toast({
         title: isFavorite ? "Removed from favorites" : "Added to favorites",
-        description: `Document ${isFavorite ? 'removed from' : 'added to'} favorites.`,
+        description: `Document ${isFavorite ? 'removed from' : 'added to'} your favorites.`,
       });
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to update favorite status.",
+        description: error.message || "Failed to update favorites.",
         variant: "destructive",
       });
     },
   });
+
+  // Add to vector database mutation
+  const addToVectorMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest(`/api/documents/${doc.id}/vectorize`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      toast({
+        title: "Added to Vector DB",
+        description: "Document has been added to the vector database for AI search.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add to vector database.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleView = () => {
+    toast({
+      title: "View Details",
+      description: "Document details will be displayed here.",
+    });
+  };
 
   const handleViewSummary = () => {
     setShowSummary(true);
   };
 
   const handleDownload = () => {
-    const link = window.document.createElement('a');
-    link.href = `/api/documents/${document.id}/download`;
-    link.download = document.originalName || document.name;
-    window.document.body.appendChild(link);
+    const link = document.createElement('a');
+    link.href = `/api/documents/${doc.id}/download`;
+    link.download = doc.originalName || doc.name;
+    document.body.appendChild(link);
     link.click();
-    window.document.body.removeChild(link);
+    document.body.removeChild(link);
     toast({
       title: "Download started",
       description: "Document download has started.",
@@ -234,123 +192,99 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: document.name || document.originalName,
-        url: window.location.origin + `/documents/${document.id}`
+        title: doc.name || doc.originalName,
+        url: `/documents/${doc.id}`,
+      }).then(() => {
+        toast({
+          title: "Document shared",
+          description: "Share link copied to clipboard.",
+        });
+      }).catch(() => {
+        copyToClipboard(`${window.location.origin}/documents/${doc.id}`);
       });
     } else {
-      navigator.clipboard.writeText(window.location.origin + `/documents/${document.id}`);
-      toast({
-        title: "Link copied",
-        description: "Document link copied to clipboard.",
-      });
+      copyToClipboard(`${window.location.origin}/documents/${doc.id}`);
     }
   };
 
-  const handleView = () => {
-    window.open(`/api/documents/${document.id}/view`, '_blank');
-  };
+  const FileIcon = getFileIcon(doc.mimeType);
+  const iconColorClass = getFileIconColor(doc.mimeType);
 
-  const deleteDocumentMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest('DELETE', `/api/documents/${document.id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
-      toast({
-        title: "Document Deleted",
-        description: "Document has been permanently deleted.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const FileIcon = getFileIcon(document.mimeType || '');
-  const iconColorClass = getFileIconColor(document.mimeType || '');
-
+  // List view layout
   if (viewMode === "list") {
     return (
-      <div className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
-          <FileIcon className="w-5 h-5" />
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-800 truncate">
-            {document.name || document.originalName}
-          </p>
-          <div className="flex items-center space-x-4 mt-1">
-            <span className="text-xs text-slate-500">{formatDate(document.createdAt)}</span>
-            <span className="text-xs text-slate-500">{formatFileSize(document.fileSize)}</span>
-            <div className="flex items-center space-x-2">
-              {/* AI Category with color */}
-              {document.aiCategory && (
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs"
-                  style={{ 
-                    backgroundColor: document.aiCategoryColor + '20',
-                    color: document.aiCategoryColor,
-                    borderColor: document.aiCategoryColor + '40'
-                  }}
-                >
-                  {document.aiCategory}
-                </Badge>
-              )}
-              
-              {/* Manual Category */}
-              {document.categoryId && categories && (
-                (() => {
-                  const category = categories.find(c => c.id === document.categoryId);
-                  return category ? (
-                    <Badge variant="outline" className="text-xs">
-                      {category.name}
-                    </Badge>
-                  ) : null;
-                })()
-              )}
-              
-              {/* AI Tags */}
-              {document.tags && document.tags.length > 0 && (
-                <div className="flex items-center space-x-1">
-                  {document.tags.slice(0, 2).map((tag, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {document.tags.length > 2 && (
-                    <span className="text-xs text-slate-500">+{document.tags.length - 2}</span>
-                  )}
-                </div>
-              )}
+      <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+        <div className="flex items-center space-x-4">
+          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
+            <FileIcon className="w-5 h-5" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">
+              {doc.name || doc.originalName}
+            </h3>
+            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+              <span className="flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {format(new Date(doc.createdAt), 'MMM d, yyyy')}
+              </span>
+              <span className="flex items-center">
+                <HardDrive className="w-3 h-3 mr-1" />
+                {formatFileSize(doc.fileSize)}
+              </span>
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1">
-            {getStatusIcon(document.status || 'pending')}
-            <span className="text-xs text-slate-600 capitalize">{document.status || 'pending'}</span>
-          </div>
+          {doc.aiCategory && (
+            <Badge 
+              variant="outline" 
+              className="text-xs"
+              style={{ 
+                backgroundColor: doc.aiCategoryColor ? `${doc.aiCategoryColor}15` : undefined,
+                borderColor: doc.aiCategoryColor || undefined,
+                color: doc.aiCategoryColor || undefined
+              }}
+            >
+              {doc.aiCategory}
+            </Badge>
+          )}
           
-          {document.isInVectorDb && (
+          {doc.categoryId && categories && (
+            (() => {
+              const category = categories.find(c => c.id === doc.categoryId);
+              return category ? (
+                <Badge variant="outline" className="text-xs">
+                  {category.name}
+                </Badge>
+              ) : null;
+            })()
+          )}
+
+          {doc.tags && doc.tags.length > 0 && (
+            <div className="flex items-center space-x-1">
+              {doc.tags.slice(0, 2).map((tag: string, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  <Hash className="w-2 h-2 mr-1" />
+                  {tag}
+                </Badge>
+              ))}
+              {doc.tags.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{doc.tags.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {doc.status === 'processing' && (
+            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-600 border-yellow-200">
+              Processing
+            </Badge>
+          )}
+          
+          {doc.isInVectorDb && (
             <Badge variant="outline" className="text-xs">
               <Database className="w-3 h-3 mr-1" />
               Vector DB
@@ -387,7 +321,7 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
                 {isFavorite ? <StarOff className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
                 {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
               </DropdownMenuItem>
-              {!document.isInVectorDb && document.status === 'processed' && (
+              {!doc.isInVectorDb && doc.status === 'processed' && (
                 <DropdownMenuItem 
                   onClick={() => addToVectorMutation.mutate()}
                   disabled={addToVectorMutation.isPending}
@@ -411,129 +345,199 @@ export default function DocumentCard({ document, viewMode = "grid", categories }
     );
   }
 
+  // Grid view layout
   return (
-    <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
-            <FileIcon className="w-5 h-5" />
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Share className="mr-2 h-4 w-4" />
-                Share
-              </DropdownMenuItem>
-              {!document.isInVectorDb && document.status === 'processed' && (
-                <DropdownMenuItem 
-                  onClick={() => addToVectorMutation.mutate()}
-                  disabled={addToVectorMutation.isPending}
-                >
-                  <Database className="mr-2 h-4 w-4" />
-                  Add to Vector DB
+    <>
+      <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
+              <FileIcon className="w-5 h-5" />
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleView}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem 
-                className="text-red-600"
-                onClick={() => deleteDocumentMutation.mutate()}
-                disabled={deleteDocumentMutation.isPending}
+                <DropdownMenuItem onClick={handleViewSummary}>
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Content Summary
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownload}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share className="mr-2 h-4 w-4" />
+                  Share
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => toggleFavoriteMutation.mutate()}
+                  disabled={toggleFavoriteMutation.isPending}
+                >
+                  {isFavorite ? <StarOff className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
+                  {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                </DropdownMenuItem>
+                {!doc.isInVectorDb && doc.status === 'processed' && (
+                  <DropdownMenuItem 
+                    onClick={() => addToVectorMutation.mutate()}
+                    disabled={addToVectorMutation.isPending}
+                  >
+                    <Database className="mr-2 h-4 w-4" />
+                    Add to Vector DB
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem 
+                  className="text-red-600"
+                  onClick={() => deleteDocumentMutation.mutate()}
+                  disabled={deleteDocumentMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm text-gray-900 line-clamp-2 leading-tight">
+              {doc.name || doc.originalName}
+            </h3>
+            
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span className="flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {format(new Date(doc.createdAt), 'MMM d, yyyy')}
+              </span>
+              <span className="flex items-center">
+                <HardDrive className="w-3 h-3 mr-1" />
+                {formatFileSize(doc.fileSize)}
+              </span>
+            </div>
+
+            {/* AI Category */}
+            {doc.aiCategory && (
+              <Badge 
+                variant="outline" 
+                className="text-xs w-fit"
+                style={{ 
+                  backgroundColor: doc.aiCategoryColor ? `${doc.aiCategoryColor}15` : undefined,
+                  borderColor: doc.aiCategoryColor || undefined,
+                  color: doc.aiCategoryColor || undefined
+                }}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-800 truncate" title={document.name || document.originalName}>
-            {document.name || document.originalName}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            {getStatusBadge(document.status || 'processed')}
-            {document.isInVectorDb && (
-              <Badge variant="outline" className="text-xs">
-                <Database className="w-3 h-3 mr-1" />
-                Vector
+                {doc.aiCategory}
               </Badge>
             )}
-          </div>
-          
-          <div className="flex items-center space-x-4 text-xs text-slate-500">
-            <span>{formatDate(document.createdAt)}</span>
-            <span>{formatFileSize(document.fileSize)}</span>
-          </div>
-          
-          <div className="space-y-2">
-            {/* AI Category with color */}
-            {document.aiCategory && (
-              <div className="flex items-center gap-1">
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs font-medium"
-                  style={{ 
-                    backgroundColor: document.aiCategoryColor + '20',
-                    color: document.aiCategoryColor,
-                    borderColor: document.aiCategoryColor + '40'
-                  }}
-                >
-                  {document.aiCategory}
-                </Badge>
-                {document.summary && (
-                  <span className="text-xs text-slate-400 truncate" title={document.summary}>
-                    - {document.summary.substring(0, 40)}...
-                  </span>
-                )}
-              </div>
+
+            {/* Summary */}
+            {doc.summary && (
+              <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                {doc.summary}
+              </p>
             )}
-            
-            {/* Manual Category */}
-            {document.categoryId && categories && (
-              <div className="flex items-center gap-1">
-                {(() => {
-                  const category = categories.find(c => c.id === document.categoryId);
-                  return category ? (
-                    <Badge variant="outline" className="text-xs">
-                      {category.name}
-                    </Badge>
-                  ) : null;
-                })()}
-              </div>
+
+            {/* User Category */}
+            {doc.categoryId && categories && (
+              (() => {
+                const category = categories.find(c => c.id === doc.categoryId);
+                return category ? (
+                  <Badge variant="outline" className="text-xs w-fit">
+                    {category.name}
+                  </Badge>
+                ) : null;
+              })()
             )}
-            
-            {/* AI Generated Tags */}
-            {document.tags && document.tags.length > 0 && (
+
+            {/* Tags */}
+            {doc.tags && doc.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {document.tags.slice(0, 3).map((tag, index) => (
+                {doc.tags.slice(0, 3).map((tag: string, index: number) => (
                   <Badge key={index} variant="outline" className="text-xs">
+                    <Hash className="w-2 h-2 mr-1" />
                     {tag}
                   </Badge>
                 ))}
-                {document.tags.length > 3 && (
+                {doc.tags.length > 3 && (
                   <Badge variant="outline" className="text-xs">
-                    +{document.tags.length - 3}
+                    +{doc.tags.length - 3}
                   </Badge>
                 )}
               </div>
             )}
+
+            {/* Status and Vector DB badges */}
+            <div className="flex items-center gap-2">
+              {doc.status === 'processing' && (
+                <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-600 border-yellow-200">
+                  Processing
+                </Badge>
+              )}
+              
+              {doc.isInVectorDb && (
+                <Badge variant="outline" className="text-xs">
+                  <Database className="w-3 h-3 mr-1" />
+                  Vector DB
+                </Badge>
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Content Summary Dialog */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <BookOpen className="w-5 h-5" />
+              <span>Content Summary</span>
+            </DialogTitle>
+            <DialogDescription>
+              AI-generated summary of {doc.name || doc.originalName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {summaryLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-2 text-gray-600">Generating summary...</span>
+              </div>
+            ) : summaryData?.summary ? (
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 leading-relaxed">{summaryData.summary}</p>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No summary available for this document.</p>
+                <p className="text-sm text-gray-400 mt-1">The document may not contain extractable text content.</p>
+              </div>
+            )}
+            
+            {doc.tags && doc.tags.length > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Related Tags</h4>
+                <div className="flex flex-wrap gap-2">
+                  {doc.tags.map((tag: string, index: number) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      <Hash className="w-2 h-2 mr-1" />
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
