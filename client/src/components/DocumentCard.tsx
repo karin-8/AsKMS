@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +7,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { 
@@ -23,9 +31,13 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  BookOpen,
+  Hash,
+  Star,
+  StarOff
 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -56,6 +68,15 @@ interface DocumentCardProps {
 export default function DocumentCard({ document, viewMode = "grid", categories }: DocumentCardProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showSummary, setShowSummary] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // Fetch document summary when needed
+  const { data: summaryData, isLoading: summaryLoading } = useQuery({
+    queryKey: ["/api/documents", document.id, "summary"],
+    enabled: showSummary,
+    retry: false,
+  });
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.includes('pdf')) return FilePen;

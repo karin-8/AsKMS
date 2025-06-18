@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
-import Settings from "@/pages/Settings";
+import Admin from "@/pages/Admin";
 import Landing from "@/pages/Landing";
 import AIAssistant from "@/pages/AIAssistant";
 
@@ -25,7 +25,7 @@ function Router() {
           <Route path="/documents" component={Documents} />
           <Route path="/categories" component={Categories} />
           <Route path="/ai-assistant" component={AIAssistant} />
-          <Route path="/settings" component={Settings} />
+          <Route path="/settings" component={Admin} />
         </>
       )}
       <Route component={NotFound} />
