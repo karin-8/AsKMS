@@ -74,6 +74,12 @@ export default function AIAssistant() {
   // Get messages for current conversation
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+    queryFn: async () => {
+      if (!currentConversationId) return [];
+      const response = await fetch(`/api/chat/conversations/${currentConversationId}/messages`);
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      return response.json();
+    },
     enabled: !!currentConversationId && isAuthenticated,
     retry: false,
   });
@@ -121,7 +127,8 @@ export default function AIAssistant() {
       if (!currentConversationId) {
         throw new Error("No conversation selected");
       }
-      const response = await apiRequest('POST', `/api/chat/conversations/${currentConversationId}/message`, {
+      const response = await apiRequest('POST', '/api/chat/messages', {
+        conversationId: currentConversationId,
         content,
       });
       return await response.json();
@@ -159,7 +166,14 @@ export default function AIAssistant() {
     // Create conversation if none exists
     if (!currentConversationId) {
       const title = messageInput.slice(0, 50) + (messageInput.length > 50 ? "..." : "");
-      await createConversationMutation.mutateAsync(title);
+      const conversation = await createConversationMutation.mutateAsync(title);
+      if (conversation) {
+        setCurrentConversationId(conversation.id);
+        // Now send the message
+        setTimeout(() => {
+          sendMessageMutation.mutate(messageInput);
+        }, 100);
+      }
       return;
     }
 
