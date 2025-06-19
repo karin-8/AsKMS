@@ -289,14 +289,19 @@ export class DatabaseConnector {
     try {
       const auth = Buffer.from(`${connection.username}:${connection.password}`).toString('base64');
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
       const response = await fetch(`${connection.apiUrl}/fscmRestApi/resources/11.13.18.05/`, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Accept': 'application/json',
         },
-        timeout: 10000,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         return { 

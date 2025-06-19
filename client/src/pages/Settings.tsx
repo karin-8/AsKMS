@@ -76,6 +76,7 @@ const authTypes = [
 ];
 
 const connectionTemplates = [
+  // Database Templates
   {
     name: 'PostgreSQL Production',
     description: 'Standard PostgreSQL production database configuration',
@@ -99,6 +100,17 @@ const connectionTemplates = [
     }
   },
   {
+    name: 'Oracle Database',
+    description: 'Oracle Database Enterprise Edition',
+    type: 'database' as const,
+    config: {
+      dbType: 'oracle',
+      port: 1521,
+      name: 'Oracle Database',
+      description: 'Oracle Enterprise Database'
+    }
+  },
+  {
     name: 'Snowflake Data Warehouse',
     description: 'Cloud data warehouse for large-scale analytics',
     type: 'database' as const,
@@ -109,6 +121,7 @@ const connectionTemplates = [
       description: 'Cloud data warehouse'
     }
   },
+  // API Templates
   {
     name: 'REST API Integration',
     description: 'Standard REST API with Bearer token authentication',
@@ -130,6 +143,48 @@ const connectionTemplates = [
       name: 'GraphQL API',
       description: 'GraphQL API endpoint'
     }
+  },
+  // Enterprise System Templates
+  {
+    name: 'Salesforce CRM',
+    description: 'Connect to Salesforce CRM for customer data and sales analytics',
+    type: 'enterprise' as const,
+    config: {
+      enterpriseType: 'salesforce',
+      name: 'Salesforce CRM',
+      description: 'Salesforce Customer Relationship Management',
+      apiUrl: 'https://login.salesforce.com'
+    }
+  },
+  {
+    name: 'SAP Business Suite',
+    description: 'Connect to SAP ERP for business process data and analytics',
+    type: 'enterprise' as const,
+    config: {
+      enterpriseType: 'sap',
+      name: 'SAP ERP System',
+      description: 'SAP Enterprise Resource Planning'
+    }
+  },
+  {
+    name: 'Oracle ERP Cloud',
+    description: 'Connect to Oracle ERP Cloud for financial and operational data',
+    type: 'enterprise' as const,
+    config: {
+      enterpriseType: 'oracle_erp',
+      name: 'Oracle ERP Cloud',
+      description: 'Oracle Enterprise Resource Planning Cloud'
+    }
+  },
+  {
+    name: 'Microsoft Dynamics 365',
+    description: 'Connect to Microsoft Dynamics 365 for business applications',
+    type: 'enterprise' as const,
+    config: {
+      enterpriseType: 'microsoft_dynamics',
+      name: 'Microsoft Dynamics 365',
+      description: 'Microsoft Business Applications Platform'
+    }
   }
 ];
 
@@ -141,7 +196,7 @@ export default function Settings() {
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<DataConnection | null>(null);
-  const [connectionType, setConnectionType] = useState<'database' | 'api'>('database');
+  const [connectionType, setConnectionType] = useState<'database' | 'api' | 'enterprise'>('database');
   const [formData, setFormData] = useState({
     name: '',
     description: '',

@@ -668,8 +668,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const connectionId = parseInt(req.params.id);
+      const connection = await storage.getDataConnection(connectionId, userId);
       
-      const result = await storage.testDataConnection(connectionId, userId);
+      if (!connection) {
+        return res.status(404).json({ message: "Connection not found" });
+      }
+
+      // Import database connector
+      const { databaseConnector } = await import('./services/databaseConnector');
+      
+      // Transform connection data for connector
+      const connectorData = {
+        id: connection.id,
+        type: connection.type as 'database' | 'api' | 'enterprise',
+        dbType: connection.dbType || undefined,
+        host: connection.host || undefined,
+        port: connection.port || undefined,
+        database: connection.database || undefined,
+        username: connection.username || undefined,
+        password: connection.password || undefined,
+        apiUrl: connection.apiUrl || undefined,
+        authType: connection.authType || undefined,
+        apiKey: connection.authConfig?.apiKey || undefined,
+        bearerToken: connection.authConfig?.bearerToken || undefined,
+        enterpriseType: connection.enterpriseType || undefined,
+      };
+
+      const result = await databaseConnector.testConnection(connectorData);
+      
+      // Update connection test status
+      await storage.updateDataConnection(connectionId, {
+        lastTested: new Date(),
+        testStatus: result.success ? 'success' : 'failed',
+        testMessage: result.message,
+      }, userId);
+
       res.json(result);
     } catch (error) {
       console.error("Error testing data connection:", error);
