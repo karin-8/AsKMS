@@ -106,7 +106,7 @@ export const dataConnections = pgTable("data_connections", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: varchar("name").notNull(),
   description: text("description"),
-  type: varchar("type").notNull(), // 'database' or 'api'
+  type: varchar("type").notNull(), // 'database', 'api', or 'enterprise'
   
   // Database connection fields
   dbType: varchar("db_type"), // 'postgresql', 'mysql', 'sqlserver', 'oracle', 'redshift', 'snowflake', 'tidb'
@@ -124,6 +124,12 @@ export const dataConnections = pgTable("data_connections", {
   body: text("body"),
   authType: varchar("auth_type"), // 'none', 'basic', 'bearer', 'api_key'
   authConfig: jsonb("auth_config"), // stores auth credentials
+  
+  // Enterprise system fields
+  enterpriseType: varchar("enterprise_type"), // 'salesforce', 'sap', 'oracle_erp', 'microsoft_dynamics'
+  instanceUrl: varchar("instance_url"), // For Salesforce, SAP, etc.
+  clientId: varchar("client_id"),
+  clientSecret: varchar("client_secret"),
   
   isActive: boolean("is_active").default(true),
   lastTested: timestamp("last_tested"),
