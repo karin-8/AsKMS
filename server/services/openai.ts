@@ -232,6 +232,58 @@ Respond with JSON in this exact format:
   }
 }
 
+export async function generateDatabaseResponse(userMessage: string, schema: any, suggestions: string[]): Promise<string> {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  // Prepare database schema context
+  const schemaContext = schema.tables.map((table: any) => `
+Table: ${table.name}
+Columns: ${table.columns.map((col: any) => `${col.name} (${col.type})`).join(', ')}
+  `).join('\n\n');
+
+  const prompt = `You are an AI assistant that helps users interact with their database using natural language.
+
+Database Schema:
+${schemaContext}
+
+Available SQL Query Suggestions:
+${suggestions.join('\n')}
+
+User Question: ${userMessage}
+
+Based on the database schema and user question, please:
+1. Provide a helpful response explaining what data might be available
+2. Suggest specific SQL queries that would answer their question
+3. Explain what the results would show
+
+Format your response in a clear, conversational way that helps the user understand how to get the information they need from their database.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful database assistant. Help users understand their data and suggest appropriate SQL queries based on their questions."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7,
+    });
+
+    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a database response.";
+  } catch (error) {
+    console.error('OpenAI API error for database response:', error);
+    throw new Error('Failed to generate database response');
+  }
+}
+
 export async function generateChatResponse(userMessage: string, documents: Document[]): Promise<string> {
   try {
     // Prepare context from documents

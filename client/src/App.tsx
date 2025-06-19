@@ -38,6 +38,7 @@ function Router() {
           <Route path="/documents" component={Documents} />
           <Route path="/categories" component={Categories} />
           <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/integrations" component={Integrations} />
           <Route path="/admin" component={Admin} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />

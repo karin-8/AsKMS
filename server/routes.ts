@@ -710,6 +710,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database query endpoints
+  app.post('/api/data-connections/:id/query', isAuthenticated, async (req: any, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const { query } = req.body;
+
+      if (!query) {
+        return res.status(400).json({ message: "SQL query is required" });
+      }
+
+      const { databaseQueryService } = await import('./services/databaseQueryService');
+      const result = await databaseQueryService.executeQuery(connectionId, query, userId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error executing database query:", error);
+      res.status(500).json({ message: "Failed to execute query" });
+    }
+  });
+
+  app.get('/api/data-connections/:id/schema', isAuthenticated, async (req: any, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      const { databaseQueryService } = await import('./services/databaseQueryService');
+      const schema = await databaseQueryService.getDatabaseSchema(connectionId, userId);
+      
+      if (!schema) {
+        return res.status(404).json({ message: "Database schema not found" });
+      }
+
+      res.json(schema);
+    } catch (error) {
+      console.error("Error fetching database schema:", error);
+      res.status(500).json({ message: "Failed to fetch database schema" });
+    }
+  });
+
+  app.post('/api/chat/database', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { message, connectionId } = req.body;
+
+      if (!message || !connectionId) {
+        return res.status(400).json({ message: "Message and connection ID are required" });
+      }
+
+      // Get database schema for context
+      const { databaseQueryService } = await import('./services/databaseQueryService');
+      const schema = await databaseQueryService.getDatabaseSchema(connectionId, userId);
+      
+      if (!schema) {
+        return res.status(404).json({ message: "Database connection not found" });
+      }
+
+      // Generate SQL query suggestions based on user question
+      const suggestions = await databaseQueryService.suggestQueries(connectionId, userId, message);
+
+      // Use OpenAI to generate a response and SQL query
+      const { generateDatabaseResponse } = await import('./services/openai');
+      const response = await generateDatabaseResponse(message, schema, suggestions);
+
+      res.json({
+        response,
+        schema,
+        suggestions
+      });
+    } catch (error) {
+      console.error("Error processing database chat:", error);
+      res.status(500).json({ message: "Failed to process database chat" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
