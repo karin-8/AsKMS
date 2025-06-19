@@ -74,12 +74,6 @@ export default function AIAssistant() {
   // Get messages for current conversation
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
-    queryFn: async () => {
-      if (!currentConversationId) return [];
-      const response = await fetch(`/api/chat/conversations/${currentConversationId}/messages`);
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      return response.json();
-    },
     enabled: !!currentConversationId && isAuthenticated,
     retry: false,
   });
@@ -469,7 +463,12 @@ export default function AIAssistant() {
                               {conversation.title}
                             </h4>
                             <p className="text-xs text-gray-500 mt-1">
-                              {new Date(conversation.createdAt).toLocaleDateString()}
+                              {new Date(conversation.createdAt).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
                             </p>
                           </button>
                         ))}
