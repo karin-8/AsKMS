@@ -5,6 +5,7 @@ import {
   chatConversations,
   chatMessages,
   documentAccess,
+  dataConnections,
   type User,
   type UpsertUser,
   type Category,
@@ -17,6 +18,9 @@ import {
   type ChatMessage,
   type InsertChatMessage,
   type DocumentAccess,
+  type DataConnection,
+  type InsertDataConnection,
+  type UpdateDataConnection,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
@@ -59,6 +63,14 @@ export interface IStorage {
   
   // Access logging
   logDocumentAccess(documentId: number, userId: string, accessType: string): Promise<void>;
+  
+  // Data connection operations
+  getDataConnections(userId: string): Promise<DataConnection[]>;
+  getDataConnection(id: number, userId: string): Promise<DataConnection | undefined>;
+  createDataConnection(connection: InsertDataConnection): Promise<DataConnection>;
+  updateDataConnection(id: number, connection: UpdateDataConnection, userId: string): Promise<DataConnection>;
+  deleteDataConnection(id: number, userId: string): Promise<void>;
+  testDataConnection(id: number, userId: string): Promise<{ success: boolean; message: string }>;
 }
 
 export class DatabaseStorage implements IStorage {

@@ -100,12 +100,45 @@ export const documentAccess = pgTable("document_access", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Data connections table for database and API connections
+export const dataConnections = pgTable("data_connections", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: varchar("type").notNull(), // 'database' or 'api'
+  
+  // Database connection fields
+  dbType: varchar("db_type"), // 'postgresql', 'mysql', 'sqlserver', 'oracle', 'redshift', 'snowflake', 'tidb'
+  host: varchar("host"),
+  port: integer("port"),
+  database: varchar("database"),
+  username: varchar("username"),
+  password: varchar("password"), // encrypted
+  connectionString: text("connection_string"), // encrypted
+  
+  // API connection fields
+  apiUrl: text("api_url"),
+  method: varchar("method"), // 'GET', 'POST', 'PUT', 'DELETE'
+  headers: jsonb("headers"),
+  body: text("body"),
+  authType: varchar("auth_type"), // 'none', 'basic', 'bearer', 'api_key'
+  authConfig: jsonb("auth_config"), // stores auth credentials
+  
+  isActive: boolean("is_active").default(true),
+  lastTested: timestamp("last_tested"),
+  testStatus: varchar("test_status"), // 'success', 'failed', 'pending'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   documents: many(documents),
   categories: many(categories),
   chatConversations: many(chatConversations),
   documentAccess: many(documentAccess),
+  dataConnections: many(dataConnections),
 }));
 
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -154,6 +187,13 @@ export const documentAccessRelations = relations(documentAccess, ({ one }) => ({
   }),
 }));
 
+export const dataConnectionsRelations = relations(dataConnections, ({ one }) => ({
+  user: one(users, {
+    fields: [dataConnections.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
@@ -182,6 +222,18 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export const insertDataConnectionSchema = createInsertSchema(dataConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateDataConnectionSchema = createInsertSchema(dataConnections).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -195,3 +247,6 @@ export type InsertChatConversation = z.infer<typeof insertChatConversationSchema
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type DocumentAccess = typeof documentAccess.$inferSelect;
+export type DataConnection = typeof dataConnections.$inferSelect;
+export type InsertDataConnection = z.infer<typeof insertDataConnectionSchema>;
+export type UpdateDataConnection = z.infer<typeof updateDataConnectionSchema>;
