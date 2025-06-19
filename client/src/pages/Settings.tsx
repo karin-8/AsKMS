@@ -75,12 +75,71 @@ const authTypes = [
   { value: 'api_key', label: 'API Key' },
 ];
 
+const connectionTemplates = [
+  {
+    name: 'PostgreSQL Production',
+    description: 'Standard PostgreSQL production database configuration',
+    type: 'database' as const,
+    config: {
+      dbType: 'postgresql',
+      port: 5432,
+      name: 'Production Database',
+      description: 'Production PostgreSQL database'
+    }
+  },
+  {
+    name: 'MySQL Analytics',
+    description: 'MySQL database optimized for analytics workloads',
+    type: 'database' as const,
+    config: {
+      dbType: 'mysql',
+      port: 3306,
+      name: 'Analytics Database',
+      description: 'MySQL analytics database'
+    }
+  },
+  {
+    name: 'Snowflake Data Warehouse',
+    description: 'Cloud data warehouse for large-scale analytics',
+    type: 'database' as const,
+    config: {
+      dbType: 'snowflake',
+      port: 443,
+      name: 'Snowflake Warehouse',
+      description: 'Cloud data warehouse'
+    }
+  },
+  {
+    name: 'REST API Integration',
+    description: 'Standard REST API with Bearer token authentication',
+    type: 'api' as const,
+    config: {
+      method: 'GET',
+      authType: 'bearer',
+      name: 'API Integration',
+      description: 'REST API integration'
+    }
+  },
+  {
+    name: 'GraphQL API',
+    description: 'GraphQL API endpoint with custom headers',
+    type: 'api' as const,
+    config: {
+      method: 'POST',
+      authType: 'bearer',
+      name: 'GraphQL API',
+      description: 'GraphQL API endpoint'
+    }
+  }
+];
+
 export default function Settings() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<DataConnection | null>(null);
   const [connectionType, setConnectionType] = useState<'database' | 'api'>('database');
   const [formData, setFormData] = useState({
@@ -321,6 +380,16 @@ export default function Settings() {
     setCustomHeaders(customHeaders.filter((_, i) => i !== index));
   };
 
+  const applyTemplate = (template: typeof connectionTemplates[0]) => {
+    setConnectionType(template.type);
+    setFormData(prev => ({
+      ...prev,
+      ...template.config
+    }));
+    setIsTemplateModalOpen(false);
+    setIsConnectionModalOpen(true);
+  };
+
   if (isLoading || !isAuthenticated) {
     return null;
   }
@@ -506,14 +575,24 @@ export default function Settings() {
                       <Database className="w-5 h-5 mr-2" />
                       Data Connections
                     </CardTitle>
-                    <Button 
-                      onClick={() => openConnectionModal()}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Connection
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        onClick={() => openConnectionModal()}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Connection
+                      </Button>
+                      <Button 
+                        onClick={() => setIsTemplateModalOpen(true)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Database className="w-4 h-4 mr-2" />
+                        Templates
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-sm text-slate-500 mt-1">
                     Configure database and API connections for enhanced AI chat capabilities
@@ -525,80 +604,165 @@ export default function Settings() {
                       <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p className="font-medium">No data connections configured</p>
                       <p className="text-xs mt-1">Connect to databases or APIs to enable chat-with-data functionality</p>
+                      <div className="mt-4 flex justify-center space-x-2">
+                        <Button 
+                          onClick={() => openConnectionModal()}
+                          size="sm"
+                          variant="outline"
+                          className="border-dashed"
+                        >
+                          <Database className="w-4 h-4 mr-2" />
+                          Add Database
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            setConnectionType('api');
+                            openConnectionModal();
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="border-dashed"
+                        >
+                          <Globe className="w-4 h-4 mr-2" />
+                          Add API
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
+                      {/* Connection Statistics */}
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <Database className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800">Databases</span>
+                          </div>
+                          <p className="text-xl font-bold text-blue-900 mt-1">
+                            {connections.filter(c => c.type === 'database').length}
+                          </p>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <Globe className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">APIs</span>
+                          </div>
+                          <p className="text-xl font-bold text-green-900 mt-1">
+                            {connections.filter(c => c.type === 'api').length}
+                          </p>
+                        </div>
+                        <div className="bg-yellow-50 p-3 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-4 h-4 text-yellow-600" />
+                            <span className="text-sm font-medium text-yellow-800">Active</span>
+                          </div>
+                          <p className="text-xl font-bold text-yellow-900 mt-1">
+                            {connections.filter(c => c.isActive).length}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Connection List */}
                       {connections.map((connection: DataConnection) => (
-                        <div key={connection.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-white rounded-lg">
-                              {connection.type === 'database' ? (
-                                <Database className="w-5 h-5 text-blue-600" />
-                              ) : (
-                                <Globe className="w-5 h-5 text-green-600" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-slate-800">{connection.name}</h4>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Badge 
-                                  variant={connection.type === 'database' ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {connection.type === 'database' ? connection.dbType?.toUpperCase() : connection.method}
-                                </Badge>
-                                <Badge 
-                                  variant={connection.isActive ? 'default' : 'destructive'}
-                                  className="text-xs"
-                                >
-                                  {connection.isActive ? 'Active' : 'Inactive'}
-                                </Badge>
-                                {connection.testStatus && (
-                                  <Badge 
-                                    variant={connection.testStatus === 'success' ? 'default' : 'destructive'}
-                                    className="text-xs"
-                                  >
-                                    {connection.testStatus === 'success' ? 'Connected' : 'Failed'}
-                                  </Badge>
+                        <div key={connection.id} className="group hover:shadow-md transition-shadow duration-200 p-4 bg-white rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className={`p-2 rounded-lg ${
+                                connection.type === 'database' 
+                                  ? 'bg-blue-100' 
+                                  : 'bg-green-100'
+                              }`}>
+                                {connection.type === 'database' ? (
+                                  <Database className={`w-5 h-5 ${
+                                    connection.type === 'database' 
+                                      ? 'text-blue-600' 
+                                      : 'text-green-600'
+                                  }`} />
+                                ) : (
+                                  <Globe className="w-5 h-5 text-green-600" />
                                 )}
                               </div>
-                              {connection.description && (
-                                <p className="text-xs text-slate-500 mt-1">{connection.description}</p>
-                              )}
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-sm font-medium text-slate-800">{connection.name}</h4>
+                                  <div className="flex items-center space-x-1">
+                                    <Badge 
+                                      variant={connection.type === 'database' ? 'default' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {connection.type === 'database' ? connection.dbType?.toUpperCase() : connection.method}
+                                    </Badge>
+                                    <Badge 
+                                      variant={connection.isActive ? 'default' : 'destructive'}
+                                      className="text-xs"
+                                    >
+                                      {connection.isActive ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                    {connection.testStatus && (
+                                      <Badge 
+                                        variant={connection.testStatus === 'success' ? 'default' : 'destructive'}
+                                        className="text-xs"
+                                      >
+                                        {connection.testStatus === 'success' ? 'Connected' : 'Failed'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                {connection.description && (
+                                  <p className="text-xs text-slate-500 mt-1">{connection.description}</p>
+                                )}
+                                {connection.type === 'database' && connection.host && (
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    {connection.host}:{connection.port} / {connection.database}
+                                  </p>
+                                )}
+                                {connection.type === 'api' && connection.apiUrl && (
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    {connection.apiUrl}
+                                  </p>
+                                )}
+                                {connection.lastTested && (
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Last tested: {new Date(connection.lastTested).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => testConnectionMutation.mutate(connection.id)}
-                              disabled={testConnectionMutation.isPending}
-                            >
-                              {testConnectionMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <TestTube className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openConnectionModal(connection)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteConnectionMutation.mutate(connection.id)}
-                              disabled={deleteConnectionMutation.isPending}
-                            >
-                              {deleteConnectionMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                              )}
-                            </Button>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => testConnectionMutation.mutate(connection.id)}
+                                disabled={testConnectionMutation.isPending}
+                                title="Test Connection"
+                              >
+                                {testConnectionMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <TestTube className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openConnectionModal(connection)}
+                                title="Edit Connection"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteConnectionMutation.mutate(connection.id)}
+                                disabled={deleteConnectionMutation.isPending}
+                                title="Delete Connection"
+                              >
+                                {deleteConnectionMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -871,6 +1035,73 @@ export default function Settings() {
               </div>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Connection Templates Modal */}
+      <Dialog open={isTemplateModalOpen} onOpenChange={setIsTemplateModalOpen}>
+        <DialogContent className="max-w-3xl w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Database className="w-5 h-5" />
+              <span>Connection Templates</span>
+            </DialogTitle>
+            <p className="text-sm text-slate-500 mt-2">
+              Choose from pre-configured templates to quickly set up common database and API connections
+            </p>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            {connectionTemplates.map((template, index) => (
+              <div 
+                key={index}
+                className="group cursor-pointer p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                onClick={() => applyTemplate(template)}
+              >
+                <div className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-lg ${
+                    template.type === 'database' ? 'bg-blue-100' : 'bg-green-100'
+                  }`}>
+                    {template.type === 'database' ? (
+                      <Database className={`w-5 h-5 ${
+                        template.type === 'database' ? 'text-blue-600' : 'text-green-600'
+                      }`} />
+                    ) : (
+                      <Globe className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-slate-800 group-hover:text-blue-600 transition-colors">
+                      {template.name}
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {template.description}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge 
+                        variant={template.type === 'database' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {template.type === 'database' ? template.config.dbType?.toUpperCase() : template.config.method}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {template.type}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <p className="text-sm text-slate-500">
+              Click on a template to use it as a starting point for your connection
+            </p>
+            <Button variant="outline" onClick={() => setIsTemplateModalOpen(false)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
