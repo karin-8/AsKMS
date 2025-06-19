@@ -74,6 +74,11 @@ export default function AIAssistant() {
   // Get messages for current conversation
   const { data: messages, isLoading: messagesLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+    queryFn: async () => {
+      if (!currentConversationId) return [];
+      const response = await apiRequest('GET', `/api/chat/conversations/${currentConversationId}/messages`);
+      return await response.json();
+    },
     enabled: !!currentConversationId && isAuthenticated,
     retry: false,
   });

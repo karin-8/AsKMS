@@ -43,6 +43,11 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   // Get messages for current conversation
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+    queryFn: async () => {
+      if (!currentConversationId) return [];
+      const response = await apiRequest('GET', `/api/chat/conversations/${currentConversationId}/messages`);
+      return await response.json();
+    },
     enabled: !!currentConversationId,
   });
 
