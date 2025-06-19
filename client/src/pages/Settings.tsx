@@ -33,14 +33,15 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  X
+  X,
+  Building
 } from "lucide-react";
 
 interface DataConnection {
   id: number;
   name: string;
   description?: string;
-  type: 'database' | 'api';
+  type: 'database' | 'api' | 'enterprise';
   dbType?: string;
   host?: string;
   port?: number;
@@ -51,6 +52,10 @@ interface DataConnection {
   headers?: Record<string, string>;
   body?: string;
   authType?: string;
+  enterpriseType?: string;
+  instanceUrl?: string;
+  clientId?: string;
+  clientSecret?: string;
   isActive: boolean;
   testStatus?: string;
   lastTested?: string;
@@ -213,6 +218,10 @@ export default function Settings() {
     body: '',
     authType: 'none',
     authConfig: {},
+    enterpriseType: 'salesforce',
+    instanceUrl: '',
+    clientId: '',
+    clientSecret: '',
   });
   const [customHeaders, setCustomHeaders] = useState<Array<{ key: string; value: string }>>([]);
 
