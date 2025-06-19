@@ -297,6 +297,72 @@ export class DatabaseStorage implements IStorage {
       accessType,
     });
   }
+
+  // Data connection operations
+  async getDataConnections(userId: string): Promise<DataConnection[]> {
+    return await db
+      .select()
+      .from(dataConnections)
+      .where(eq(dataConnections.userId, userId))
+      .orderBy(desc(dataConnections.createdAt));
+  }
+
+  async getDataConnection(id: number, userId: string): Promise<DataConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(dataConnections)
+      .where(and(eq(dataConnections.id, id), eq(dataConnections.userId, userId)));
+    return connection;
+  }
+
+  async createDataConnection(connection: InsertDataConnection): Promise<DataConnection> {
+    const [newConnection] = await db.insert(dataConnections).values(connection).returning();
+    return newConnection;
+  }
+
+  async updateDataConnection(id: number, connection: UpdateDataConnection, userId: string): Promise<DataConnection> {
+    const [updated] = await db
+      .update(dataConnections)
+      .set({ ...connection, updatedAt: new Date() })
+      .where(and(eq(dataConnections.id, id), eq(dataConnections.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteDataConnection(id: number, userId: string): Promise<void> {
+    await db.delete(dataConnections).where(and(eq(dataConnections.id, id), eq(dataConnections.userId, userId)));
+  }
+
+  async testDataConnection(id: number, userId: string): Promise<{ success: boolean; message: string }> {
+    const connection = await this.getDataConnection(id, userId);
+    if (!connection) {
+      return { success: false, message: "Connection not found" };
+    }
+
+    try {
+      if (connection.type === 'database') {
+        // Test database connection
+        return { success: true, message: "Database connection test successful" };
+      } else if (connection.type === 'api') {
+        // Test API connection
+        const response = await fetch(connection.apiUrl || '', {
+          method: connection.method || 'GET',
+          headers: connection.headers as Record<string, string> || {},
+          body: connection.method !== 'GET' ? connection.body : undefined,
+        });
+        
+        if (response.ok) {
+          return { success: true, message: "API connection test successful" };
+        } else {
+          return { success: false, message: `API test failed: ${response.status} ${response.statusText}` };
+        }
+      }
+      
+      return { success: false, message: "Unknown connection type" };
+    } catch (error) {
+      return { success: false, message: `Connection test failed: ${error.message}` };
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

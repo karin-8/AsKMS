@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema, type Document as DocType } from "@shared/schema";
+import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema, insertDataConnectionSchema, updateDataConnectionSchema, type Document as DocType } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -593,6 +593,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Data connection management routes
+  app.get('/api/data-connections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connections = await storage.getDataConnections(userId);
+      res.json(connections);
+    } catch (error) {
+      console.error("Error fetching data connections:", error);
+      res.status(500).json({ message: "Failed to fetch data connections" });
+    }
+  });
+
+  app.post('/api/data-connections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionData = insertDataConnectionSchema.parse({ ...req.body, userId });
+      const connection = await storage.createDataConnection(connectionData);
+      res.json(connection);
+    } catch (error) {
+      console.error("Error creating data connection:", error);
+      res.status(500).json({ message: "Failed to create data connection" });
+    }
+  });
+
+  app.get('/api/data-connections/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionId = parseInt(req.params.id);
+      const connection = await storage.getDataConnection(connectionId, userId);
+      
+      if (!connection) {
+        return res.status(404).json({ message: "Data connection not found" });
+      }
+      
+      res.json(connection);
+    } catch (error) {
+      console.error("Error fetching data connection:", error);
+      res.status(500).json({ message: "Failed to fetch data connection" });
+    }
+  });
+
+  app.put('/api/data-connections/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionId = parseInt(req.params.id);
+      const connectionData = updateDataConnectionSchema.parse(req.body);
+      
+      const connection = await storage.updateDataConnection(connectionId, connectionData, userId);
+      res.json(connection);
+    } catch (error) {
+      console.error("Error updating data connection:", error);
+      res.status(500).json({ message: "Failed to update data connection" });
+    }
+  });
+
+  app.delete('/api/data-connections/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionId = parseInt(req.params.id);
+      
+      await storage.deleteDataConnection(connectionId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting data connection:", error);
+      res.status(500).json({ message: "Failed to delete data connection" });
+    }
+  });
+
+  app.post('/api/data-connections/:id/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionId = parseInt(req.params.id);
+      
+      const result = await storage.testDataConnection(connectionId, userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing data connection:", error);
+      res.status(500).json({ message: "Failed to test data connection" });
     }
   });
 
