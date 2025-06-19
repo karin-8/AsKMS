@@ -12,6 +12,7 @@ import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
 import Landing from "@/pages/Landing";
 import AIAssistant from "@/pages/AIAssistant";
+import Integrations from "@/pages/Integrations";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
