@@ -122,7 +122,7 @@ export default function Settings() {
     queryKey: ['/api/data-connections'],
     enabled: isAuthenticated,
     retry: false,
-  });
+  }) as { data: DataConnection[], refetch: () => void };
 
   // Create/Update connection mutation
   const saveConnectionMutation = useMutation({
@@ -355,28 +355,28 @@ export default function Settings() {
                   <div className="flex flex-col items-center text-center">
                     <Avatar className="w-20 h-20 mb-4">
                       <AvatarImage 
-                        src={user?.profileImageUrl} 
-                        alt={`${user?.firstName} ${user?.lastName}`}
+                        src={(user as any)?.profileImageUrl} 
+                        alt={`${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`}
                         className="object-cover"
                       />
                       <AvatarFallback className="text-lg">
-                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        {(user as any)?.firstName?.[0] || 'U'}{(user as any)?.lastName?.[0] || 'S'}
                       </AvatarFallback>
                     </Avatar>
                     
                     <h3 className="text-lg font-semibold text-slate-800 mb-1">
-                      {user?.firstName} {user?.lastName}
+                      {(user as any)?.firstName || ''} {(user as any)?.lastName || ''}
                     </h3>
                     
                     <p className="text-sm text-slate-500 mb-3">
-                      {user?.email}
+                      {(user as any)?.email || ''}
                     </p>
                     
                     <Badge 
-                      variant={user?.role === "admin" ? "default" : "secondary"}
+                      variant={(user as any)?.role === "admin" ? "default" : "secondary"}
                       className="mb-4"
                     >
-                      {user?.role === "admin" ? "Administrator" : "User"}
+                      {(user as any)?.role === "admin" ? "Administrator" : "User"}
                     </Badge>
                     
                     <Button 

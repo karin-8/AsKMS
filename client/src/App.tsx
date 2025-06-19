@@ -9,26 +9,39 @@ import Dashboard from "@/pages/Dashboard";
 import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
 import Admin from "@/pages/Admin";
+import Settings from "@/pages/Settings";
 import Landing from "@/pages/Landing";
 import AIAssistant from "@/pages/AIAssistant";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+      {!isAuthenticated ? (
+        <>
+          <Route path="/" component={Landing} />
+          <Route component={Landing} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/documents" component={Documents} />
           <Route path="/categories" component={Categories} />
           <Route path="/ai-assistant" component={AIAssistant} />
-          <Route path="/settings" component={Admin} />
+          <Route path="/admin" component={Admin} />
+          <Route path="/settings" component={Settings} />
+          <Route component={NotFound} />
         </>
       )}
-      <Route component={NotFound} />
     </Switch>
   );
 }
