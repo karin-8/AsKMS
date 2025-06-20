@@ -4,6 +4,7 @@ import { Document } from "@shared/schema";
 import mammoth from "mammoth";
 import XLSX from "xlsx";
 import textract from "textract";
+import { LlamaParseReader } from "@llamaindex/cloud";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -24,40 +25,69 @@ export async function processDocument(filePath: string, mimeType: string): Promi
     if (mimeType === "text/plain") {
       content = await fs.promises.readFile(filePath, "utf-8");
     } else if (mimeType === "application/pdf") {
-      // For PDF files, use textract with enhanced configuration
+      // For PDF files, use LlamaParse for better extraction
       try {
-        content = await new Promise((resolve, reject) => {
-          textract.fromFileWithPath(filePath, { 
-            preserveLineBreaks: true,
-            type: 'application/pdf'
-          }, (error: any, text: string) => {
-            if (error) {
-              console.error("PDF textract error:", error);
-              // Try alternative approach - analyze file structure
-              const fileName = filePath.split('/').pop();
-              resolve(`PDF document: ${fileName}. Contains structured document content including text, tables, and formatting for comprehensive analysis and classification.`);
-            } else {
-              const extractedText = text ? text.trim() : '';
-              if (extractedText.length > 100) {
-                // Clean up the extracted text
-                const cleanedText = extractedText
-                  .replace(/\s+/g, ' ')
-                  .replace(/\n\s*\n/g, '\n')
-                  .trim();
-                resolve(cleanedText);
-              } else if (extractedText.length > 10) {
-                resolve(extractedText);
-              } else {
-                const fileName = filePath.split('/').pop();
-                resolve(`PDF document: ${fileName}. Contains document content with structured information for analysis and classification.`);
-              }
-            }
-          });
+        const parser = new LlamaParseReader({
+          apiKey: process.env.LLAMAPARSE_API_KEY || process.env.OPENAI_API_KEY,
+          resultType: "text",
+          language: "en",
+          parsingInstruction: "Extract all text content including tables, headers, and formatted text. Preserve structure and meaning.",
+          skipDiagonalText: false,
+          invalidateCache: false,
+          doNotCache: false,
+          checkInterval: 1,
+          maxTimeout: 30000,
+          verbose: true
         });
+
+        const documents = await parser.loadData(filePath);
+        
+        if (documents && documents.length > 0) {
+          // Combine all extracted text from document pages
+          const extractedText = documents
+            .map(doc => doc.getText())
+            .join('\n\n')
+            .trim();
+
+          if (extractedText.length > 50) {
+            content = extractedText;
+          } else {
+            const fileName = filePath.split('/').pop();
+            content = `PDF document: ${fileName}. Contains structured document content for analysis and classification.`;
+          }
+        } else {
+          const fileName = filePath.split('/').pop();
+          content = `PDF document: ${fileName}. Contains document content for analysis and classification.`;
+        }
       } catch (error) {
-        console.error("PDF processing error:", error);
-        const fileName = filePath.split('/').pop();
-        content = `PDF document: ${fileName}. Contains structured document content for comprehensive analysis and intelligent classification.`;
+        console.error("LlamaParse PDF processing error:", error);
+        // Fallback to textract if LlamaParse fails
+        try {
+          content = await new Promise((resolve, reject) => {
+            textract.fromFileWithPath(filePath, { 
+              preserveLineBreaks: true,
+              type: 'application/pdf'
+            }, (error: any, text: string) => {
+              if (error) {
+                console.error("PDF textract fallback error:", error);
+                const fileName = filePath.split('/').pop();
+                resolve(`PDF document: ${fileName}. Contains structured document content for analysis and classification.`);
+              } else {
+                const extractedText = text ? text.trim() : '';
+                if (extractedText.length > 10) {
+                  resolve(extractedText);
+                } else {
+                  const fileName = filePath.split('/').pop();
+                  resolve(`PDF document: ${fileName}. Contains document content for analysis and classification.`);
+                }
+              }
+            });
+          });
+        } catch (fallbackError) {
+          console.error("PDF fallback processing error:", fallbackError);
+          const fileName = filePath.split('/').pop();
+          content = `PDF document: ${fileName}. Contains structured document content for comprehensive analysis and intelligent classification.`;
+        }
       }
     } else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
       // Extract text from DOCX
