@@ -199,6 +199,16 @@ export default function AIAssistant() {
     e.preventDefault();
     if (!messageInput.trim()) return;
 
+    // Validate based on active tab
+    if ((activeTab === "database" || activeTab === "api") && !selectedConnection) {
+      toast({
+        title: "Connection Required",
+        description: `Please select a ${activeTab} connection before sending a message.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Create conversation if none exists
     if (!currentConversationId) {
       const title = messageInput.slice(0, 50) + (messageInput.length > 50 ? "..." : "");
