@@ -23,7 +23,9 @@ import {
   Loader2,
   Sparkles,
   Clock,
-  Hash
+  Hash,
+  Database,
+  Globe
 } from "lucide-react";
 
 interface Message {
@@ -48,6 +50,8 @@ export default function AIAssistant() {
   const [messageInput, setMessageInput] = useState("");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"documents" | "database" | "api">("documents");
+  const [selectedConnection, setSelectedConnection] = useState<number | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -86,7 +90,14 @@ export default function AIAssistant() {
   // Get documents for context
   const { data: documents } = useQuery({
     queryKey: ["/api/documents"],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && activeTab === "documents",
+    retry: false,
+  });
+
+  // Get data connections for database and API chat
+  const { data: dataConnections } = useQuery({
+    queryKey: ["/api/data-connections"],
+    enabled: isAuthenticated && (activeTab === "database" || activeTab === "api"),
     retry: false,
   });
 
@@ -126,11 +137,37 @@ export default function AIAssistant() {
       if (!currentConversationId) {
         throw new Error("No conversation selected");
       }
-      const response = await apiRequest('POST', '/api/chat/messages', {
-        conversationId: currentConversationId,
-        content,
-      });
-      return await response.json();
+
+      // Handle different chat types
+      if (activeTab === "database" && selectedConnection) {
+        const response = await apiRequest('POST', '/api/chat/database', {
+          message: content,
+          connectionId: selectedConnection,
+        });
+        const result = await response.json();
+        
+        // Create a chat message with the database response
+        const messageResponse = await apiRequest('POST', '/api/chat/messages', {
+          conversationId: currentConversationId,
+          content: result.response,
+          role: 'assistant',
+        });
+        return await messageResponse.json();
+      } else if (activeTab === "api" && selectedConnection) {
+        // For API connections, use regular chat for now
+        const response = await apiRequest('POST', '/api/chat/messages', {
+          conversationId: currentConversationId,
+          content,
+        });
+        return await response.json();
+      } else {
+        // Default document chat
+        const response = await apiRequest('POST', '/api/chat/messages', {
+          conversationId: currentConversationId,
+          content,
+        });
+        return await response.json();
+      }
     },
     onSuccess: () => {
       setMessageInput("");
@@ -229,10 +266,10 @@ export default function AIAssistant() {
               <div className="lg:col-span-2">
                 <Card className="h-[600px] flex flex-col">
                   <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-4">
                       <CardTitle className="flex items-center space-x-2">
                         <Bot className="w-5 h-5 text-blue-500" />
-                        <span>Knowledge Base Chat</span>
+                        <span>AI Assistant Chat</span>
                       </CardTitle>
                       <Button 
                         variant="outline" 
@@ -243,13 +280,77 @@ export default function AIAssistant() {
                         New Chat
                       </Button>
                     </div>
+                    
+                    {/* Chat Categories */}
+                    <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                      <button
+                        onClick={() => setActiveTab("documents")}
+                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          activeTab === "documents"
+                            ? "bg-white text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Documents</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("database")}
+                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          activeTab === "database"
+                            ? "bg-white text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <Database className="w-4 h-4" />
+                        <span>Database</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("api")}
+                        className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          activeTab === "api"
+                            ? "bg-white text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        <Globe className="w-4 h-4" />
+                        <span>API</span>
+                      </button>
+                    </div>
+
+                    {/* Connection Selection for Database and API */}
+                    {(activeTab === "database" || activeTab === "api") && dataConnections && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select {activeTab === "database" ? "Database" : "API"} Connection:
+                        </label>
+                        <select
+                          value={selectedConnection || ""}
+                          onChange={(e) => setSelectedConnection(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select a connection...</option>
+                          {Array.isArray(dataConnections) && dataConnections
+                            .filter((conn: any) => 
+                              activeTab === "database" 
+                                ? conn.type === "database" 
+                                : conn.type === "api"
+                            )
+                            .map((conn: any) => (
+                              <option key={conn.id} value={conn.id}>
+                                {conn.name} ({conn.dbType || conn.apiUrl})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
                   </CardHeader>
                   
                   <CardContent className="flex-1 flex flex-col min-h-0 p-4 pt-0">
                     <ScrollArea className="flex-1 pr-4">
                       <div className="space-y-4">
                         {!currentConversationId ? (
-                          // Welcome message
+                          // Welcome message based on active tab
                           <div className="flex space-x-3">
                             <Avatar className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 flex-shrink-0">
                               <AvatarFallback>
@@ -258,15 +359,55 @@ export default function AIAssistant() {
                             </Avatar>
                             <div className="flex-1">
                               <div className="bg-gray-100 rounded-lg rounded-tl-none p-4">
-                                <p className="text-sm text-gray-700 mb-3">
-                                  Hello! I'm your AI assistant. I can help you with:
-                                </p>
-                                <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                                  <li>Search through your uploaded documents</li>
-                                  <li>Answer questions about document content</li>
-                                  <li>Summarize information across multiple files</li>
-                                  <li>Help with document classification and organization</li>
-                                </ul>
+                                {activeTab === "documents" && (
+                                  <>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                      Hello! I can help you explore your uploaded documents.
+                                    </p>
+                                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                                      <li>Search through your uploaded documents</li>
+                                      <li>Answer questions about document content</li>
+                                      <li>Summarize information across multiple files</li>
+                                      <li>Help with document classification and organization</li>
+                                    </ul>
+                                  </>
+                                )}
+                                {activeTab === "database" && (
+                                  <>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                      I can help you query and analyze your database connections.
+                                    </p>
+                                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                                      <li>Generate SQL queries based on your questions</li>
+                                      <li>Explain database schema and relationships</li>
+                                      <li>Analyze data patterns and insights</li>
+                                      <li>Help with data exploration and reporting</li>
+                                    </ul>
+                                    {!selectedConnection && (
+                                      <p className="text-sm text-orange-600 mt-3">
+                                        Please select a database connection above to start chatting.
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                                {activeTab === "api" && (
+                                  <>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                      I can help you interact with your API connections.
+                                    </p>
+                                    <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                                      <li>Make API calls and analyze responses</li>
+                                      <li>Help with API endpoint exploration</li>
+                                      <li>Format and interpret API data</li>
+                                      <li>Assist with API integration questions</li>
+                                    </ul>
+                                    {!selectedConnection && (
+                                      <p className="text-sm text-orange-600 mt-3">
+                                        Please select an API connection above to start chatting.
+                                      </p>
+                                    )}
+                                  </>
+                                )}
                                 <p className="text-sm text-gray-700 mt-3">
                                   What would you like to know?
                                 </p>
