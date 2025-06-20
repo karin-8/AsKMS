@@ -31,13 +31,7 @@ export async function processDocument(filePath: string, mimeType: string): Promi
           apiKey: process.env.LLAMAPARSE_API_KEY || process.env.OPENAI_API_KEY,
           resultType: "text",
           language: "en",
-          parsingInstruction: "Extract all text content including tables, headers, and formatted text. Preserve structure and meaning.",
-          skipDiagonalText: false,
-          invalidateCache: false,
-          doNotCache: false,
-          checkInterval: 1,
-          maxTimeout: 30000,
-          verbose: true
+          parsingInstruction: "Extract all text content including tables, headers, and formatted text. Preserve structure and meaning."
         });
 
         const documents = await parser.loadData(filePath);
@@ -45,7 +39,7 @@ export async function processDocument(filePath: string, mimeType: string): Promi
         if (documents && documents.length > 0) {
           // Combine all extracted text from document pages
           const extractedText = documents
-            .map(doc => doc.getText())
+            .map((doc: any) => doc.getText())
             .join('\n\n')
             .trim();
 
@@ -65,8 +59,7 @@ export async function processDocument(filePath: string, mimeType: string): Promi
         try {
           content = await new Promise((resolve, reject) => {
             textract.fromFileWithPath(filePath, { 
-              preserveLineBreaks: true,
-              type: 'application/pdf'
+              preserveLineBreaks: true
             }, (error: any, text: string) => {
               if (error) {
                 console.error("PDF textract fallback error:", error);
