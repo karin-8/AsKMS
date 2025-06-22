@@ -4,8 +4,22 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema, insertDataConnectionSchema, updateDataConnectionSchema, type Document as DocType } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
+import { 
+  insertCategorySchema, 
+  insertDocumentSchema, 
+  insertChatConversationSchema, 
+  insertChatMessageSchema, 
+  insertDataConnectionSchema, 
+  updateDataConnectionSchema, 
+  type Document as DocType,
+  users,
+  departments,
+  documentUserPermissions,
+  documentDepartmentPermissions,
+  documents,
+  categories
+} from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";

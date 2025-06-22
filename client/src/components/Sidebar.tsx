@@ -15,14 +15,14 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Home", href: "/", icon: Home },
   { name: "Upload Documents", href: "/upload", icon: Upload },
   { name: "My Documents", href: "/documents", icon: FolderOpen },
   { name: "Search & Discovery", href: "/search", icon: Search },
   { name: "AI Assistant", href: "/ai-assistant", icon: MessageSquare },
   { name: "Integrations", href: "/integrations", icon: Building },
   { name: "Categories & Tags", href: "/categories", icon: Tags },
-  { name: "User Management", href: "/users", icon: Users },
+  { name: "User Management", href: "/user-management", icon: Users },
   { name: "Live Chat Widget", href: "/live-chat-widget", icon: MessageSquare },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

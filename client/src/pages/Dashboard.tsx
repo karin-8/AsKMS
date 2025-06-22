@@ -231,6 +231,77 @@ export default function Dashboard() {
               <CategoryStatsCards />
             </div>
 
+            {/* Recent Upload Documents */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Recent Upload Documents</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {documents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No documents uploaded yet</p>
+                    <p className="text-sm text-gray-400 mt-1">Upload your first document to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.slice(0, 5).map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{doc.name}</h4>
+                            <div className="text-sm text-gray-500 flex items-center space-x-2">
+                              {doc.aiCategory && (
+                                <Badge variant="outline">
+                                  {doc.aiCategory}
+                                </Badge>
+                              )}
+                              <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {doc.isFavorite && (
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => window.open(`/api/documents/${doc.id}/download`, '_blank')}>
+                                <Download className="w-4 h-4 mr-2" />
+                                Download
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                    {documents.length > 5 && (
+                      <div className="text-center pt-3">
+                        <Button variant="outline" onClick={() => window.location.href = '/documents'}>
+                          View All Documents ({documents.length})
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Content Summary Modal */}
             {selectedDocumentSummary && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
