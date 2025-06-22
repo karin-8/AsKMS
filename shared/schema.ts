@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   real,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -204,14 +205,13 @@ export const dataConnectionsRelations = relations(dataConnections, ({ one }) => 
 export const hrEmployees = pgTable("hr_employees", {
   id: serial("id").primaryKey(),
   employeeId: varchar("employee_id").notNull().unique(),
-  citizenId: varchar("citizen_id").notNull().unique(),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
+  citizenId: varchar("citizen_id", { length: 13 }).notNull().unique(),
+  name: varchar("name").notNull(),
+  department: varchar("department").notNull(),
+  position: varchar("position").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
-  department: varchar("department").notNull(),
-  position: varchar("position"),
-  startDate: timestamp("start_date"),
+  hireDate: date("hire_date"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

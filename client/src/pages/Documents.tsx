@@ -8,6 +8,7 @@ import Sidebar from "@/components/Layout/Sidebar";
 import TopBar from "@/components/TopBar";
 import DocumentCard from "@/components/DocumentCard";
 import ChatModal from "@/components/Chat/ChatModal";
+import UploadZone from "@/components/Upload/UploadZone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ export default function Documents() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showUploadZone, setShowUploadZone] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -222,7 +224,7 @@ export default function Documents() {
                   Documents ({filteredDocuments?.length || 0})
                 </CardTitle>
                 <Button 
-                  onClick={() => window.location.href = "/upload"}
+                  onClick={() => setShowUploadZone(!showUploadZone)}
                   className="bg-primary text-white hover:bg-blue-700"
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -231,6 +233,19 @@ export default function Documents() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Upload Zone */}
+              {showUploadZone && (
+                <div className="mb-6 p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50">
+                  <UploadZone 
+                    onUploadComplete={() => {
+                      setShowUploadZone(false);
+                      // Refresh documents list
+                      window.location.reload();
+                    }} 
+                  />
+                </div>
+              )}
+
               {documentsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
