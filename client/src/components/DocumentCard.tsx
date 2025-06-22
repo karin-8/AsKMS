@@ -505,14 +505,9 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {summaryLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <span className="ml-2 text-gray-600">Generating summary...</span>
-              </div>
-            ) : (summaryData as any)?.summary ? (
+            {doc.summary ? (
               <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 leading-relaxed">{(summaryData as any).summary}</p>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{doc.summary}</p>
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
