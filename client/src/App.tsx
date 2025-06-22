@@ -30,14 +30,14 @@ function Router() {
   }
 
   return (
-    <Switch>
+    <>
       {!isAuthenticated ? (
-        <>
+        <Switch>
           <Route path="/" component={Landing} />
           <Route component={Landing} />
-        </>
+        </Switch>
       ) : (
-        <>
+        <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/documents" component={Documents} />
           <Route path="/upload" component={Upload} />
@@ -49,10 +49,10 @@ function Router() {
           <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
-          <Route path="*" component={NotFound} />
-        </>
+          <Route component={NotFound} />
+        </Switch>
       )}
-    </Switch>
+    </>
   );
 }
 
