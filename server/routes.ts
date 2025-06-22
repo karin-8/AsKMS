@@ -178,17 +178,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/stats/categories', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { documents, categories } = await import('@shared/schema');
+      const { documents } = await import('@shared/schema');
       const { sql } = await import('drizzle-orm');
       
       const categoryStats = await db.select({
-        category: categories.name,
+        category: documents.aiCategory,
         count: sql<number>`count(${documents.id})`
       })
       .from(documents)
-      .leftJoin(categories, eq(documents.categoryId, categories.id))
       .where(eq(documents.userId, userId))
-      .groupBy(categories.name)
+      .groupBy(documents.aiCategory)
       .orderBy(sql`count(${documents.id}) desc`);
 
       res.json(categoryStats);
@@ -227,10 +226,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
+  // Admin User Management Routes
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const allUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+        departmentId: users.departmentId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt
+      })
+      .from(users)
+      .leftJoin(departments, eq(users.departmentId, departments.id));
+      
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/admin/departments', isAuthenticated, async (req: any, res) => {
+    try {
+      const allDepartments = await db.select().from(departments);
+      res.json(allDepartments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ message: "Failed to fetch departments" });
+    }
+  });
+
+  app.post('/api/admin/departments', isAuthenticated, async (req: any, res) => {
+    try {
+      const { name, description } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Department name is required" });
+      }
+
+      const [department] = await db.insert(departments).values({
+        name,
+        description,
+        createdBy: req.user.claims.sub
+      }).returning();
+
+      res.status(201).json(department);
+    } catch (error) {
+      console.error("Error creating department:", error);
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  app.put('/api/admin/users/:userId/department', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { departmentId } = req.body;
+
+      await db.update(users)
+        .set({ 
+          departmentId: departmentId || null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ message: "User department updated successfully" });
+    } catch (error) {
+      console.error("Error updating user department:", error);
+      res.status(500).json({ message: "Failed to update user department" });
+    }
+  });
+
+  app.get('/api/admin/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userPermissions = await db
+        .select({
+          id: documentUserPermissions.id,
+          documentId: documentUserPermissions.documentId,
+          userId: documentUserPermissions.userId,
+          permission: documentUserPermissions.permission,
+          createdAt: documentUserPermissions.createdAt
+        })
+        .from(documentUserPermissions);
+
+      const departmentPermissions = await db
+        .select({
+          id: documentDepartmentPermissions.id,
+          documentId: documentDepartmentPermissions.documentId,
+          departmentId: documentDepartmentPermissions.departmentId,
+          permission: documentDepartmentPermissions.permission,
+          createdAt: documentDepartmentPermissions.createdAt
+        })
+        .from(documentDepartmentPermissions);
+
+      const allPermissions = [
+        ...userPermissions.map(p => ({ ...p, type: 'user' })),
+        ...departmentPermissions.map(p => ({ ...p, type: 'department' }))
+      ];
+
+      res.json(allPermissions);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  app.post('/api/admin/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const { documentId, userId, departmentId, permission = 'read' } = req.body;
+
+      if (!documentId) {
+        return res.status(400).json({ message: "Document ID is required" });
+      }
+
+      if (!userId && !departmentId) {
+        return res.status(400).json({ message: "Either user ID or department ID is required" });
+      }
+
+      let result;
+      if (userId) {
+        [result] = await db.insert(documentUserPermissions).values({
+          documentId: parseInt(documentId),
+          userId,
+          permission
+        }).returning();
+      } else {
+        [result] = await db.insert(documentDepartmentPermissions).values({
+          documentId: parseInt(documentId),
+          departmentId: parseInt(departmentId),
+          permission
+        }).returning();
+      }
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating permission:", error);
+      res.status(500).json({ message: "Failed to create permission" });
+    }
+  });
+
+  app.delete('/api/admin/permissions/:permissionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { permissionId } = req.params;
+      const { type } = req.query;
+
+      if (type === 'department') {
+        await db.delete(documentDepartmentPermissions)
+          .where(eq(documentDepartmentPermissions.id, parseInt(permissionId)));
+      } else {
+        await db.delete(documentUserPermissions)
+          .where(eq(documentUserPermissions.id, parseInt(permissionId)));
+      }
+
+      res.json({ message: "Permission deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting permission:", error);
+      res.status(500).json({ message: "Failed to delete permission" });
+    }
+  });
+
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {
-      const { users, departments } = await import('@shared/schema');
-      
       const allUsers = await db.select({
         id: users.id,
         email: users.email,
@@ -238,7 +397,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: users.lastName,
         profileImageUrl: users.profileImageUrl,
         departmentId: users.departmentId,
-        department: departments.name,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt
       })

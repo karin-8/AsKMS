@@ -14,6 +14,7 @@ import Landing from "@/pages/Landing";
 import AIAssistant from "@/pages/AIAssistant";
 import Integrations from "@/pages/Integrations";
 import LiveChatWidget from "@/pages/LiveChatWidget";
+import UserManagement from "@/pages/UserManagement";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/ai-assistant" component={AIAssistant} />
           <Route path="/integrations" component={Integrations} />
           <Route path="/admin" component={Admin} />
+          <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
           <Route component={NotFound} />
