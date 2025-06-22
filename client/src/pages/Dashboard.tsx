@@ -187,7 +187,7 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto space-y-6">
             <StatsCards />
             
-            {/* Upload Section */}
+            {/* Upload and Category Stats Section */}
             <div className="grid lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
@@ -227,76 +227,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Recent Documents */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="w-5 h-5" />
-                    <span>Recent Documents</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {recentDocuments.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No documents uploaded yet</p>
-                    ) : (
-                      recentDocuments.map((doc: any) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {doc.name}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              {doc.aiCategory && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs"
-                                  style={{ 
-                                    backgroundColor: doc.aiCategoryColor + '20',
-                                    color: doc.aiCategoryColor,
-                                    borderColor: doc.aiCategoryColor + '40'
-                                  }}
-                                >
-                                  {doc.aiCategory}
-                                </Badge>
-                              )}
-                              <span className="text-xs text-gray-500">
-                                {new Date(doc.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => summaryMutation.mutate(doc.id)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Content Summary
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Download className="w-4 h-4 mr-2" />
-                                Download
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Star className="w-4 h-4 mr-2" />
-                                Add to Favorites
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Category Statistics */}
+              <CategoryStatsCards />
             </div>
 
             {/* Content Summary Modal */}
