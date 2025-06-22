@@ -356,3 +356,70 @@ export type WidgetChatSession = typeof widgetChatSessions.$inferSelect;
 export type InsertWidgetChatSession = typeof widgetChatSessions.$inferInsert;
 export type WidgetChatMessage = typeof widgetChatMessages.$inferSelect;
 export type InsertWidgetChatMessage = typeof widgetChatMessages.$inferInsert;
+
+// Departments table
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Document User Permissions (Many-to-Many)
+export const documentUserPermissions = pgTable("document_user_permissions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  permissionType: varchar("permission_type").default("read"),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  grantedBy: varchar("granted_by"),
+});
+
+// Document Department Permissions (Many-to-Many)  
+export const documentDepartmentPermissions = pgTable("document_department_permissions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull(),
+  departmentId: integer("department_id").notNull(),
+  permissionType: varchar("permission_type").default("read"),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  grantedBy: varchar("granted_by"),
+});
+
+// Department relations
+export const departmentsRelations = relations(departments, ({ many }) => ({
+  users: many(users),
+  documentPermissions: many(documentDepartmentPermissions),
+}));
+
+// Document User Permissions relations
+export const documentUserPermissionsRelations = relations(documentUserPermissions, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentUserPermissions.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentUserPermissions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Document Department Permissions relations
+export const documentDepartmentPermissionsRelations = relations(documentDepartmentPermissions, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentDepartmentPermissions.documentId],
+    references: [documents.id],
+  }),
+  department: one(departments, {
+    fields: [documentDepartmentPermissions.departmentId],
+    references: [departments.id],
+  }),
+}));
+
+// Additional types
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = typeof departments.$inferInsert;
+export type DocumentUserPermission = typeof documentUserPermissions.$inferSelect;
+export type InsertDocumentUserPermission = typeof documentUserPermissions.$inferInsert;
+export type DocumentDepartmentPermission = typeof documentDepartmentPermissions.$inferSelect;
+export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermissions.$inferInsert;
