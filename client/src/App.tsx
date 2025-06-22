@@ -15,6 +15,8 @@ import AIAssistant from "@/pages/AIAssistant";
 import Integrations from "@/pages/Integrations";
 import LiveChatWidget from "@/pages/LiveChatWidget";
 import UserManagement from "@/pages/UserManagement";
+import Upload from "@/pages/Upload";
+import Search from "@/pages/Search";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +40,8 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/documents" component={Documents} />
+          <Route path="/upload" component={Upload} />
+          <Route path="/search" component={Search} />
           <Route path="/categories" component={Categories} />
           <Route path="/ai-assistant" component={AIAssistant} />
           <Route path="/integrations" component={Integrations} />
@@ -45,7 +49,7 @@ function Router() {
           <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
-          <Route component={NotFound} />
+          <Route path="*" component={NotFound} />
         </>
       )}
     </Switch>
