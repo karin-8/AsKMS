@@ -200,6 +200,96 @@ export const dataConnectionsRelations = relations(dataConnections, ({ one }) => 
   }),
 }));
 
+// HR Employee table for public API
+export const hrEmployees = pgTable("hr_employees", {
+  id: serial("id").primaryKey(),
+  employeeId: varchar("employee_id").notNull().unique(),
+  citizenId: varchar("citizen_id").notNull().unique(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  department: varchar("department").notNull(),
+  position: varchar("position"),
+  startDate: timestamp("start_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Live Chat Widget configurations
+export const chatWidgets = pgTable("chat_widgets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  widgetKey: varchar("widget_key").notNull().unique(),
+  isActive: boolean("is_active").default(true),
+  
+  // Widget styling
+  primaryColor: varchar("primary_color").default("#2563eb"),
+  textColor: varchar("text_color").default("#ffffff"),
+  position: varchar("position").default("bottom-right"), // 'bottom-right', 'bottom-left'
+  
+  // Widget settings
+  welcomeMessage: text("welcome_message").default("Hi! How can I help you today?"),
+  offlineMessage: text("offline_message").default("We're currently offline. Please leave a message."),
+  
+  // HR API integration
+  enableHrLookup: boolean("enable_hr_lookup").default(false),
+  hrApiEndpoint: varchar("hr_api_endpoint"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Widget chat sessions
+export const widgetChatSessions = pgTable("widget_chat_sessions", {
+  id: serial("id").primaryKey(),
+  widgetId: integer("widget_id").notNull(),
+  sessionId: varchar("session_id").notNull().unique(),
+  visitorId: varchar("visitor_id"),
+  visitorName: varchar("visitor_name"),
+  visitorEmail: varchar("visitor_email"),
+  visitorPhone: varchar("visitor_phone"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Widget chat messages
+export const widgetChatMessages = pgTable("widget_chat_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").notNull(),
+  role: varchar("role").notNull(), // 'user', 'assistant'
+  content: text("content").notNull(),
+  messageType: varchar("message_type").default("text"), // 'text', 'hr_lookup'
+  metadata: jsonb("metadata"), // For storing additional data like HR lookup results
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const chatWidgetsRelations = relations(chatWidgets, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatWidgets.userId],
+    references: [users.id],
+  }),
+  sessions: many(widgetChatSessions),
+}));
+
+export const widgetChatSessionsRelations = relations(widgetChatSessions, ({ one, many }) => ({
+  widget: one(chatWidgets, {
+    fields: [widgetChatSessions.widgetId],
+    references: [chatWidgets.id],
+  }),
+  messages: many(widgetChatMessages),
+}));
+
+export const widgetChatMessagesRelations = relations(widgetChatMessages, ({ one }) => ({
+  session: one(widgetChatSessions, {
+    fields: [widgetChatMessages.sessionId],
+    references: [widgetChatSessions.sessionId],
+  }),
+}));
+
 // Insert schemas
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
@@ -256,3 +346,13 @@ export type DocumentAccess = typeof documentAccess.$inferSelect;
 export type DataConnection = typeof dataConnections.$inferSelect;
 export type InsertDataConnection = z.infer<typeof insertDataConnectionSchema>;
 export type UpdateDataConnection = z.infer<typeof updateDataConnectionSchema>;
+
+// HR and Widget types
+export type HrEmployee = typeof hrEmployees.$inferSelect;
+export type InsertHrEmployee = typeof hrEmployees.$inferInsert;
+export type ChatWidget = typeof chatWidgets.$inferSelect;
+export type InsertChatWidget = typeof chatWidgets.$inferInsert;
+export type WidgetChatSession = typeof widgetChatSessions.$inferSelect;
+export type InsertWidgetChatSession = typeof widgetChatSessions.$inferInsert;
+export type WidgetChatMessage = typeof widgetChatMessages.$inferSelect;
+export type InsertWidgetChatMessage = typeof widgetChatMessages.$inferInsert;

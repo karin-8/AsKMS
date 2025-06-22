@@ -7,11 +7,17 @@ import textract from "textract";
 import { LlamaParseReader } from "@llamaindex/cloud";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
+const openai = new OpenAI({
+  apiKey:
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENAI_API_KEY_ENV_VAR ||
+    "default_key",
 });
 
-export async function processDocument(filePath: string, mimeType: string): Promise<{
+export async function processDocument(
+  filePath: string,
+  mimeType: string,
+): Promise<{
   content: string;
   summary: string;
   tags: string[];
@@ -20,7 +26,7 @@ export async function processDocument(filePath: string, mimeType: string): Promi
 }> {
   try {
     let content = "";
-    
+
     // Extract content based on file type
     if (mimeType === "text/plain") {
       content = await fs.promises.readFile(filePath, "utf-8");
@@ -28,29 +34,32 @@ export async function processDocument(filePath: string, mimeType: string): Promi
       // For PDF files, use LlamaParse for better extraction
       try {
         const parser = new LlamaParseReader({
-          apiKey: process.env.LLAMAPARSE_API_KEY || process.env.OPENAI_API_KEY,
+          apiKey:
+            "llx-ttqFBFkplDsndkK88sAH9GRjKWbymaHEvPQivivIP1yHarr1" ||
+            process.env.OPENAI_API_KEY,
           resultType: "text",
           language: "en",
-          parsingInstruction: "Extract all text content including tables, headers, and formatted text. Preserve structure and meaning."
+          parsingInstruction:
+            "Extract all text content including tables, headers, and formatted text. Preserve structure and meaning.",
         });
 
         const documents = await parser.loadData(filePath);
-        
+
         if (documents && documents.length > 0) {
           // Combine all extracted text from document pages
           const extractedText = documents
             .map((doc: any) => doc.getText())
-            .join('\n\n')
+            .join("\n\n")
             .trim();
 
           if (extractedText.length > 50) {
             content = extractedText;
           } else {
-            const fileName = filePath.split('/').pop();
+            const fileName = filePath.split("/").pop();
             content = `PDF document: ${fileName}. Contains structured document content for analysis and classification.`;
           }
         } else {
-          const fileName = filePath.split('/').pop();
+          const fileName = filePath.split("/").pop();
           content = `PDF document: ${fileName}. Contains document content for analysis and classification.`;
         }
       } catch (error) {
@@ -58,85 +67,115 @@ export async function processDocument(filePath: string, mimeType: string): Promi
         // Fallback to textract if LlamaParse fails
         try {
           content = await new Promise((resolve, reject) => {
-            textract.fromFileWithPath(filePath, { 
-              preserveLineBreaks: true
-            }, (error: any, text: string) => {
-              if (error) {
-                console.error("PDF textract fallback error:", error);
-                const fileName = filePath.split('/').pop();
-                resolve(`PDF document: ${fileName}. Contains structured document content for analysis and classification.`);
-              } else {
-                const extractedText = text ? text.trim() : '';
-                if (extractedText.length > 10) {
-                  resolve(extractedText);
+            textract.fromFileWithPath(
+              filePath,
+              {
+                preserveLineBreaks: true,
+              },
+              (error: any, text: string) => {
+                if (error) {
+                  console.error("PDF textract fallback error:", error);
+                  const fileName = filePath.split("/").pop();
+                  resolve(
+                    `PDF document: ${fileName}. Contains structured document content for analysis and classification.`,
+                  );
                 } else {
-                  const fileName = filePath.split('/').pop();
-                  resolve(`PDF document: ${fileName}. Contains document content for analysis and classification.`);
+                  const extractedText = text ? text.trim() : "";
+                  if (extractedText.length > 10) {
+                    resolve(extractedText);
+                  } else {
+                    const fileName = filePath.split("/").pop();
+                    resolve(
+                      `PDF document: ${fileName}. Contains document content for analysis and classification.`,
+                    );
+                  }
                 }
-              }
-            });
+              },
+            );
           });
         } catch (fallbackError) {
           console.error("PDF fallback processing error:", fallbackError);
-          const fileName = filePath.split('/').pop();
+          const fileName = filePath.split("/").pop();
           content = `PDF document: ${fileName}. Contains structured document content for comprehensive analysis and intelligent classification.`;
         }
       }
-    } else if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    } else if (
+      mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
       // Extract text from DOCX
       const docxBuffer = await fs.promises.readFile(filePath);
       const result = await mammoth.extractRawText({ buffer: docxBuffer });
       content = result.value;
-    } else if (mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || 
-               mimeType === "application/vnd.ms-excel") {
+    } else if (
+      mimeType ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      mimeType === "application/vnd.ms-excel"
+    ) {
       // Extract text from Excel files
       try {
         const workbook = XLSX.readFile(filePath);
         const sheets = workbook.SheetNames;
         let allText = "";
-        sheets.forEach(sheet => {
+        sheets.forEach((sheet) => {
           const worksheet = workbook.Sheets[sheet];
-          const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+          const sheetData = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,
+            raw: false,
+          });
           allText += `Sheet: ${sheet}\n`;
           sheetData.forEach((row: any) => {
             if (Array.isArray(row) && row.length > 0) {
-              allText += row.join('\t') + '\n';
+              allText += row.join("\t") + "\n";
             }
           });
-          allText += '\n';
+          allText += "\n";
         });
-        content = allText || `Excel file: ${filePath.split('/').pop()}. Contains ${sheets.length} sheets.`;
+        content =
+          allText ||
+          `Excel file: ${filePath.split("/").pop()}. Contains ${sheets.length} sheets.`;
       } catch (error) {
         console.error("Excel processing error:", error);
-        content = `Excel file: ${filePath.split('/').pop()}. Content extraction failed, analyzing file metadata.`;
+        content = `Excel file: ${filePath.split("/").pop()}. Content extraction failed, analyzing file metadata.`;
       }
-    } else if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
+    } else if (
+      mimeType ===
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ) {
       // For PPTX files, use textract for text extraction
       try {
         content = await new Promise((resolve, reject) => {
-          textract.fromFileWithPath(filePath, { preserveLineBreaks: true }, (error: any, text: string) => {
-            if (error) {
-              console.error("PPTX textract error:", error);
-              resolve(`PowerPoint presentation: ${filePath.split('/').pop()}. Contains slide content for analysis.`);
-            } else {
-              const extractedText = text ? text.trim() : '';
-              if (extractedText.length > 30) {
-                resolve(extractedText);
+          textract.fromFileWithPath(
+            filePath,
+            { preserveLineBreaks: true },
+            (error: any, text: string) => {
+              if (error) {
+                console.error("PPTX textract error:", error);
+                resolve(
+                  `PowerPoint presentation: ${filePath.split("/").pop()}. Contains slide content for analysis.`,
+                );
               } else {
-                resolve(`PowerPoint presentation: ${filePath.split('/').pop()}. Contains presentation slides and content.`);
+                const extractedText = text ? text.trim() : "";
+                if (extractedText.length > 30) {
+                  resolve(extractedText);
+                } else {
+                  resolve(
+                    `PowerPoint presentation: ${filePath.split("/").pop()}. Contains presentation slides and content.`,
+                  );
+                }
               }
-            }
-          });
+            },
+          );
         });
       } catch (error) {
         console.error("PPTX processing error:", error);
-        content = `PowerPoint presentation: ${filePath.split('/').pop()}. Contains presentation content for analysis.`;
+        content = `PowerPoint presentation: ${filePath.split("/").pop()}. Contains presentation content for analysis.`;
       }
     } else if (mimeType.startsWith("image/")) {
       // For images, use GPT-4o vision capabilities
       const imageBuffer = await fs.promises.readFile(filePath);
-      const base64Image = imageBuffer.toString('base64');
-      
+      const base64Image = imageBuffer.toString("base64");
+
       const visionResponse = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -145,20 +184,20 @@ export async function processDocument(filePath: string, mimeType: string): Promi
             content: [
               {
                 type: "text",
-                text: "Extract all text and describe the content of this document image. Provide the extracted text and a summary of what's shown."
+                text: "Extract all text and describe the content of this document image. Provide the extracted text and a summary of what's shown.",
               },
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`
-                }
-              }
+                  url: `data:${mimeType};base64,${base64Image}`,
+                },
+              },
             ],
           },
         ],
         max_tokens: 1000,
       });
-      
+
       content = visionResponse.choices[0].message.content || "";
     }
 
@@ -168,7 +207,7 @@ export async function processDocument(filePath: string, mimeType: string): Promi
         summary: "No content could be extracted from this document.",
         tags: ["empty"],
         category: "Uncategorized",
-        categoryColor: "#6B7280"
+        categoryColor: "#6B7280",
       };
     }
 
@@ -205,44 +244,45 @@ Respond with JSON in this exact format:
   "category": "category_name",
   "summary": "concise summary here",
   "tags": ["specific_tag1", "topic_tag2", "type_tag3", "purpose_tag4"]
-}`
+}`,
         },
         {
           role: "user",
-          content: `Analyze and classify this document content:\n\n${content.substring(0, 4000)}`
-        }
+          content: `Analyze and classify this document content:\n\n${content.substring(0, 4000)}`,
+        },
       ],
       response_format: { type: "json_object" },
       max_tokens: 800,
     });
 
-    const analysis = JSON.parse(analysisResponse.choices[0].message.content || "{}");
-    
+    const analysis = JSON.parse(
+      analysisResponse.choices[0].message.content || "{}",
+    );
+
     // Category color mapping for visual identification
     const categoryColors: Record<string, string> = {
-      "HR": "#10B981",           // Green - Human resources
-      "Finance": "#F59E0B",      // Amber - Financial documents  
-      "Legal": "#EF4444",        // Red - Legal/compliance
-      "Marketing": "#8B5CF6",    // Purple - Marketing materials
-      "Technical": "#3B82F6",    // Blue - Technical documentation
-      "Operations": "#6366F1",   // Indigo - Operational procedures
-      "Research": "#06B6D4",     // Cyan - Research and analysis
-      "Personal": "#EC4899",     // Pink - Personal documents
-      "Administrative": "#84CC16", // Lime - Administrative forms
-      "Uncategorized": "#6B7280"  // Gray - Uncategorized items
+      HR: "#10B981", // Green - Human resources
+      Finance: "#F59E0B", // Amber - Financial documents
+      Legal: "#EF4444", // Red - Legal/compliance
+      Marketing: "#8B5CF6", // Purple - Marketing materials
+      Technical: "#3B82F6", // Blue - Technical documentation
+      Operations: "#6366F1", // Indigo - Operational procedures
+      Research: "#06B6D4", // Cyan - Research and analysis
+      Personal: "#EC4899", // Pink - Personal documents
+      Administrative: "#84CC16", // Lime - Administrative forms
+      Uncategorized: "#6B7280", // Gray - Uncategorized items
     };
-    
+
     const category = analysis.category || "Uncategorized";
     const categoryColor = categoryColors[category] || "#6B7280";
-    
+
     return {
       content: content.substring(0, 10000),
       summary: analysis.summary || "Document processed successfully",
       tags: Array.isArray(analysis.tags) ? analysis.tags : ["document"],
       category,
-      categoryColor
+      categoryColor,
     };
-
   } catch (error) {
     console.error("Error processing document with AI:", error);
     return {
@@ -250,21 +290,29 @@ Respond with JSON in this exact format:
       summary: "Document uploaded but could not be processed with AI",
       tags: ["unprocessed"],
       category: "Uncategorized",
-      categoryColor: "#6B7280"
+      categoryColor: "#6B7280",
     };
   }
 }
 
-export async function generateDatabaseResponse(userMessage: string, schema: any, suggestions: string[]): Promise<string> {
+export async function generateDatabaseResponse(
+  userMessage: string,
+  schema: any,
+  suggestions: string[],
+): Promise<string> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
 
   // Prepare database schema context
-  const schemaContext = schema.tables.map((table: any) => `
+  const schemaContext = schema.tables
+    .map(
+      (table: any) => `
 Table: ${table.name}
-Columns: ${table.columns.map((col: any) => `${col.name} (${col.type})`).join(', ')}
-  `).join('\n\n');
+Columns: ${table.columns.map((col: any) => `${col.name} (${col.type})`).join(", ")}
+  `,
+    )
+    .join("\n\n");
 
   const prompt = `You are an AI assistant that helps users interact with their database using natural language.
 
@@ -272,7 +320,7 @@ Database Schema:
 ${schemaContext}
 
 Available SQL Query Suggestions:
-${suggestions.join('\n')}
+${suggestions.join("\n")}
 
 User Question: ${userMessage}
 
@@ -289,31 +337,41 @@ Format your response in a clear, conversational way that helps the user understa
       messages: [
         {
           role: "system",
-          content: "You are a helpful database assistant. Help users understand their data and suggest appropriate SQL queries based on their questions."
+          content:
+            "You are a helpful database assistant. Help users understand their data and suggest appropriate SQL queries based on their questions.",
         },
         {
           role: "user",
-          content: prompt
-        }
+          content: prompt,
+        },
       ],
       max_tokens: 1000,
       temperature: 0.7,
     });
 
-    return completion.choices[0].message.content || "I'm sorry, I couldn't generate a database response.";
+    return (
+      completion.choices[0].message.content ||
+      "I'm sorry, I couldn't generate a database response."
+    );
   } catch (error) {
-    console.error('OpenAI API error for database response:', error);
-    throw new Error('Failed to generate database response');
+    console.error("OpenAI API error for database response:", error);
+    throw new Error("Failed to generate database response");
   }
 }
 
-export async function generateChatResponse(userMessage: string, documents: Document[]): Promise<string> {
+export async function generateChatResponse(
+  userMessage: string,
+  documents: Document[],
+): Promise<string> {
   try {
     // Prepare context from documents
     const documentContext = documents
-      .filter(doc => doc.content && doc.content.trim().length > 0)
+      .filter((doc) => doc.content && doc.content.trim().length > 0)
       .slice(0, 5) // Limit to 5 most recent documents for context
-      .map(doc => `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 500)}`)
+      .map(
+        (doc) =>
+          `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 500)}`,
+      )
       .join("\n\n");
 
     const response = await openai.chat.completions.create({
@@ -326,18 +384,20 @@ export async function generateChatResponse(userMessage: string, documents: Docum
 Available documents context:
 ${documentContext}
 
-Provide helpful, accurate responses based on the available documents. If you can't find relevant information in the documents, let the user know and suggest how they might upload or organize documents to get better assistance.`
+Provide helpful, accurate responses based on the available documents. If you can't find relevant information in the documents, let the user know and suggest how they might upload or organize documents to get better assistance.`,
         },
         {
           role: "user",
-          content: userMessage
-        }
+          content: userMessage,
+        },
       ],
       max_tokens: 500,
     });
 
-    return response.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
-
+    return (
+      response.choices[0].message.content ||
+      "I'm sorry, I couldn't generate a response at this time."
+    );
   } catch (error) {
     console.error("Error generating chat response:", error);
     return "I'm experiencing some technical difficulties. Please try again later.";

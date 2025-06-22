@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,14 +20,16 @@ interface ChatModalProps {
 
 interface ChatMessage {
   id: number;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   createdAt: string;
 }
 
 export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [message, setMessage] = useState("");
-  const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    number | null
+  >(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -30,8 +37,8 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   // Create initial conversation when modal opens
   const createConversationMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/chat/conversations', {
-        title: `Chat ${new Date().toLocaleDateString()}`
+      const response = await apiRequest("POST", "/api/chat/conversations", {
+        title: `Chat ${new Date().toLocaleDateString()}`,
       });
       return response.json();
     },
@@ -45,7 +52,10 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
     queryFn: async () => {
       if (!currentConversationId) return [];
-      const response = await apiRequest('GET', `/api/chat/conversations/${currentConversationId}/messages`);
+      const response = await apiRequest(
+        "GET",
+        `/api/chat/conversations/${currentConversationId}/messages`,
+      );
       return await response.json();
     },
     enabled: !!currentConversationId,
@@ -55,16 +65,20 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!currentConversationId) throw new Error("No conversation");
-      
-      const response = await apiRequest('POST', '/api/chat/messages', {
+
+      const response = await apiRequest("POST", "/api/chat/messages", {
         conversationId: currentConversationId,
-        content
+        content,
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/chat/conversations", currentConversationId, "messages"] 
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/chat/conversations",
+          currentConversationId,
+          "messages",
+        ],
       });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setMessage("");
@@ -93,12 +107,12 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || sendMessageMutation.isPending) return;
-    
+
     sendMessageMutation.mutate(message.trim());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e);
     }
@@ -135,7 +149,8 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-900">
-                    Hello! I can help you search and analyze your documents. What would you like to know?
+                    Hello! I can help you search and analyze your documents.
+                    What would you like to know?
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Just now</p>
                 </div>
@@ -143,12 +158,12 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
             ) : (
               messages.map((msg: ChatMessage) => (
                 <div key={msg.id} className="flex items-start space-x-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    msg.role === 'assistant' 
-                      ? 'bg-blue-100' 
-                      : 'bg-gray-100'
-                  }`}>
-                    {msg.role === 'assistant' ? (
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      msg.role === "assistant" ? "bg-blue-100" : "bg-gray-100"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
                       <Bot className="w-5 h-5 text-blue-600" />
                     ) : (
                       <User className="w-5 h-5 text-gray-600" />
@@ -173,8 +188,14 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <div className="animate-bounce w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="animate-bounce w-2 h-2 bg-gray-400 rounded-full" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="animate-bounce w-2 h-2 bg-gray-400 rounded-full" style={{ animationDelay: '0.2s' }}></div>
+                    <div
+                      className="animate-bounce w-2 h-2 bg-gray-400 rounded-full"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="animate-bounce w-2 h-2 bg-gray-400 rounded-full"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -185,7 +206,10 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
 
         {/* Chat Input */}
         <div className="flex-shrink-0 p-4 border-t border-gray-200">
-          <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+          <form
+            onSubmit={handleSendMessage}
+            className="flex items-center space-x-3"
+          >
             <Input
               type="text"
               placeholder="Ask about your documents..."
@@ -195,9 +219,13 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
               disabled={sendMessageMutation.isPending || !currentConversationId}
               className="flex-1"
             />
-            <Button 
-              type="submit" 
-              disabled={!message.trim() || sendMessageMutation.isPending || !currentConversationId}
+            <Button
+              type="submit"
+              disabled={
+                !message.trim() ||
+                sendMessageMutation.isPending ||
+                !currentConversationId
+              }
               className="bg-blue-500 hover:bg-blue-600"
             >
               <Send className="w-4 h-4" />
