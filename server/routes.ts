@@ -1170,8 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [employee] = await db
             .select({
               employeeId: hrEmployees.employeeId,
-              firstName: hrEmployees.firstName,
-              lastName: hrEmployees.lastName,
+              name: hrEmployees.name,
               department: hrEmployees.department,
               position: hrEmployees.position,
               isActive: hrEmployees.isActive
@@ -1181,7 +1180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(1);
 
           if (employee && employee.isActive) {
-            response = `Yes, ${employee.employeeId} ${employee.firstName} ${employee.lastName} is working in ${employee.department}`;
+            response = `Yes, ${employee.employeeId} ${employee.name} is working in ${employee.department}`;
             if (employee.position) {
               response += ` as ${employee.position}`;
             }
@@ -1191,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               found: true, 
               employee: {
                 employeeId: employee.employeeId,
-                name: `${employee.firstName} ${employee.lastName}`,
+                name: employee.name,
                 department: employee.department,
                 position: employee.position
               }

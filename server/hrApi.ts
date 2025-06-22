@@ -23,8 +23,7 @@ export function registerHrApiRoutes(app: Express) {
       const [employee] = await db
         .select({
           employeeId: hrEmployees.employeeId,
-          firstName: hrEmployees.firstName,
-          lastName: hrEmployees.lastName,
+          name: hrEmployees.name,
           department: hrEmployees.department,
           position: hrEmployees.position,
           isActive: hrEmployees.isActive
