@@ -56,13 +56,6 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const [showDetails, setShowDetails] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // Fetch document summary when needed
-  const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ["/api/documents", doc.id, "summary"],
-    enabled: showSummary,
-    retry: false,
-  });
-
   // Fetch document details when needed
   const { data: documentDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ["/api/documents", doc.id],
@@ -172,7 +165,15 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   };
 
   const handleViewSummary = () => {
-    setShowSummary(true);
+    if (doc.summary) {
+      setShowSummary(true);
+    } else {
+      toast({
+        title: "No summary available",
+        description: "This document doesn't have a generated summary yet.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownload = () => {

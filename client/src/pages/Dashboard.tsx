@@ -285,6 +285,12 @@ export default function Dashboard() {
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
                               </DropdownMenuItem>
+                              {doc.summary && (
+                                <DropdownMenuItem onClick={() => setSelectedDocumentSummary(doc.summary)}>
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Content Summary
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

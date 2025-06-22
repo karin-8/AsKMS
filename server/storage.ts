@@ -219,14 +219,14 @@ export class DatabaseStorage implements IStorage {
 
     const [stats] = await db
       .select({
-        totalDocuments: sql<number>`CAST(COUNT(${documents.id}) AS INTEGER)`,
+        totalDocuments: count(documents.id),
         storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
       })
       .from(documents)
       .where(eq(documents.userId, userId));
 
     const [processedToday] = await db
-      .select({ count: sql<number>`CAST(COUNT(${documents.id}) AS INTEGER)` })
+      .select({ count: count(documents.id) })
       .from(documents)
       .where(
         and(
@@ -236,7 +236,7 @@ export class DatabaseStorage implements IStorage {
       );
 
     const [aiQueries] = await db
-      .select({ count: sql<number>`CAST(COUNT(${chatMessages.id}) AS INTEGER)` })
+      .select({ count: count(chatMessages.id) })
       .from(chatMessages)
       .innerJoin(chatConversations, eq(chatMessages.conversationId, chatConversations.id))
       .where(
