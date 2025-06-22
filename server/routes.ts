@@ -75,6 +75,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register public HR API routes (no authentication required)
   registerHrApiRoutes(app);
 
+  // Serve widget embed script
+  app.get('/widget/:widgetKey/embed.js', async (req, res) => {
+    try {
+      const { widgetKey } = req.params;
+      const { chatWidgets } = await import('@shared/schema');
+      
+      // Verify widget exists and is active
+      const [widget] = await db.select().from(chatWidgets).where(eq(chatWidgets.widgetKey, widgetKey)).limit(1);
+      
+      if (!widget || !widget.isActive) {
+        return res.status(404).send('// Widget not found or inactive');
+      }
+
+      // Read and serve the embed script
+      const fs = await import('fs');
+      const path = await import('path');
+      const embedScript = fs.readFileSync(path.join(process.cwd(), 'public', 'widget', 'embed.js'), 'utf8');
+      
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(embedScript);
+    } catch (error) {
+      console.error('Error serving widget embed script:', error);
+      res.status(500).send('// Error loading widget script');
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
