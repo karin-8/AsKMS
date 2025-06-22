@@ -189,14 +189,14 @@ export default function Dashboard() {
             
             {/* Upload and Category Stats Section */}
             <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
+              <Card className="h-[400px] flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Upload className="w-5 h-5" />
                     <span>Upload Documents</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 overflow-y-auto">
                   <UploadZone onUploadComplete={() => {}} />
                   
                   {/* Upload Progress */}
@@ -232,14 +232,14 @@ export default function Dashboard() {
             </div>
 
             {/* Recent Upload Documents */}
-            <Card>
+            <Card className="h-[500px] flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="w-5 h-5" />
                   <span>Recent Upload Documents</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 overflow-hidden">
                 {documents.length === 0 ? (
                   <div className="text-center py-8">
                     <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -247,8 +247,8 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400 mt-1">Upload your first document to get started</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {documents.slice(0, 5).map((doc: any) => (
+                  <div className="h-full overflow-y-auto space-y-3 pr-2">
+                    {documents.map((doc: any) => (
                       <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
