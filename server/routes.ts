@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { insertCategorySchema, insertDocumentSchema, insertChatConversationSchema, insertChatMessageSchema, insertDataConnectionSchema, updateDataConnectionSchema, type Document as DocType } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -786,6 +788,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing database chat:", error);
       res.status(500).json({ message: "Failed to process database chat" });
+    }
+  });
+
+  // Chat Widget API endpoints
+  app.get('/api/chat-widgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { chatWidgets } = await import('@shared/schema');
+      
+      const widgets = await db.select().from(chatWidgets).where(eq(chatWidgets.userId, userId));
+      res.json(widgets);
+    } catch (error) {
+      console.error("Error fetching chat widgets:", error);
+      res.status(500).json({ message: "Failed to fetch chat widgets" });
+    }
+  });
+
+  app.post('/api/chat-widgets', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { nanoid } = await import('nanoid');
+      const { chatWidgets } = await import('@shared/schema');
+      const { name, primaryColor, textColor, position, welcomeMessage, offlineMessage, enableHrLookup, hrApiEndpoint } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ message: "Widget name is required" });
+      }
+
+      const widgetKey = nanoid(16);
+      
+      const [widget] = await db.insert(chatWidgets).values({
+        userId,
+        name,
+        widgetKey,
+        primaryColor: primaryColor || "#2563eb",
+        textColor: textColor || "#ffffff", 
+        position: position || "bottom-right",
+        welcomeMessage: welcomeMessage || "Hi! How can I help you today?",
+        offlineMessage: offlineMessage || "We're currently offline. Please leave a message.",
+        enableHrLookup: enableHrLookup || false,
+        hrApiEndpoint: hrApiEndpoint || null
+      }).returning();
+
+      res.status(201).json(widget);
+    } catch (error) {
+      console.error("Error creating chat widget:", error);
+      res.status(500).json({ message: "Failed to create chat widget" });
+    }
+  });
+
+  // HR Employee management endpoints
+  app.get('/api/hr-employees', isAuthenticated, async (req: any, res) => {
+    try {
+      const { hrEmployees } = await import('@shared/schema');
+      const employees = await db.select().from(hrEmployees).where(eq(hrEmployees.isActive, true));
+      res.json(employees);
+    } catch (error) {
+      console.error("Error fetching HR employees:", error);
+      res.status(500).json({ message: "Failed to fetch HR employees" });
+    }
+  });
+
+  app.post('/api/hr-employees', isAuthenticated, async (req: any, res) => {
+    try {
+      const { hrEmployees } = await import('@shared/schema');
+      const { employeeId, citizenId, firstName, lastName, email, phone, department, position, startDate } = req.body;
+
+      if (!employeeId || !citizenId || !firstName || !lastName || !department) {
+        return res.status(400).json({ message: "Required fields: employeeId, citizenId, firstName, lastName, department" });
+      }
+
+      // Validate Thai Citizen ID format
+      if (!/^\d{13}$/.test(citizenId)) {
+        return res.status(400).json({ message: "Invalid Thai Citizen ID format. Must be 13 digits." });
+      }
+
+      const [employee] = await db.insert(hrEmployees).values({
+        employeeId,
+        citizenId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        department,
+        position,
+        startDate: startDate ? new Date(startDate) : null
+      }).returning();
+
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error("Error creating HR employee:", error);
+      if (error.code === '23505') { // Unique constraint violation
+        res.status(409).json({ message: "Employee ID or Citizen ID already exists" });
+      } else {
+        res.status(500).json({ message: "Failed to create HR employee" });
+      }
+    }
+  });
+
+  // Widget chat endpoints for public use
+  app.post('/api/widget/:widgetKey/chat', async (req, res) => {
+    try {
+      const { widgetKey } = req.params;
+      const { sessionId, message, visitorInfo } = req.body;
+      const { chatWidgets, widgetChatSessions, widgetChatMessages, hrEmployees } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const { nanoid } = await import('nanoid');
+
+      // Find widget
+      const [widget] = await db.select().from(chatWidgets).where(eq(chatWidgets.widgetKey, widgetKey)).limit(1);
+      
+      if (!widget || !widget.isActive) {
+        return res.status(404).json({ message: "Widget not found or inactive" });
+      }
+
+      // Create or get session
+      let session;
+      if (sessionId) {
+        [session] = await db.select().from(widgetChatSessions).where(eq(widgetChatSessions.sessionId, sessionId)).limit(1);
+      }
+      
+      if (!session) {
+        const newSessionId = sessionId || nanoid(16);
+        [session] = await db.insert(widgetChatSessions).values({
+          widgetId: widget.id,
+          sessionId: newSessionId,
+          visitorName: visitorInfo?.name,
+          visitorEmail: visitorInfo?.email,
+          visitorPhone: visitorInfo?.phone
+        }).returning();
+      }
+
+      // Add user message
+      await db.insert(widgetChatMessages).values({
+        sessionId: session.sessionId,
+        role: 'user',
+        content: message
+      });
+
+      // Check if this is an HR lookup request
+      let response = "Thank you for your message. How can I help you today?";
+      let messageType = "text";
+      let metadata = null;
+
+      if (widget.enableHrLookup && message) {
+        // Check if message contains Thai Citizen ID pattern
+        const citizenIdMatch = message.match(/\b\d{13}\b/);
+        if (citizenIdMatch) {
+          const citizenId = citizenIdMatch[0];
+          
+          const [employee] = await db
+            .select({
+              employeeId: hrEmployees.employeeId,
+              firstName: hrEmployees.firstName,
+              lastName: hrEmployees.lastName,
+              department: hrEmployees.department,
+              position: hrEmployees.position,
+              isActive: hrEmployees.isActive
+            })
+            .from(hrEmployees)
+            .where(eq(hrEmployees.citizenId, citizenId))
+            .limit(1);
+
+          if (employee && employee.isActive) {
+            response = `Yes, ${employee.employeeId} ${employee.firstName} ${employee.lastName} is working in ${employee.department}`;
+            if (employee.position) {
+              response += ` as ${employee.position}`;
+            }
+            messageType = "hr_lookup";
+            metadata = { 
+              citizenId, 
+              found: true, 
+              employee: {
+                employeeId: employee.employeeId,
+                name: `${employee.firstName} ${employee.lastName}`,
+                department: employee.department,
+                position: employee.position
+              }
+            };
+          } else {
+            response = "No active employee found with the provided Thai Citizen ID.";
+            messageType = "hr_lookup";
+            metadata = { citizenId, found: false };
+          }
+        } else {
+          response = widget.welcomeMessage + " You can also check employee status by providing a Thai Citizen ID (13 digits).";
+        }
+      }
+
+      // Add assistant response
+      await db.insert(widgetChatMessages).values({
+        sessionId: session.sessionId,
+        role: 'assistant',
+        content: response,
+        messageType,
+        metadata
+      });
+
+      res.json({
+        sessionId: session.sessionId,
+        response,
+        messageType,
+        metadata
+      });
+
+    } catch (error) {
+      console.error("Widget chat error:", error);
+      res.status(500).json({ message: "Chat service error" });
     }
   });
 

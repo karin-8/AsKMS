@@ -23,6 +23,7 @@ const navigation = [
   { name: "Integrations", href: "/integrations", icon: Building },
   { name: "Categories & Tags", href: "/categories", icon: Tags },
   { name: "User Management", href: "/users", icon: Users },
+  { name: "Live Chat Widget", href: "/live-chat-widget", icon: MessageSquare },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
