@@ -174,6 +174,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Category statistics endpoint
+  app.get('/api/stats/categories', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { documents, categories } = await import('@shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      const categoryStats = await db.select({
+        category: categories.name,
+        count: sql<number>`count(${documents.id})`
+      })
+      .from(documents)
+      .leftJoin(categories, eq(documents.categoryId, categories.id))
+      .where(eq(documents.userId, userId))
+      .groupBy(categories.name)
+      .orderBy(sql`count(${documents.id}) desc`);
+
+      res.json(categoryStats);
+    } catch (error) {
+      console.error("Error fetching category stats:", error);
+      res.status(500).json({ message: "Failed to fetch category stats" });
+    }
+  });
+
   // Document routes
   app.get('/api/documents', isAuthenticated, async (req: any, res) => {
     try {

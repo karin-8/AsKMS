@@ -41,8 +41,8 @@ export default function TopBar() {
     <header className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-800">Dashboard</h2>
-          <p className="text-sm text-slate-500">Welcome back! Here's your knowledge management overview.</p>
+          <h2 className="text-xl font-semibold text-slate-800">4urney AI-KMS</h2>
+          <p className="text-sm text-slate-500">Unleash the power of intelligent knowledge discovery and seamless collaboration.</p>
         </div>
         
         <div className="flex items-center space-x-4">

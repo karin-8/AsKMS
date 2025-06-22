@@ -25,6 +25,7 @@ import {
 import Sidebar from "@/components/Layout/Sidebar";
 import TopBar from "@/components/TopBar";
 import StatsCards from "@/components/Stats/StatsCards";
+import CategoryStatsCards from "@/components/Stats/CategoryStatsCards";
 import UploadZone from "@/components/Upload/UploadZone";
 import ChatModal from "@/components/Chat/ChatModal";
 import { apiRequest } from "@/lib/queryClient";
