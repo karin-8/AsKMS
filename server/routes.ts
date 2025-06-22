@@ -321,8 +321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: documentUserPermissions.id,
           documentId: documentUserPermissions.documentId,
           userId: documentUserPermissions.userId,
-          permission: documentUserPermissions.permission,
-          createdAt: documentUserPermissions.createdAt
+          permissionType: documentUserPermissions.permissionType,
+          grantedAt: documentUserPermissions.grantedAt
         })
         .from(documentUserPermissions);
 
@@ -331,8 +331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: documentDepartmentPermissions.id,
           documentId: documentDepartmentPermissions.documentId,
           departmentId: documentDepartmentPermissions.departmentId,
-          permission: documentDepartmentPermissions.permission,
-          createdAt: documentDepartmentPermissions.createdAt
+          permissionType: documentDepartmentPermissions.permissionType,
+          grantedAt: documentDepartmentPermissions.grantedAt
         })
         .from(documentDepartmentPermissions);
 

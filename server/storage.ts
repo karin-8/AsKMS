@@ -247,10 +247,10 @@ export class DatabaseStorage implements IStorage {
       );
 
     return {
-      totalDocuments: stats.totalDocuments,
-      processedToday: processedToday.count,
-      storageUsed: Math.round(stats.storageUsed / (1024 * 1024)), // Convert to MB
-      aiQueries: aiQueries.count,
+      totalDocuments: Number(stats.totalDocuments) || 0,
+      processedToday: Number(processedToday.count) || 0,
+      storageUsed: Math.round((Number(stats.storageUsed) || 0) / (1024 * 1024)), // Convert to MB
+      aiQueries: Number(aiQueries.count) || 0,
     };
   }
 
