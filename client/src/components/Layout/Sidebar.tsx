@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,10 @@ import {
   Upload,
   Search,
   Settings,
-  FolderOpen
+  FolderOpen,
+  BarChart3,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 
 interface SidebarProps {
@@ -25,6 +29,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: SidebarProps) {
   const [location] = useLocation();
+  const [isDashboardExpanded, setIsDashboardExpanded] = useState(false);
   
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
@@ -44,6 +49,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
   ];
 
   const isActiveRoute = (path: string) => location === path;
+  const isDashboardActive = location.startsWith('/dashboards');
 
   return (
     <>
@@ -106,6 +112,87 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                   <span>Categories</span>
                 </Button>
               </Link>
+
+              {/* Dashboard Menu with Expandable Sub-items */}
+              <div className="space-y-1">
+                <Button 
+                  variant="ghost" 
+                  className={cn(
+                    "w-full justify-start",
+                    isDashboardActive 
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  )}
+                  onClick={() => setIsDashboardExpanded(!isDashboardExpanded)}
+                >
+                  <BarChart3 className="w-5 h-5 mr-3" />
+                  <span>Dashboards</span>
+                  {isDashboardExpanded ? (
+                    <ChevronDown className="w-4 h-4 ml-auto" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  )}
+                </Button>
+
+                {isDashboardExpanded && (
+                  <div className="ml-6 space-y-1">
+                    <Link href="/dashboards/document-usage" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/document-usage")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        Document Usage Overview
+                      </Button>
+                    </Link>
+
+                    <Link href="/dashboards/ai-interaction" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/ai-interaction")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        AI Agent Interaction
+                      </Button>
+                    </Link>
+
+                    <Link href="/dashboards/user-activity" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/user-activity")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        User Activity Monitoring
+                      </Button>
+                    </Link>
+
+                    <Link href="/dashboards/system-health" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/system-health")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        System Health & AI Performance
+                      </Button>
+                    </Link>
+
+                    <Link href="/dashboards/security-governance" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/security-governance")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        Security & Governance
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
               
               <Link href="/settings" onClick={onMobileClose}>
                 <Button variant="ghost" className={cn(
