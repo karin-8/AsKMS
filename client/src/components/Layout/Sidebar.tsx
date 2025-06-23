@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,13 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
 
   const isActiveRoute = (path: string) => location === path;
   const isDashboardActive = location.startsWith('/dashboards');
+  
+  // Auto-expand dashboard menu if user is on a dashboard route
+  useEffect(() => {
+    if (isDashboardActive) {
+      setIsDashboardExpanded(true);
+    }
+  }, [isDashboardActive]);
 
   return (
     <>

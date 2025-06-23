@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, TrendingUp, PieChart, BarChart3, Upload, Calendar } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart as RechartsPieChart, Cell, LineChart, Line, Legend } from "recharts";
+import DashboardLayout from "@/components/Layout/DashboardLayout";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -58,17 +59,18 @@ export default function DocumentUsage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Document Usage Overview</h1>
-          <p className="text-gray-600 mt-1">Analyze document upload patterns and classification metrics</p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Document Usage Overview</h1>
+            <p className="text-gray-600 mt-1">Analyze document upload patterns and classification metrics</p>
+          </div>
+          <Badge variant="outline" className="px-3 py-1">
+            <Calendar className="w-4 h-4 mr-2" />
+            Last 7 Days
+          </Badge>
         </div>
-        <Badge variant="outline" className="px-3 py-1">
-          <Calendar className="w-4 h-4 mr-2" />
-          Last 7 Days
-        </Badge>
-      </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -230,6 +232,7 @@ export default function DocumentUsage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
