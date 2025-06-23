@@ -17,6 +17,11 @@ import LiveChatWidget from "@/pages/LiveChatWidget";
 import UserManagement from "@/pages/UserManagement";
 import Upload from "@/pages/Upload";
 import Search from "@/pages/Search";
+import DocumentUsage from "@/pages/dashboards/DocumentUsage";
+import AIInteraction from "@/pages/dashboards/AIInteraction";
+import UserActivity from "@/pages/dashboards/UserActivity";
+import SystemHealth from "@/pages/dashboards/SystemHealth";
+import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -49,6 +54,14 @@ function Router() {
           <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
+          
+          {/* Dashboard Routes */}
+          <Route path="/dashboards/document-usage" component={DocumentUsage} />
+          <Route path="/dashboards/ai-interaction" component={AIInteraction} />
+          <Route path="/dashboards/user-activity" component={UserActivity} />
+          <Route path="/dashboards/system-health" component={SystemHealth} />
+          <Route path="/dashboards/security-governance" component={SecurityGovernance} />
+          
           <Route component={NotFound} />
         </Switch>
       )}
