@@ -350,13 +350,13 @@ export class DatabaseStorage implements IStorage {
     // Category statistics
     const categoryStats = await db
       .select({
-        category: documents.category,
+        category: sql<string>`coalesce(${documents.category}, 'Uncategorized')`.as('category'),
         count: sql<number>`count(*)::int`,
       })
       .from(documentAccess)
       .innerJoin(documents, eq(documentAccess.documentId, documents.id))
       .where(whereClause)
-      .groupBy(documents.category)
+      .groupBy(sql`coalesce(${documents.category}, 'Uncategorized')`)
       .orderBy(sql`count(*) desc`);
 
     // Timeline data (last 30 days)
