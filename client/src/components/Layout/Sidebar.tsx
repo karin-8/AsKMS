@@ -18,6 +18,7 @@ import {
   FolderOpen,
   BarChart3,
   ChevronDown,
+  MessageSquare,
   ChevronRight
 } from "lucide-react";
 
