@@ -854,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/chat/messages', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { conversationId, content } = req.body;
+      const { conversationId, content, documentId } = req.body;
       
       // Create user message
       const userMessage = await storage.createChatMessage({
@@ -863,11 +863,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
       });
 
-      // Get user's documents for context
-      const documents = await storage.getDocuments(userId, { limit: 100 });
+      // Get specific document if documentId is provided, otherwise get all documents
+      let documents;
+      if (documentId) {
+        const specificDocument = await storage.getDocument(documentId, userId);
+        documents = specificDocument ? [specificDocument] : [];
+      } else {
+        documents = await storage.getDocuments(userId, { limit: 100 });
+      }
       
-      // Generate AI response
-      const aiResponse = await generateChatResponse(content, documents);
+      // Generate AI response with specific document context
+      const aiResponse = await generateChatResponse(content, documents, documentId);
       
       // Create assistant message
       const assistantMessage = await storage.createChatMessage({

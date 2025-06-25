@@ -76,7 +76,7 @@ export default function DocumentChatModal({
       const response = await apiRequest("POST", "/api/chat/messages", {
         conversationId: currentConversationId,
         content,
-        documentId: documentId,
+        documentId: documentId, // Pass the specific document ID
       });
       return response.json();
     },
@@ -160,8 +160,8 @@ export default function DocumentChatModal({
                 <div className="flex-1">
                   <div className="p-3 rounded-lg bg-green-50 border border-green-200">
                     <p className="text-sm text-gray-900 leading-relaxed">
-                      สวัสดีครับ! ผมสามารถช่วยวิเคราะห์และตอบคำถามเกี่ยวกับเอกสาร "{documentName}" ได้
-                      คุณต้องการทราบอะไรเกี่ยวกับเอกสารนี้บ้างครับ?
+                      สวัสดีครับ! ผมสามารถช่วยวิเคราะห์และตอบคำถามเกี่ยวกับเอกสาร "{documentName}" โดยเฉพาะได้
+                      คุณต้องการทราบอะไรเกี่ยวกับเอกสารนี้บ้างครับ? ผมจะตอบโดยอิงจากเนื้อหาในเอกสารนี้เท่านั้น
                     </p>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">เมื่อสักครู่</p>
@@ -238,7 +238,7 @@ export default function DocumentChatModal({
           >
             <Input
               type="text"
-              placeholder={`Ask about "${documentName}"...`}
+              placeholder={`ถามเกี่ยวกับ "${documentName}"...`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}

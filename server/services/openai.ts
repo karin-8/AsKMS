@@ -28,8 +28,36 @@ export async function processDocument(
     let content = "";
 
     // Extract content based on file type
-    if (mimeType === "text/plain") {
+    if (mimeType === "text/plain" || mimeType === "text/csv") {
       content = await fs.promises.readFile(filePath, "utf-8");
+      
+      // Enhanced processing for CSV files
+      if (mimeType === "text/csv" || filePath.endsWith('.csv')) {
+        try {
+          const lines = content.split('\n').filter(line => line.trim());
+          if (lines.length > 0) {
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const dataRows = lines.slice(1, Math.min(lines.length, 100)); // Limit to first 100 rows for analysis
+            
+            // Format CSV content for better AI analysis
+            const formattedContent = [
+              `CSV Data Structure:`,
+              `Headers: ${headers.join(', ')}`,
+              `Total Rows: ${lines.length - 1}`,
+              `Sample Data:`,
+              ...dataRows.slice(0, 10).map((row, index) => {
+                const cells = row.split(',').map(cell => cell.trim().replace(/"/g, ''));
+                return `Row ${index + 1}: ${headers.map((header, i) => `${header}: ${cells[i] || 'N/A'}`).join(', ')}`;
+              })
+            ].join('\n');
+            
+            content = formattedContent;
+          }
+        } catch (csvError) {
+          console.log("CSV parsing fallback to plain text");
+          // Fallback to plain text if CSV parsing fails
+        }
+      }
     } else if (mimeType === "application/pdf") {
       // For PDF files, use LlamaParse for better extraction
       try {
@@ -270,6 +298,7 @@ Respond with JSON in this exact format:
       Research: "#06B6D4", // Cyan - Research and analysis
       Personal: "#EC4899", // Pink - Personal documents
       Administrative: "#84CC16", // Lime - Administrative forms
+      Data: "#F97316", // Orange - Data files and datasets
       Uncategorized: "#6B7280", // Gray - Uncategorized items
     };
 
@@ -362,36 +391,46 @@ Format your response in a clear, conversational way that helps the user understa
 export async function generateChatResponse(
   userMessage: string,
   documents: Document[],
+  specificDocumentId?: number,
 ): Promise<string> {
   try {
     // Prepare context from documents
     const documentContext = documents
       .filter((doc) => doc.content && doc.content.trim().length > 0)
-      .slice(0, 5) // Limit to 5 most recent documents for context
+      .slice(0, specificDocumentId ? 1 : 5) // If specific document, use only that one
       .map(
         (doc) =>
-          `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 500)}`,
+          `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 1500)}`,
       )
       .join("\n\n");
+
+    const systemMessage = specificDocumentId 
+      ? `You are an AI assistant helping users analyze and understand specific documents. You are currently focusing on a specific document provided in the context below.
+
+Document context:
+${documentContext}
+
+Answer questions specifically about this document. Provide detailed analysis, explanations, and insights based on the document's content. If the user's question cannot be answered from this specific document, clearly state that and explain what information is available in the document.`
+      : `You are an AI assistant helping users with their document management system. You have access to the user's documents and can answer questions about them, help with searches, provide summaries, and assist with document organization.
+
+Available documents context:
+${documentContext}
+
+Provide helpful, accurate responses based on the available documents. If you can't find relevant information in the documents, let the user know and suggest how they might upload or organize documents to get better assistance.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are an AI assistant helping users with their document management system. You have access to the user's documents and can answer questions about them, help with searches, provide summaries, and assist with document organization.
-
-Available documents context:
-${documentContext}
-
-Provide helpful, accurate responses based on the available documents. If you can't find relevant information in the documents, let the user know and suggest how they might upload or organize documents to get better assistance.`,
+          content: systemMessage,
         },
         {
           role: "user",
           content: userMessage,
         },
       ],
-      max_tokens: 500,
+      max_tokens: 700,
     });
 
     return (
