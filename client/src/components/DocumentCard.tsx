@@ -592,7 +592,11 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Created</label>
-                    <p className="text-sm text-gray-900">{format(new Date((documentDetails as any).createdAt), 'PPP')}</p>
+                    <p className="text-sm text-gray-900">
+                      {(documentDetails as any).createdAt 
+                        ? format(new Date((documentDetails as any).createdAt), 'PPP') 
+                        : 'Unknown'}
+                    </p>
                   </div>
                 </div>
 
