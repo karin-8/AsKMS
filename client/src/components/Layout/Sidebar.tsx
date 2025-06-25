@@ -197,6 +197,17 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                         Security & Governance
                       </Button>
                     </Link>
+                    
+                    <Link href="/dashboards/customer-survey" onClick={onMobileClose}>
+                      <Button variant="ghost" size="sm" className={cn(
+                        "w-full justify-start text-sm",
+                        isActiveRoute("/dashboards/customer-survey")
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      )}>
+                        Customer Survey
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -210,6 +221,18 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                 )}>
                   <Settings className="w-5 h-5 mr-3" />
                   <span>Settings</span>
+                </Button>
+              </Link>
+              
+              <Link href="/survey" onClick={onMobileClose}>
+                <Button variant="ghost" className={cn(
+                  "w-full justify-start",
+                  isActiveRoute("/survey") 
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}>
+                  <MessageSquare className="w-5 h-5 mr-3" />
+                  <span>Survey</span>
                 </Button>
               </Link>
             </nav>
