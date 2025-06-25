@@ -10,6 +10,7 @@ import Documents from "@/pages/Documents";
 import Categories from "@/pages/Categories";
 import Admin from "@/pages/Admin";
 import Settings from "@/pages/Settings";
+import Survey from "@/pages/Survey";
 import Landing from "@/pages/Landing";
 import AIAssistant from "@/pages/AIAssistant";
 import Integrations from "@/pages/Integrations";

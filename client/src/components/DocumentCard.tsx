@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
   Eye, Trash2, MoreHorizontal, Calendar, HardDrive, Hash, Star, StarOff,
-  BookOpen, Database, Plus
+  BookOpen, Database, Plus, MessageSquare
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -313,6 +313,10 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
               <DropdownMenuItem onClick={handleShare}>
                 <Share className="mr-2 h-4 w-4" />
                 Share
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowChatWithDocument(true)}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Chat with Document
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => toggleFavoriteMutation.mutate()}

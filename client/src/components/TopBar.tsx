@@ -21,6 +21,7 @@ import {
   User
 } from "lucide-react";
 import { useState } from "react";
+import NotificationSystem from "./NotificationSystem";
 
 export default function TopBar() {
   const { user } = useAuth();
@@ -69,10 +70,7 @@ export default function TopBar() {
           </Button>
           
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative p-2 text-slate-400 hover:text-slate-600">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </Button>
+          <NotificationSystem />
 
           {/* User Menu */}
           <DropdownMenu>
