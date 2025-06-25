@@ -214,6 +214,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tag statistics endpoint
+  app.get('/api/stats/tags', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { documents } = await import('@shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      // Get all documents with their tags
+      const documentsWithTags = await db.select({
+        tags: documents.tags
+      })
+      .from(documents)
+      .where(eq(documents.userId, userId));
+
+      // Count occurrences of each tag
+      const tagCounts: { [key: string]: number } = {};
+      
+      documentsWithTags.forEach(doc => {
+        if (doc.tags && Array.isArray(doc.tags)) {
+          doc.tags.forEach((tag: string) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        }
+      });
+
+      // Convert to array and sort by count
+      const tagStats = Object.entries(tagCounts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count);
+
+      res.json(tagStats);
+    } catch (error) {
+      console.error("Error fetching tag stats:", error);
+      res.status(500).json({ message: "Failed to fetch tag stats" });
+    }
+  });
+
   // Department management routes
   app.get('/api/departments', isAuthenticated, async (req: any, res) => {
     try {

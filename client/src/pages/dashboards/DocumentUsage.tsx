@@ -14,7 +14,11 @@ export default function DocumentUsage() {
   });
 
   const { data: categoryStats = [] } = useQuery({
-    queryKey: ["/api/categories/stats"],
+    queryKey: ["/api/stats/categories"],
+  });
+
+  const { data: tagStats = [] } = useQuery({
+    queryKey: ["/api/stats/tags"],
   });
 
   // Calculate metrics
@@ -210,13 +214,61 @@ export default function DocumentUsage() {
                         className="w-4 h-4 rounded"
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="font-medium">{stat.category}</span>
+                      <span className="font-medium">{stat.category || 'Uncategorized'}</span>
                     </div>
                     <Badge variant="outline">{stat.count} docs</Badge>
                   </div>
                 )) : (
                   <div className="text-center py-4 text-gray-500">
                     <p className="text-sm">No category data available</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tags Analysis */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Documents by Tag Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents by Tag</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={tagStats.slice(0, 10)} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="tag" type="category" width={80} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#FFBB28" name="Documents" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Tag Overview List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tag Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-72 overflow-y-auto">
+                {Array.isArray(tagStats) && tagStats.length > 0 ? tagStats.slice(0, 15).map((stat: any, index: number) => (
+                  <div key={stat.tag} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm font-medium">{stat.tag}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">{stat.count}</Badge>
+                  </div>
+                )) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No tag data available</p>
                   </div>
                 )}
               </div>
