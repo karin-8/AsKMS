@@ -873,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate AI response with specific document context
-      const aiResponse = await generateChatResponse(content, documents, documentId);
+      const aiResponse = await generateChatResponse(content, documents, documentId ? documentId : undefined);
       
       // Create assistant message
       const assistantMessage = await storage.createChatMessage({

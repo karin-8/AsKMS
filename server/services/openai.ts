@@ -257,15 +257,21 @@ export async function processDocument(
    - Research: Studies, analysis, whitepapers, academic papers, research reports
    - Personal: Personal notes, diaries, personal correspondence, private documents
    - Administrative: Forms, applications, administrative documents, general paperwork
+   - Data: CSV files, datasets, spreadsheets, data exports, statistical data, structured data
    - Uncategorized: Documents that don't clearly fit the above categories
 
 2. INTELLIGENT TAGGING - Generate 4-8 specific, relevant tags that describe:
-   - Document type/format
+   - Document type/format (csv_data, text_file, structured_data, etc.)
    - Subject matter/topic
    - Purpose/use case
    - Key themes or concepts
+   - For CSV: data structure, column types, data purpose
+   - For TXT: content type, format, purpose
 
 3. SUMMARY - Create a concise 2-3 sentence summary highlighting the document's main purpose and key information
+
+For CSV files, focus on data structure, columns, and data insights.
+For TXT files, analyze content type, purpose, and key information.
 
 Respond with JSON in this exact format:
 {
