@@ -60,6 +60,11 @@ export default function DocumentChatModal({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
     enabled: !!currentConversationId,
     retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+    onSuccess: (data) => {
+      console.log("Messages received:", data);
+    }
   });
 
   // Send message mutation
@@ -75,6 +80,10 @@ export default function DocumentChatModal({
     onSuccess: () => {
       setMessage("");
       queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+      });
+      // Refetch messages immediately
+      queryClient.refetchQueries({
         queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
       });
     },
@@ -158,21 +167,34 @@ export default function DocumentChatModal({
                 <div key={msg.id} className="flex items-start space-x-3">
                   <div
                     className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      msg.role === "assistant" ? "bg-green-100" : "bg-gray-100"
+                      msg.role === "assistant" ? "bg-green-100" : "bg-blue-100"
                     }`}
                   >
                     {msg.role === "assistant" ? (
                       <Bot className="w-5 h-5 text-green-600" />
                     ) : (
-                      <User className="w-5 h-5 text-gray-600" />
+                      <User className="w-5 h-5 text-blue-600" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                      {msg.content}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(msg.createdAt).toLocaleTimeString()}
+                    <div className={`p-3 rounded-lg ${
+                      msg.role === "assistant" 
+                        ? "bg-green-50 border border-green-200" 
+                        : "bg-blue-50 border border-blue-200"
+                    }`}>
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+                        {msg.content && msg.content.trim() ? msg.content : "ข้อความว่างเปล่า"}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {new Date(msg.createdAt).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'short', 
+                        day: 'numeric'
+                      })} เวลา {new Date(msg.createdAt).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   </div>
                 </div>
