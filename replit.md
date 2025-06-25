@@ -110,6 +110,7 @@ This is a full-stack AI-powered Knowledge Management System built with modern we
 ```
 Changelog:
 - June 25, 2025. Initial setup
+- June 25, 2025. Fixed Chat with Documents feature - improved message display and Thai date/time formatting
 ```
 
 ## User Preferences

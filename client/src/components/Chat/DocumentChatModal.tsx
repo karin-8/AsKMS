@@ -58,13 +58,16 @@ export default function DocumentChatModal({
   // Get messages for current conversation
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+    queryFn: async () => {
+      if (!currentConversationId) return [];
+      const response = await apiRequest("GET", `/api/chat/conversations/${currentConversationId}/messages`);
+      const data = await response.json();
+      return data;
+    },
     enabled: !!currentConversationId,
     retry: false,
     refetchOnWindowFocus: false,
-    staleTime: 0,
-    onSuccess: (data) => {
-      console.log("Messages received:", data);
-    }
+    staleTime: 0
   });
 
   // Send message mutation
@@ -155,11 +158,13 @@ export default function DocumentChatModal({
                   <Bot className="w-5 h-5 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-900">
-                    Hello! I can help you analyze and answer questions about "{documentName}".
-                    What would you like to know about this document?
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Just now</p>
+                  <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                    <p className="text-sm text-gray-900 leading-relaxed">
+                      สวัสดีครับ! ผมสามารถช่วยวิเคราะห์และตอบคำถามเกี่ยวกับเอกสาร "{documentName}" ได้
+                      คุณต้องการทราบอะไรเกี่ยวกับเอกสารนี้บ้างครับ?
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">เมื่อสักครู่</p>
                 </div>
               </div>
             ) : (
@@ -189,12 +194,13 @@ export default function DocumentChatModal({
                     <p className="text-xs text-gray-500 mt-2">
                       {new Date(msg.createdAt).toLocaleDateString('th-TH', {
                         year: 'numeric',
-                        month: 'short', 
+                        month: 'long', 
                         day: 'numeric'
                       })} เวลา {new Date(msg.createdAt).toLocaleTimeString('th-TH', {
                         hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                        minute: '2-digit',
+                        hour12: false
+                      })} น.
                     </p>
                   </div>
                 </div>
