@@ -194,25 +194,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchDocuments(userId: string, query: string): Promise<Document[]> {
+    console.log(`Storage searchDocuments called - userId: ${userId}, query: "${query}"`);
+    
     const lowerQuery = query.toLowerCase();
-    return await db
+    const searchTerms = lowerQuery.split(/\s+/).filter(term => term.length > 0);
+    
+    console.log(`Search terms: ${searchTerms.join(', ')}`);
+    
+    // Build search conditions for each term
+    const searchConditions = searchTerms.map(term => 
+      or(
+        sql`LOWER(${documents.name}) LIKE ${`%${term}%`}`,
+        sql`LOWER(${documents.content}) LIKE ${`%${term}%`}`,
+        sql`LOWER(${documents.summary}) LIKE ${`%${term}%`}`,
+        sql`LOWER(${documents.aiCategory}) LIKE ${`%${term}%`}`,
+        sql`LOWER(${documents.category}) LIKE ${`%${term}%`}`,
+        sql`EXISTS (
+          SELECT 1 FROM unnest(${documents.tags}) AS tag 
+          WHERE LOWER(tag) LIKE ${`%${term}%`}
+        )`
+      )
+    );
+    
+    const whereClause = and(
+      eq(documents.userId, userId),
+      searchConditions.length > 0 ? or(...searchConditions) : sql`true`
+    );
+    
+    const results = await db
       .select()
       .from(documents)
-      .where(
-        and(
-          eq(documents.userId, userId),
-          or(
-            sql`LOWER(${documents.name}) LIKE ${'%' + lowerQuery + '%'}`,
-            sql`LOWER(${documents.description}) LIKE ${'%' + lowerQuery + '%'}`,
-            sql`LOWER(${documents.content}) LIKE ${'%' + lowerQuery + '%'}`,
-            sql`LOWER(${documents.summary}) LIKE ${'%' + lowerQuery + '%'}`,
-            sql`LOWER(${documents.aiCategory}) LIKE ${'%' + lowerQuery + '%'}`,
-            sql`EXISTS (SELECT 1 FROM unnest(${documents.tags}) AS tag WHERE LOWER(tag) LIKE ${'%' + lowerQuery + '%'})`
-          )
-        )
-      )
+      .where(whereClause)
       .orderBy(desc(documents.updatedAt))
-      .limit(20);
+      .limit(50);
+      
+    console.log(`Found ${results.length} documents matching search criteria`);
+    return results;
   }
 
   async toggleDocumentFavorite(id: number, userId: string): Promise<Document> {

@@ -571,48 +571,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const query = req.query.query as string;
-      const searchType = req.query.type as 'keyword' | 'semantic' | 'hybrid' || 'hybrid';
+      const searchType = req.query.type as 'keyword' | 'semantic' | 'hybrid' || 'keyword';
 
-      if (!query) {
+      console.log(`Search request - User: ${userId}, Query: "${query}", Type: ${searchType}`);
+
+      if (!query || query.trim().length === 0) {
+        console.log("Empty query, returning empty results");
         return res.json([]);
       }
 
-      console.log(`Performing ${searchType} search for user ${userId}: "${query}"`);
-
       let results = [];
       
-      if (searchType === 'semantic') {
+      if (searchType === 'keyword') {
+        console.log("Performing keyword search...");
+        results = await storage.searchDocuments(userId, query);
+        console.log(`Keyword search returned ${results.length} results`);
+      } else if (searchType === 'semantic') {
+        console.log("Performing semantic search...");
         try {
           results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'semantic' });
           console.log(`Semantic search returned ${results.length} results`);
         } catch (semanticError) {
           console.error("Semantic search failed, falling back to keyword:", semanticError);
           results = await storage.searchDocuments(userId, query);
+          console.log(`Fallback keyword search returned ${results.length} results`);
         }
-      } else if (searchType === 'keyword') {
-        results = await storage.searchDocuments(userId, query);
       } else { // hybrid
+        console.log("Performing hybrid search...");
         try {
           results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'hybrid' });
+          console.log(`Hybrid search returned ${results.length} results`);
         } catch (hybridError) {
           console.error("Hybrid search failed, falling back to keyword:", hybridError);
           results = await storage.searchDocuments(userId, query);
+          console.log(`Fallback keyword search returned ${results.length} results`);
         }
       }
 
-      console.log(`Found ${results.length} results for query: "${query}"`);
-      
-      // Add sample search suggestions for testing
-      if (results.length === 0 && searchType === 'semantic') {
-        console.log("No semantic results found. Try these sample queries:");
-        console.log("- 'employee benefits and vacation policy'");
-        console.log("- 'training requirements for new hires'");
-        console.log("- 'safety procedures and guidelines'");
-        console.log("- 'performance review process'");
-        console.log("- 'company policies and procedures'");
-        console.log("- 'HR guidelines and documentation'");
-      }
-      
+      console.log(`Final results count: ${results.length}`);
       res.json(results);
     } catch (error) {
       console.error("Search error:", error);

@@ -74,16 +74,25 @@ export default function Documents() {
     queryFn: async () => {
       if (!searchQuery.trim()) {
         const response = await fetch("/api/documents");
+        if (!response.ok) {
+          throw new Error(`${response.status}: ${response.statusText}`);
+        }
         return await response.json();
       }
       
       const params = new URLSearchParams({
-        q: searchQuery,
+        query: searchQuery,
         type: searchType
       });
       
+      console.log(`Frontend search: "${searchQuery}" (${searchType})`);
       const response = await fetch(`/api/documents/search?${params}`);
-      return await response.json();
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      const results = await response.json();
+      console.log(`Frontend received ${results.length} search results`);
+      return results;
     },
     retry: false,
   }) as { data: Array<any>; isLoading: boolean };
