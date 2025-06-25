@@ -291,6 +291,27 @@ export const widgetChatMessagesRelations = relations(widgetChatMessages, ({ one 
   }),
 }));
 
+// AI Assistant Feedback System for RLHF preparation
+export const aiAssistantFeedback = pgTable("ai_assistant_feedback", {
+  id: serial("id").primaryKey(),
+  chatMessageId: integer("chat_message_id").references(() => chatMessages.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  userQuery: text("user_query").notNull(),
+  assistantResponse: text("assistant_response").notNull(),
+  feedbackType: varchar("feedback_type").notNull(), // 'helpful', 'not_helpful'
+  userNote: text("user_note"), // Optional explanation for negative feedback
+  documentContext: jsonb("document_context"), // Which documents were referenced
+  conversationId: integer("conversation_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const aiAssistantFeedbackRelations = relations(aiAssistantFeedback, ({ one }) => ({
+  chatMessage: one(chatMessages, {
+    fields: [aiAssistantFeedback.chatMessageId],
+    references: [chatMessages.id],
+  }),
+}));
+
 // Insert schemas
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
@@ -424,6 +445,9 @@ export type DocumentUserPermission = typeof documentUserPermissions.$inferSelect
 export type InsertDocumentUserPermission = typeof documentUserPermissions.$inferInsert;
 export type DocumentDepartmentPermission = typeof documentDepartmentPermissions.$inferSelect;
 export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermissions.$inferInsert;
+
+export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
+export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
 
 export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
 export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;

@@ -202,6 +202,15 @@ export default function DocumentChatModal({
                         hour12: false
                       })} น.
                     </p>
+                    {msg.role === 'assistant' && (
+                      <FeedbackButtons
+                        messageId={msg.id}
+                        userQuery={messages[messages.findIndex(m => m.id === msg.id) - 1]?.content || ''}
+                        assistantResponse={msg.content}
+                        conversationId={currentConversationId!}
+                        documentContext={{ documentId, documentName }}
+                      />
+                    )}
                   </div>
                 </div>
               ))

@@ -882,6 +882,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: aiResponse,
       });
 
+      // Log document access if specific document was referenced
+      if (documentId) {
+        await storage.logDocumentAccess(documentId, userId, 'chat', {
+          query: content,
+          conversationId: conversationId
+        });
+      }
+
       res.json([userMessage, assistantMessage]);
     } catch (error) {
       console.error("Error processing chat message:", error);
@@ -1463,6 +1471,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching survey stats:", error);
       res.status(500).json({ message: "Failed to fetch survey stats" });
+    }
+  });
+
+  // Document Demand Insights API
+  app.get("/api/analytics/document-demand", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const insights = await storage.getDocumentAccessStats(userId);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching document demand insights:", error);
+      res.status(500).json({ message: "Failed to fetch insights" });
+    }
+  });
+
+  // AI Assistant Feedback API
+  app.post("/api/ai-feedback", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const feedback = await storage.createAiFeedback({
+        ...req.body,
+        userId,
+      });
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error creating AI feedback:", error);
+      res.status(500).json({ message: "Failed to create feedback" });
+    }
+  });
+
+  app.get("/api/ai-feedback/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getAiFeedbackStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching AI feedback stats:", error);
+      res.status(500).json({ message: "Failed to fetch feedback stats" });
+    }
+  });
+
+  app.get("/api/ai-feedback/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const feedbackData = await storage.exportAiFeedbackData(userId);
+      res.json(feedbackData);
+    } catch (error) {
+      console.error("Error exporting AI feedback data:", error);
+      res.status(500).json({ message: "Failed to export feedback data" });
     }
   });
 

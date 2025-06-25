@@ -6,6 +6,7 @@ import {
   chatMessages,
   documentAccess,
   dataConnections,
+  aiAssistantFeedback,
   type User,
   type UpsertUser,
   type Category,
@@ -21,6 +22,8 @@ import {
   type DataConnection,
   type InsertDataConnection,
   type UpdateDataConnection,
+  type AiAssistantFeedback,
+  type InsertAiAssistantFeedback,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
