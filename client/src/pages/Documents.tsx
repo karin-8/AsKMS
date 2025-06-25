@@ -31,7 +31,7 @@ export default function Documents() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchType, setSearchType] = useState<"keyword" | "semantic">("keyword");
+  const [searchType, setSearchType] = useState<"keyword" | "semantic" | "hybrid">("hybrid");
   const [sortBy, setSortBy] = useState("newest");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterTag, setFilterTag] = useState("all");

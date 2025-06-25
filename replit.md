@@ -41,7 +41,9 @@ This is a full-stack AI-powered Knowledge Management System built with modern we
 5. **Database Storage**: Structured metadata and content storage
 
 ### AI-Powered Features
-- **Semantic Search**: Vector similarity search across document content
+- **Advanced Semantic Search**: OpenAI text-embedding-3-small integration with custom embeddings, document chunking, and hybrid search combining semantic and keyword approaches
+- **Vector Database**: Document and chunk-level embeddings stored in PostgreSQL with similarity calculations
+- **Search Analytics**: Query tracking, search session logging, and performance insights
 - **Chat Assistant**: Conversational interface with document context and feedback system
 - **Auto-Categorization**: AI-generated categories and tags with CSV/TXT processing
 - **Content Summarization**: Automatic document summaries
@@ -118,6 +120,7 @@ Changelog:
 - June 25, 2025. Implemented resizable chat modals and fixed navigation for Document Demand Insights dashboard
 - June 25, 2025. Fixed chat modal positioning (starts higher on screen) and added bidirectional resize capability including upward expansion
 - June 25, 2025. Enhanced chat scrolling behavior to auto-scroll to latest messages when reopening dialogs
+- June 25, 2025. Implemented advanced semantic search with custom embeddings - added OpenAI text-embedding-3-small integration, document chunking, hybrid search capabilities, and comprehensive search analytics
 ```
 
 ## User Preferences
