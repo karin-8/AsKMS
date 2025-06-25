@@ -42,10 +42,12 @@ This is a full-stack AI-powered Knowledge Management System built with modern we
 
 ### AI-Powered Features
 - **Semantic Search**: Vector similarity search across document content
-- **Chat Assistant**: Conversational interface with document context
-- **Auto-Categorization**: AI-generated categories and tags
+- **Chat Assistant**: Conversational interface with document context and feedback system
+- **Auto-Categorization**: AI-generated categories and tags with CSV/TXT processing
 - **Content Summarization**: Automatic document summaries
 - **Widget Integration**: Embeddable chat widgets for external sites
+- **Feedback Collection**: RLHF-ready feedback system with thumbs up/down and explanations
+- **Document Analytics**: Demand insights dashboard with access patterns and trends
 
 ### User Management System
 - **Role-Based Access**: Admin, Editor, Viewer roles
@@ -112,6 +114,7 @@ Changelog:
 - June 25, 2025. Initial setup
 - June 25, 2025. Fixed Chat with Documents feature - improved message display and Thai date/time formatting
 - June 25, 2025. Enhanced CSV/TXT file processing with structured data analysis and document-specific chat targeting
+- June 25, 2025. Implemented Document Demand Insights dashboard and AI Assistant feedback system with RLHF preparation
 ```
 
 ## User Preferences

@@ -12,6 +12,7 @@ import { X, Bot, User, Send, FileText } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { FeedbackButtons } from "@/components/FeedbackButtons";
 
 interface DocumentChatModalProps {
   isOpen: boolean;
