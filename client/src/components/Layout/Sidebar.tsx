@@ -232,7 +232,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                     ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 )}>
-                  <MessageSquare className="w-5 h-5 mr-3" />
+                  <Bot className="w-5 h-5 mr-3" />
                   <span>Survey</span>
                 </Button>
               </Link>
