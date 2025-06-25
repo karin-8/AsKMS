@@ -201,25 +201,30 @@ export class DatabaseStorage implements IStorage {
     
     console.log(`Search terms: ${searchTerms.join(', ')}`);
     
-    // Build search conditions for each term
+    // Build search conditions for each term using ILIKE for case-insensitive search
     const searchConditions = searchTerms.map(term => 
       or(
-        sql`LOWER(${documents.name}) LIKE ${`%${term}%`}`,
-        sql`LOWER(${documents.content}) LIKE ${`%${term}%`}`,
-        sql`LOWER(${documents.summary}) LIKE ${`%${term}%`}`,
-        sql`LOWER(${documents.aiCategory}) LIKE ${`%${term}%`}`,
-        sql`LOWER(${documents.category}) LIKE ${`%${term}%`}`,
+        ilike(documents.name, `%${term}%`),
+        ilike(documents.content, `%${term}%`),
+        ilike(documents.summary, `%${term}%`),
+        ilike(documents.aiCategory, `%${term}%`),
         sql`EXISTS (
           SELECT 1 FROM unnest(${documents.tags}) AS tag 
-          WHERE LOWER(tag) LIKE ${`%${term}%`}
+          WHERE tag ILIKE ${`%${term}%`}
         )`
       )
     );
     
-    const whereClause = and(
-      eq(documents.userId, userId),
-      searchConditions.length > 0 ? or(...searchConditions) : sql`true`
-    );
+    let whereClause;
+    
+    if (searchConditions.length > 0) {
+      whereClause = and(
+        eq(documents.userId, userId),
+        or(...searchConditions)
+      );
+    } else {
+      whereClause = eq(documents.userId, userId);
+    }
     
     const results = await db
       .select()
