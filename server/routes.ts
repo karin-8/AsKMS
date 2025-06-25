@@ -89,6 +89,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register public HR API routes (no authentication required)
   registerHrApiRoutes(app);
 
+  // Register analytics routes
+  const { registerAnalyticsRoutes } = await import('./routes-analytics');
+  registerAnalyticsRoutes(app);
+
   // Serve widget embed script
   app.get('/widget/:widgetKey/embed.js', async (req, res) => {
     try {
@@ -685,6 +689,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const document = await storage.createDocument(documentData);
+
+          // Generate embeddings for semantic search
+          try {
+            const { semanticSearchService } = await import('./services/semanticSearch');
+            await semanticSearchService.generateDocumentEmbedding(document.id);
+            console.log(`Embeddings generated for document: ${file.originalname}`);
+          } catch (embeddingError) {
+            console.error(`Error generating embeddings for ${file.originalname}:`, embeddingError);
+            // Continue without embeddings - document will still be searchable with keywords
+          }
+
           uploadedDocuments.push(document);
           
           console.log(`Document processed: ${file.originalname} -> Category: ${category}, Tags: ${tags?.join(', ')}`);
