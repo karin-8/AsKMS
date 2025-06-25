@@ -115,6 +115,7 @@ Changelog:
 - June 25, 2025. Fixed Chat with Documents feature - improved message display and Thai date/time formatting
 - June 25, 2025. Enhanced CSV/TXT file processing with structured data analysis and document-specific chat targeting
 - June 25, 2025. Implemented Document Demand Insights dashboard and AI Assistant feedback system with RLHF preparation
+- June 25, 2025. Implemented resizable chat modals and fixed navigation for Document Demand Insights dashboard
 ```
 
 ## User Preferences

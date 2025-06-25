@@ -251,6 +251,6 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
             </Button>
           </form>
         </div>
-      </ResizableDialog>
+    </ResizableDialog>
   );
 }

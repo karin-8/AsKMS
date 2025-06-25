@@ -122,24 +122,20 @@ export default function DocumentChatModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-full h-[600px] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <DialogTitle>Chat with Document</DialogTitle>
-                <p className="text-sm text-gray-500 mt-1">{documentName}</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
+    <ResizableDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      title={`แชทกับเอกสาร: ${documentName}`}
+      defaultWidth="60%"
+      defaultHeight="70%"
+      minWidth={500}
+      minHeight={400}
+      className="flex flex-col"
+    >
+      <div className="flex items-center space-x-2 mb-4">
+        <FileText className="w-5 h-5 text-blue-600" />
+        <span className="text-sm text-gray-600">คุณกำลังแชทเฉพาะกับเอกสารนี้</span>
+      </div>
 
         {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4">
@@ -262,7 +258,7 @@ export default function DocumentChatModal({
               <Send className="w-4 h-4" />
             </Button>
           </form>
-        </div>
+      </div>
       </ResizableDialog>
   );
 }
