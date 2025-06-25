@@ -107,6 +107,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
         title: "Document deleted",
         description: "Document has been successfully deleted.",
       });
+      // Add notification
+      if ((window as any).addNotification) {
+        (window as any).addNotification({
+          type: 'delete',
+          title: 'Document Deleted',
+          message: `Document "${doc.name || doc.originalName}" has been deleted.`
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -537,6 +545,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Chat with Document Modal */}
+      <DocumentChatModal
+        isOpen={showChatWithDocument}
+        onClose={() => setShowChatWithDocument(false)}
+        documentId={doc.id}
+        documentName={doc.name || doc.originalName}
+      />
 
       {/* Document Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>

@@ -23,6 +23,7 @@ import AIInteraction from "@/pages/dashboards/AIInteraction";
 import UserActivity from "@/pages/dashboards/UserActivity";
 import SystemHealth from "@/pages/dashboards/SystemHealth";
 import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
+import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -62,6 +63,8 @@ function Router() {
           <Route path="/dashboards/user-activity" component={UserActivity} />
           <Route path="/dashboards/system-health" component={SystemHealth} />
           <Route path="/dashboards/security-governance" component={SecurityGovernance} />
+          <Route path="/dashboards/customer-survey" component={CustomerSurvey} />
+          <Route path="/survey" component={Survey} />
           
           <Route component={NotFound} />
         </Switch>
