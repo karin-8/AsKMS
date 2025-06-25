@@ -1399,6 +1399,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Survey routes
+  app.post('/api/survey/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { satisfaction, easeOfUse, improvements, suggestions } = req.body;
+      
+      // Store survey response (you can add this to schema if needed)
+      // For now, we'll just return success
+      res.json({ success: true, message: "Survey submitted successfully" });
+    } catch (error) {
+      console.error("Error submitting survey:", error);
+      res.status(500).json({ message: "Failed to submit survey" });
+    }
+  });
+
+  app.get('/api/survey/responses', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock survey responses for now
+      const mockResponses = [
+        {
+          id: 1,
+          satisfaction: 4,
+          easeOfUse: 5,
+          improvements: "Better search functionality",
+          suggestions: "Add more AI features",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          satisfaction: 5,
+          easeOfUse: 4,
+          improvements: "UI improvements",
+          suggestions: "More integrations",
+          createdAt: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
+      
+      res.json(mockResponses);
+    } catch (error) {
+      console.error("Error fetching survey responses:", error);
+      res.status(500).json({ message: "Failed to fetch survey responses" });
+    }
+  });
+
+  app.get('/api/survey/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      // Mock survey stats
+      const mockStats = {
+        totalResponses: 25,
+        averageSatisfaction: 4.2,
+        averageEaseOfUse: 4.1,
+        responseRate: 68
+      };
+      
+      res.json(mockStats);
+    } catch (error) {
+      console.error("Error fetching survey stats:", error);
+      res.status(500).json({ message: "Failed to fetch survey stats" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

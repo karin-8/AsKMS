@@ -203,7 +203,7 @@ export default function DocumentUsage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {Array.isArray(categoryStats) && categoryStats.map((stat: any, index: number) => (
+                {Array.isArray(categoryStats) && categoryStats.length > 0 ? categoryStats.map((stat: any, index: number) => (
                   <div key={stat.category} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div 
@@ -214,7 +214,11 @@ export default function DocumentUsage() {
                     </div>
                     <Badge variant="outline">{stat.count} docs</Badge>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <p className="text-sm">No category data available</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

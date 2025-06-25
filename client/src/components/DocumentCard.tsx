@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import DocumentChatModal from "./Chat/DocumentChatModal";
 
 interface DocumentCardProps {
   document: {
