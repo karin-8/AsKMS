@@ -24,7 +24,6 @@ import UserActivity from "@/pages/dashboards/UserActivity";
 import SystemHealth from "@/pages/dashboards/SystemHealth";
 import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
-import DocumentDemandInsights from "@/pages/dashboards/DocumentDemandInsights";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();

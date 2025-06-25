@@ -24,8 +24,12 @@ import {
   SortDesc,
   Calendar,
   Upload,
-  Tag
+  Tag,
+  ChevronDown
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Documents() {
   const { toast } = useToast();
@@ -97,12 +101,19 @@ export default function Documents() {
   const aiCategories = documents ? Array.from(new Set(documents.map((doc: any) => doc.aiCategory).filter(Boolean))) : [];
   const allTags = documents ? Array.from(new Set(documents.flatMap((doc: any) => doc.tags || []))) : [];
 
-  // Filter and sort documents
+  // Filter and sort documents with multi-select support
   const filteredDocuments = documents ? documents.filter((doc: any) => {
-    const matchesCategory = filterCategory === "all" || 
-                           doc.aiCategory === filterCategory ||
-                           (categories && categories.find((c: any) => c.id === doc.categoryId)?.name === filterCategory);
-    const matchesTag = filterTag === "all" || (doc.tags && doc.tags.includes(filterTag));
+    // Apply category filters
+    const matchesCategory = filterCategories.length === 0 || 
+                           filterCategories.includes(doc.aiCategory) ||
+                           filterCategories.includes(doc.category) ||
+                           (categories && categories.some((c: any) => 
+                             filterCategories.includes(c.name) && c.id === doc.categoryId
+                           ));
+    
+    // Apply tag filters  
+    const matchesTag = filterTags.length === 0 || 
+                      (doc.tags && filterTags.some((tag: string) => doc.tags.includes(tag)));
     
     return matchesCategory && matchesTag;
   }).sort((a: any, b: any) => {
@@ -164,34 +175,75 @@ export default function Documents() {
                   </SelectContent>
                 </Select>
                 
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {aiCategories.map((category: string) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-40 justify-between">
+                      Categories ({filterCategories.length})
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0">
+                    <Command>
+                      <CommandInput placeholder="Search categories..." />
+                      <CommandEmpty>No categories found.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-auto">
+                        {aiCategories.map((category: string) => (
+                          <CommandItem
+                            key={category}
+                            onSelect={() => {
+                              setFilterCategories(prev =>
+                                prev.includes(category)
+                                  ? prev.filter(c => c !== category)
+                                  : [...prev, category]
+                              );
+                            }}
+                          >
+                            <Checkbox
+                              checked={filterCategories.includes(category)}
+                              className="mr-2"
+                            />
+                            {category}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 
-                <Select value={filterTag} onValueChange={setFilterTag}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by tag" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tags</SelectItem>
-                    {allTags.map((tag: string) => (
-                      <SelectItem key={tag} value={tag}>
-                        <Tag className="w-3 h-3 mr-1" />
-                        {tag}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-32 justify-between">
+                      Tags ({filterTags.length})
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0">
+                    <Command>
+                      <CommandInput placeholder="Search tags..." />
+                      <CommandEmpty>No tags found.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-auto">
+                        {allTags.map((tag: string) => (
+                          <CommandItem
+                            key={tag}
+                            onSelect={() => {
+                              setFilterTags(prev =>
+                                prev.includes(tag)
+                                  ? prev.filter(t => t !== tag)
+                                  : [...prev, tag]
+                              );
+                            }}
+                          >
+                            <Checkbox
+                              checked={filterTags.includes(tag)}
+                              className="mr-2"
+                            />
+                            {tag}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger>
