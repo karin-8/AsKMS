@@ -70,39 +70,8 @@ export const documents = pgTable("documents", {
   isPublic: boolean("is_public").default(false),
   isFavorite: boolean("is_favorite").default(false),
   processedAt: timestamp("processed_at"),
-  embedding: text("embedding"), // Store embeddings as JSON string
-  embeddingModel: varchar("embedding_model", { length: 100 }), // Track which model was used
-  lastEmbeddingUpdate: timestamp("last_embedding_update"),
-  isInVectorDb: boolean("is_in_vector_db").default(false),
-  status: varchar("status", { length: 20 }).default("uploaded"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Document chunks for improved semantic search
-export const documentChunks = pgTable("document_chunks", {
-  id: serial("id").primaryKey(),
-  documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
-  chunkIndex: integer("chunk_index").notNull(),
-  content: text("content").notNull(),
-  embedding: text("embedding"), // Store chunk embeddings as JSON string
-  startPosition: integer("start_position"),
-  endPosition: integer("end_position"),
-  tokenCount: integer("token_count"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Search sessions to track user queries and improve search
-export const searchSessions = pgTable("search_sessions", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
-  query: text("query").notNull(),
-  searchType: varchar("search_type", { length: 20 }).notNull(), // 'keyword', 'semantic', 'hybrid'
-  resultsCount: integer("results_count"),
-  clickedDocumentIds: text("clicked_document_ids").array(),
-  queryEmbedding: text("query_embedding"), // Store query embeddings
-  sessionDuration: integer("session_duration"), // in seconds
-  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Chat conversations

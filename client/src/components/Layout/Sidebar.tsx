@@ -217,7 +217,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                           ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
                           : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                       )}>
-                        Document Demand Analysis
+                        Document Demand Insights
                       </Button>
                     </Link>
                   </div>
