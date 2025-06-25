@@ -56,6 +56,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const [showSummary, setShowSummary] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showChatWithDocument, setShowChatWithDocument] = useState(false);
 
   // Fetch document details when needed
   const { data: documentDetails, isLoading: detailsLoading } = useQuery({
@@ -390,6 +391,10 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                 <DropdownMenuItem onClick={handleShare}>
                   <Share className="mr-2 h-4 w-4" />
                   Share
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowChatWithDocument(true)}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Chat with Document
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => toggleFavoriteMutation.mutate()}
