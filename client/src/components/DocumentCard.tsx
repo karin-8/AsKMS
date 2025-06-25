@@ -308,10 +308,6 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleView}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleViewSummary}>
                 <BookOpen className="mr-2 h-4 w-4" />
                 Content Summary

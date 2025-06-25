@@ -20,6 +20,7 @@ import {
   LogOut,
   User
 } from "lucide-react";
+import kingpowerLogo from "@assets/kingpower_1750867302870.webp";
 import { useState } from "react";
 import NotificationSystem from "./NotificationSystem";
 
@@ -41,9 +42,16 @@ export default function TopBar() {
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-800">4urney AI-KMS</h2>
-          <p className="text-sm text-slate-500">Unleash the power of intelligent knowledge discovery and seamless collaboration.</p>
+        <div className="flex items-center space-x-3">
+          <img 
+            src={kingpowerLogo} 
+            alt="Kingpower" 
+            className="h-8 w-auto object-contain"
+          />
+          <div>
+            <h2 className="text-xl font-semibold text-slate-800">4urney AI-KMS</h2>
+            <p className="text-sm text-slate-500">Unleash the power of intelligent knowledge discovery and seamless collaboration.</p>
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
