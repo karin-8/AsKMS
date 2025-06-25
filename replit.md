@@ -116,6 +116,8 @@ Changelog:
 - June 25, 2025. Enhanced CSV/TXT file processing with structured data analysis and document-specific chat targeting
 - June 25, 2025. Implemented Document Demand Insights dashboard and AI Assistant feedback system with RLHF preparation
 - June 25, 2025. Implemented resizable chat modals and fixed navigation for Document Demand Insights dashboard
+- June 25, 2025. Fixed chat modal positioning (starts higher on screen) and added bidirectional resize capability including upward expansion
+- June 25, 2025. Enhanced chat scrolling behavior to auto-scroll to latest messages when reopening dialogs
 ```
 
 ## User Preferences

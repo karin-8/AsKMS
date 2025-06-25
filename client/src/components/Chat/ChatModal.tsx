@@ -27,6 +27,7 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
     number | null
   >(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -131,7 +132,7 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
       </div>
 
         {/* Chat Messages */}
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
