@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { documents, documentChunks, searchSessions } from "@shared/schema";
+import { documents } from "@shared/schema";
 import { embeddingService } from "./embeddings";
 import { eq, sql, desc, and, or, ilike } from "drizzle-orm";
 
@@ -40,8 +40,8 @@ export class SemanticSearchService {
       dateRange
     } = options;
 
-    // Log search session
-    await this.logSearchSession(query, userId, searchType);
+    // Log search session (simplified for now)
+    console.log(`Search session: ${userId} searched for "${query}" using ${searchType}`);
 
     switch (searchType) {
       case 'semantic':
@@ -66,7 +66,7 @@ export class SemanticSearchService {
       // Generate embedding for the query
       const queryEmbedding = await embeddingService.generateEmbedding(query);
 
-      // Get documents with embeddings
+      // Get documents with content for semantic search
       let documentsQuery = db
         .select({
           id: documents.id,
@@ -75,14 +75,13 @@ export class SemanticSearchService {
           summary: documents.summary,
           category: documents.category,
           aiCategory: documents.aiCategory,
-          embedding: documents.embedding,
           createdAt: documents.createdAt,
         })
         .from(documents)
         .where(
           and(
             eq(documents.userId, userId),
-            sql`${documents.embedding} IS NOT NULL`
+            sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`
           )
         );
 
@@ -91,7 +90,7 @@ export class SemanticSearchService {
         documentsQuery = documentsQuery.where(
           and(
             eq(documents.userId, userId),
-            sql`${documents.embedding} IS NOT NULL`,
+            sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`,
             or(
               eq(documents.category, categoryFilter),
               eq(documents.aiCategory, categoryFilter)

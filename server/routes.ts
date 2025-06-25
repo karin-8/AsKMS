@@ -28,6 +28,7 @@ import * as fsSync from "fs";
 import { processDocument, generateChatResponse } from "./services/openai";
 import { documentProcessor } from "./services/documentProcessor";
 import { vectorService } from "./services/vectorService";
+import { SemanticSearchService } from "./services/semanticSearch";
 
 // File upload configuration
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -81,6 +82,8 @@ const upload = multer({
     fileSize: 25 * 1024 * 1024 // 25MB limit
   }
 });
+
+const semanticSearchService = new SemanticSearchService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -567,39 +570,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/documents/search', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const query = req.query.q as string;
-      const type = req.query.type as string || 'keyword'; // 'keyword' or 'semantic'
-      
+      const query = req.query.query as string;
+      const searchType = req.query.type as 'keyword' | 'semantic' | 'hybrid' || 'hybrid';
+
       if (!query) {
-        return res.status(400).json({ message: "Search query is required" });
+        return res.json([]);
       }
+
+      console.log(`Performing ${searchType} search for user ${userId}: "${query}"`);
+
+      let results = [];
       
-      let documents: DocType[];
-      
-      if (type === 'semantic') {
-        // Use vector search for semantic similarity
-        const vectorResults = await vectorService.searchDocuments(query, userId, 10);
-        const documentIds = vectorResults.map(result => parseInt(result.document.id));
-        
-        if (documentIds.length > 0) {
-          const allDocuments = await storage.getDocuments(userId, { limit: 50 });
-          documents = allDocuments.filter(doc => documentIds.includes(doc.id))
-            .sort((a, b) => {
-              const aIndex = documentIds.indexOf(a.id);
-              const bIndex = documentIds.indexOf(b.id);
-              return aIndex - bIndex;
-            }) as DocType[];
-        } else {
-          documents = [] as DocType[];
+      if (searchType === 'semantic') {
+        try {
+          results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'semantic' });
+          console.log(`Semantic search returned ${results.length} results`);
+        } catch (semanticError) {
+          console.error("Semantic search failed, falling back to keyword:", semanticError);
+          results = await storage.searchDocuments(userId, query);
         }
-      } else {
-        // Use keyword search
-        documents = await storage.searchDocuments(userId, query);
+      } else if (searchType === 'keyword') {
+        results = await storage.searchDocuments(userId, query);
+      } else { // hybrid
+        try {
+          results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'hybrid' });
+        } catch (hybridError) {
+          console.error("Hybrid search failed, falling back to keyword:", hybridError);
+          results = await storage.searchDocuments(userId, query);
+        }
+      }
+
+      console.log(`Found ${results.length} results for query: "${query}"`);
+      
+      // Add sample search suggestions for testing
+      if (results.length === 0 && searchType === 'semantic') {
+        console.log("No semantic results found. Try these sample queries:");
+        console.log("- 'employee benefits and vacation policy'");
+        console.log("- 'training requirements for new hires'");
+        console.log("- 'safety procedures and guidelines'");
+        console.log("- 'performance review process'");
+        console.log("- 'company policies and procedures'");
+        console.log("- 'HR guidelines and documentation'");
       }
       
-      res.json(documents);
+      res.json(results);
     } catch (error) {
-      console.error("Error searching documents:", error);
+      console.error("Search error:", error);
       res.status(500).json({ message: "Failed to search documents" });
     }
   });
