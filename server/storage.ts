@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         documentId: documentAccess.documentId,
         documentName: documents.name,
-        category: documents.category,
+        category: sql<string>`coalesce(${documents.category}, 'Uncategorized')`.as('category'),
         accessCount: sql<number>`count(*)::int`,
       })
       .from(documentAccess)
