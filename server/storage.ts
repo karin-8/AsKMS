@@ -26,7 +26,7 @@ import {
   type InsertAiAssistantFeedback,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql, ilike } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
