@@ -448,6 +448,3 @@ export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermis
 
 export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
 export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
-
-export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
-export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
