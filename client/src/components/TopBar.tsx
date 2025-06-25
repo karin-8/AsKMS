@@ -46,7 +46,7 @@ export default function TopBar() {
           <img 
             src={kingpowerLogo} 
             alt="Kingpower" 
-            className="h-8 w-auto object-contain"
+            className="h-12 w-auto object-contain"
           />
           <div>
             <h2 className="text-xl font-semibold text-slate-800">4urney AI-KMS</h2>
