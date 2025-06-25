@@ -263,6 +263,6 @@ export default function DocumentChatModal({
             </Button>
           </form>
         </div>
-    </ResizableDialog>
+      </ResizableDialog>
   );
 }

@@ -1,10 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +6,8 @@ import { X, Bot, User, Send } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
+import { FeedbackButtons } from "@/components/FeedbackButtons";
 
 interface ChatModalProps {
   isOpen: boolean;
@@ -119,18 +115,20 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-full h-[600px] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-              <DialogTitle>AI Assistant</DialogTitle>
-            </div>
-          </div>
-        </DialogHeader>
+    <ResizableDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      title="AI Assistant"
+      defaultWidth="60%"
+      defaultHeight="70%"
+      minWidth={600}
+      minHeight={500}
+      className="flex flex-col"
+    >
+      <div className="flex items-center space-x-2 mb-4">
+        <Bot className="w-5 h-5 text-blue-600" />
+        <span className="text-sm text-gray-600">พูดคุยกับ AI Assistant</span>
+      </div>
 
         {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4">
@@ -178,8 +176,25 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {new Date(msg.createdAt).toLocaleTimeString()}
+                      {new Date(msg.createdAt).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric'
+                      })} เวลา {new Date(msg.createdAt).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      })} น.
                     </p>
+                    {msg.role === 'assistant' && (
+                      <FeedbackButtons
+                        messageId={msg.id}
+                        userQuery={messages[messages.findIndex(m => m.id === msg.id) - 1]?.content || ''}
+                        assistantResponse={msg.content}
+                        conversationId={currentConversationId!}
+                        documentContext={{ mode: 'documents' }}
+                      />
+                    )}
                   </div>
                 </div>
               ))
@@ -216,7 +231,7 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
           >
             <Input
               type="text"
-              placeholder="Ask about your documents..."
+              placeholder="ถามคำถามเกี่ยวกับเอกสารของคุณ..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
