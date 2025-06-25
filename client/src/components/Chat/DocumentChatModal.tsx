@@ -139,9 +139,9 @@ export default function DocumentChatModal({
       </div>
 
         {/* Chat Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <div className="flex-1 overflow-y-auto max-h-96 p-4 border border-gray-200 rounded-lg bg-gray-50" ref={scrollAreaRef}>
           <div className="space-y-4">
-            {isLoading ? (
+              {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
               </div>
@@ -198,7 +198,7 @@ export default function DocumentChatModal({
                     {msg.role === 'assistant' && (
                       <FeedbackButtons
                         messageId={msg.id}
-                        userQuery={messages[messages.findIndex(m => m.id === msg.id) - 1]?.content || ''}
+                        userQuery={messages[messages.findIndex((m: ChatMessage) => m.id === msg.id) - 1]?.content || ''}
                         assistantResponse={msg.content}
                         conversationId={currentConversationId!}
                         documentContext={{ documentId, documentName }}
@@ -230,7 +230,7 @@ export default function DocumentChatModal({
             )}
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Chat Input */}
         <div className="flex-shrink-0 p-4 border-t border-gray-200">
@@ -259,7 +259,7 @@ export default function DocumentChatModal({
               <Send className="w-4 h-4" />
             </Button>
           </form>
-      </div>
-      </ResizableDialog>
+        </div>
+    </ResizableDialog>
   );
 }
