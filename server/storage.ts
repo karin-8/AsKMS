@@ -62,7 +62,24 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   
   // Access logging
-  logDocumentAccess(documentId: number, userId: string, accessType: string): Promise<void>;
+  logDocumentAccess(documentId: number, userId: string, accessType: string, metadata?: any): Promise<void>;
+  
+  // Document demand insights
+  getDocumentAccessStats(userId: string, dateRange?: { from: Date; to: Date }): Promise<{
+    mostAccessedDocuments: Array<{ documentId: number; documentName: string; accessCount: number; category: string }>;
+    categoryStats: Array<{ category: string; count: number }>;
+    timelineData: Array<{ date: string; accessCount: number }>;
+  }>;
+  
+  // AI feedback system
+  createAiFeedback(feedback: InsertAiAssistantFeedback): Promise<AiAssistantFeedback>;
+  getAiFeedbackStats(userId: string): Promise<{
+    totalFeedback: number;
+    helpfulCount: number;
+    notHelpfulCount: number;
+    recentFeedback: AiAssistantFeedback[];
+  }>;
+  exportAiFeedbackData(userId: string): Promise<AiAssistantFeedback[]>;
   
   // Data connection operations
   getDataConnections(userId: string): Promise<DataConnection[]>;
@@ -290,12 +307,127 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Access logging
-  async logDocumentAccess(documentId: number, userId: string, accessType: string): Promise<void> {
+  async logDocumentAccess(documentId: number, userId: string, accessType: string, metadata?: any): Promise<void> {
     await db.insert(documentAccess).values({
       documentId,
       userId,
       accessType,
+      metadata: metadata || null,
     });
+  }
+
+  async getDocumentAccessStats(userId: string, dateRange?: { from: Date; to: Date }): Promise<{
+    mostAccessedDocuments: Array<{ documentId: number; documentName: string; accessCount: number; category: string }>;
+    categoryStats: Array<{ category: string; count: number }>;
+    timelineData: Array<{ date: string; accessCount: number }>;
+  }> {
+    const whereClause = dateRange 
+      ? and(
+          eq(documentAccess.userId, userId),
+          gte(documentAccess.createdAt, dateRange.from),
+          lte(documentAccess.createdAt, dateRange.to)
+        )
+      : eq(documentAccess.userId, userId);
+
+    // Most accessed documents
+    const mostAccessed = await db
+      .select({
+        documentId: documentAccess.documentId,
+        documentName: documents.name,
+        category: documents.category,
+        accessCount: sql<number>`count(*)::int`,
+      })
+      .from(documentAccess)
+      .innerJoin(documents, eq(documentAccess.documentId, documents.id))
+      .where(whereClause)
+      .groupBy(documentAccess.documentId, documents.name, documents.category)
+      .orderBy(sql`count(*) desc`)
+      .limit(10);
+
+    // Category statistics
+    const categoryStats = await db
+      .select({
+        category: documents.category,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(documentAccess)
+      .innerJoin(documents, eq(documentAccess.documentId, documents.id))
+      .where(whereClause)
+      .groupBy(documents.category)
+      .orderBy(sql`count(*) desc`);
+
+    // Timeline data (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const timelineData = await db
+      .select({
+        date: sql<string>`date(${documentAccess.createdAt})`,
+        accessCount: sql<number>`count(*)::int`,
+      })
+      .from(documentAccess)
+      .where(and(
+        eq(documentAccess.userId, userId),
+        gte(documentAccess.createdAt, thirtyDaysAgo)
+      ))
+      .groupBy(sql`date(${documentAccess.createdAt})`)
+      .orderBy(sql`date(${documentAccess.createdAt})`);
+
+    return {
+      mostAccessedDocuments: mostAccessed,
+      categoryStats,
+      timelineData,
+    };
+  }
+
+  async createAiFeedback(feedback: InsertAiAssistantFeedback): Promise<AiAssistantFeedback> {
+    const [newFeedback] = await db
+      .insert(aiAssistantFeedback)
+      .values(feedback)
+      .returning();
+    return newFeedback;
+  }
+
+  async getAiFeedbackStats(userId: string): Promise<{
+    totalFeedback: number;
+    helpfulCount: number;
+    notHelpfulCount: number;
+    recentFeedback: AiAssistantFeedback[];
+  }> {
+    const stats = await db
+      .select({
+        feedbackType: aiAssistantFeedback.feedbackType,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(aiAssistantFeedback)
+      .where(eq(aiAssistantFeedback.userId, userId))
+      .groupBy(aiAssistantFeedback.feedbackType);
+
+    const recent = await db
+      .select()
+      .from(aiAssistantFeedback)
+      .where(eq(aiAssistantFeedback.userId, userId))
+      .orderBy(desc(aiAssistantFeedback.createdAt))
+      .limit(10);
+
+    const totalFeedback = stats.reduce((sum, stat) => sum + stat.count, 0);
+    const helpfulCount = stats.find(s => s.feedbackType === 'helpful')?.count || 0;
+    const notHelpfulCount = stats.find(s => s.feedbackType === 'not_helpful')?.count || 0;
+
+    return {
+      totalFeedback,
+      helpfulCount,
+      notHelpfulCount,
+      recentFeedback: recent,
+    };
+  }
+
+  async exportAiFeedbackData(userId: string): Promise<AiAssistantFeedback[]> {
+    return await db
+      .select()
+      .from(aiAssistantFeedback)
+      .where(eq(aiAssistantFeedback.userId, userId))
+      .orderBy(desc(aiAssistantFeedback.createdAt));
   }
 
   // Data connection operations

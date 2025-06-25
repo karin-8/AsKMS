@@ -1,0 +1,57 @@
+แน่นอน! ด้านล่างนี้คือ **Prompt ที่เพิ่มเติม** เพื่อสั่งงาน Replit ให้ช่วยพัฒนา **2 ฟีเจอร์ใหม่** ตามที่คุณระบุไว้ โดยเนื้อหาจะกลมกลืนกับคำสั่งก่อนหน้าและอธิบายให้เข้าใจชัดเจนสำหรับ Developer ที่นำไปใช้จริง:
+
+---
+
+### 🔧 **Additional Feature Requests for Replit**
+
+#### **4. New Dashboard: Document Demand Insights**
+
+* **Goal**: Understand which document topics or types are most frequently accessed or queried by users.
+* **Feature Requirements**:
+
+  * Create a new dashboard named **“Document Demand Insights”** under the Dashboards menu.
+  * The dashboard should analyze:
+
+    * **Which documents are most viewed, downloaded, or opened via search or chat**
+    * **Which document topics/categories are most frequently mentioned in AI Assistant queries**
+  * Visualization suggestions:
+
+    * Bar chart: Top 10 most accessed documents
+    * Pie chart: Document types/categories most commonly mentioned
+    * Timeline trend: Popular document usage over time
+  * Data Source:
+
+    * Log of user actions (views/downloads)
+    * AI Assistant interaction history
+    * Search queries
+
+---
+
+#### **5. AI Assistant Feedback & Fine-Tuning Preparation**
+
+* **Objective**: Collect feedback on AI Assistant responses and prepare data for future fine-tuning via Reinforcement Learning (RLHF-style).
+* **Feature Requirements**:
+
+  * Add a **Feedback UI** under each AI Assistant message:
+
+    * 👍 (Helpful)
+    * 👎 (Not Helpful)
+  * When a user gives a 👎, allow them to optionally add a short explanation (e.g., *“The answer was irrelevant to my question.”*)
+  * Store this feedback and log it in a structured format:
+
+    ```json
+    {
+      "query": "How do I access HR policy?",
+      "response": "Here's the company travel policy...",
+      "feedback": "not_helpful",
+      "user_note": "Wrong topic — asked about HR not travel."
+    }
+    ```
+  * These logs should be exportable later for AI model fine-tuning.
+  * Additional Prompt Adjustment (Optional for future use):
+
+    * Automatically build a “negative prompt memory” from 👎 responses — a list of example responses that the bot **should avoid** giving in the future.
+
+---
+
+หากคุณต้องการรวม prompt ทั้งหมดเป็นชุดเดียว หรือแยกให้เฉพาะแต่ละฟีเจอร์สำหรับส่งต่อในแต่ละรอบก็สามารถบอกได้ครับ ผมสามารถจัดรูปแบบให้อีกทีให้เหมาะกับการคุยกับทีม dev หรือใช้ในระบบ Replit ได้เลย.
