@@ -1,10 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
+import { ResizableDialog } from "@/components/ui/resizable-dialog";
 
 interface DocumentChatModalProps {
   isOpen: boolean;
@@ -268,7 +263,6 @@ export default function DocumentChatModal({
             </Button>
           </form>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResizableDialog>
   );
 }
