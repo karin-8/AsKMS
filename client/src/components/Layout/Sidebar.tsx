@@ -210,16 +210,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                       </Button>
                     </Link>
 
-                    <Link href="/dashboards/document-demand" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/document-demand")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
-                        Document Demand Insights
-                      </Button>
-                    </Link>
+
                   </div>
                 )}
               </div>

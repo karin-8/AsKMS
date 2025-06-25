@@ -33,8 +33,8 @@ export default function Documents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<"keyword" | "semantic" | "hybrid">("hybrid");
   const [sortBy, setSortBy] = useState("newest");
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterTag, setFilterTag] = useState("all");
+  const [filterCategories, setFilterCategories] = useState<string[]>([]);
+  const [filterTags, setFilterTags] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -277,10 +277,10 @@ export default function Documents() {
                 <div className="text-center py-16 text-slate-500">
                   <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                   <h3 className="text-lg font-medium text-slate-800 mb-2">
-                    {searchQuery || filterCategory !== "all" ? "No documents found" : "No documents yet"}
+                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0 ? "No documents found" : "No documents yet"}
                   </h3>
                   <p className="text-sm text-slate-500 mb-6">
-                    {searchQuery || filterCategory !== "all" 
+                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0
                       ? "Try adjusting your search or filter criteria"
                       : "Upload your first document to get started with AI-powered knowledge management"
                     }
