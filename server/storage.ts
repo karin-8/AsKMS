@@ -332,12 +332,12 @@ export class DatabaseStorage implements IStorage {
         )
       : eq(documentAccess.userId, userId);
 
-    // Most accessed documents
+    // Most accessed documents - simplified query
     const mostAccessed = await db
       .select({
         documentId: documentAccess.documentId,
         documentName: documents.name,
-        category: sql<string>`coalesce(${documents.category}, 'Uncategorized')`.as('category'),
+        category: documents.category,
         accessCount: sql<number>`count(*)::int`,
       })
       .from(documentAccess)
@@ -347,16 +347,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`count(*) desc`)
       .limit(10);
 
-    // Category statistics
+    // Category statistics - simplified query
     const categoryStats = await db
       .select({
-        category: sql<string>`coalesce(${documents.category}, 'Uncategorized')`.as('category'),
+        category: documents.category,
         count: sql<number>`count(*)::int`,
       })
       .from(documentAccess)
       .innerJoin(documents, eq(documentAccess.documentId, documents.id))
       .where(whereClause)
-      .groupBy(sql`coalesce(${documents.category}, 'Uncategorized')`)
+      .groupBy(documents.category)
       .orderBy(sql`count(*) desc`);
 
     // Timeline data (last 30 days)
