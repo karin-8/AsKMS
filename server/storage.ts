@@ -377,9 +377,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`date(${documentAccess.createdAt})`);
 
     return {
-      mostAccessedDocuments: mostAccessed,
-      categoryStats,
-      timelineData,
+      mostAccessedDocuments: mostAccessed.map(doc => ({
+        ...doc,
+        category: doc.category || 'Uncategorized'
+      })),
+      categoryStats: categoryStats.map(cat => ({
+        category: cat.category || 'Uncategorized',
+        count: cat.count
+      })),
+      timelineData: timelineData,
     };
   }
 
