@@ -64,7 +64,7 @@ function Router() {
           <Route path="/dashboards/system-health" component={SystemHealth} />
           <Route path="/dashboards/security-governance" component={SecurityGovernance} />
           <Route path="/dashboards/customer-survey" component={CustomerSurvey} />
-          <Route path="/dashboards/document-demand" component={DocumentDemandInsights} />
+
           <Route path="/survey" component={Survey} />
           
           <Route component={NotFound} />
