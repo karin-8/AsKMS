@@ -1,0 +1,116 @@
+แน่นอน ต่อไปนี้คือ **Prompt ที่ปรับแต่งแล้วอย่างละเอียดและชัดเจน** เพื่อให้ระบบของ Replit เข้าใจสิ่งที่คุณต้องการทำมากขึ้น และสามารถช่วยคุณแก้ไขบั๊ก รวมถึงเพิ่มฟีเจอร์ใหม่ได้อย่างถูกต้อง:
+
+---
+
+### 🛠️ **Prompt for Replit: Bug Fixes and Feature Enhancements for AI-KMS Web Application**
+
+Hello Replit team,
+
+Please help me **debug and enhance** the AI-KMS web application generated previously. Below is a detailed breakdown of **bugs that need fixing** and **features to be added**, organized by page and function:
+
+---
+
+### **A. Bug Fixes and Improvements**
+
+#### 1. **Home Page**
+
+##### 1.1 AI Queries Section
+
+* **Bug**: The displayed AI queries are not updating based on real-time interactions with the AI Assistant.
+* **Expected Behavior**: The list should reflect actual user questions submitted via the AI Assistant menu.
+
+##### 1.2 Search Documents (Top Right Corner)
+
+* **Bug**: The search bar is currently non-functional.
+* **Expected Behavior**:
+
+  * Allow users to search documents using `keywords`, `category`, `title`, or `content`.
+  * Once a search is submitted, redirect the user to the **All Documents** page with pre-filtered results based on the search input.
+
+##### 1.3 Documents by Category Section
+
+* **Bug**: The total document count does not update in real-time after new documents are uploaded.
+* **Expected Behavior**: Update the total number of documents immediately once a file upload is successfully completed.
+
+##### 1.4 AI Assistant Popup
+
+* **Bug**: Two overlapping close buttons (❌) appear — please remove the duplicate.
+* **Enhancements**:
+
+  * If a user asks for a file download, the assistant should **respond with a clickable download link** (if applicable).
+  * After answering any question, the assistant should **politely ask a follow-up question** like:
+
+    > *“Is there anything else you’d like me to help with?”*
+
+##### 1.5 Notification Bell
+
+* **Bug**: No notification is triggered when a document is uploaded or deleted.
+* **Expected Behavior**: Show a notification in the bell icon indicating:
+
+  * *“New document ‘\[Document Name]’ has been uploaded.”*
+  * *“Document ‘\[Document Name]’ has been deleted.”*
+
+---
+
+#### 2. **Documents Page**
+
+##### 2.1 Document Options (Three-dot Menu)
+
+* **Enhancement**: Add a new menu option: **“Chat with Document”**
+
+  * Clicking this should open a dedicated chatbot interaction scoped only to that specific document’s content.
+
+---
+
+#### 3. **Dashboards Page**
+
+##### 3.1 Document Usage Overview
+
+* **Bug**: “Documents by Category” chart shows no data.
+* **Fix Needed**: Ensure the chart pulls live data categorized by document types.
+
+##### 3.2 AI Agent Interaction Summary
+
+* **Bug**: “Query Categories” section is empty.
+* **Fix Needed**:
+
+  * Analyze user questions sent to the AI Assistant.
+  * Automatically categorize them using OpenAI or similar models (e.g., classify as "Policy", "HR", "Finance", etc.)
+
+##### 3.3 Security & Governance Summary
+
+* **Fix Needed**: “Document Access Levels” has no data.
+* **Expected Behavior**: Please mock sample access level data (e.g., “Public”, “Restricted”, “Confidential”) and show it in a chart or summary format.
+
+---
+
+### **B. New Feature: Survey Module**
+
+#### B.1 Add Survey Feature
+
+* **Purpose**: Collect user feedback on the AI-KMS system.
+
+* **Form Requirements** (Questions in English):
+
+  * “How satisfied are you with the system?”
+  * “Was the system easy to use?”
+  * “What features would you like to see improved?”
+  * “Any additional suggestions?”
+
+* **Location**: Place the survey form somewhere prominent (e.g., bottom of Home page or as a new “Survey” menu item).
+
+#### B.2 Create Customer Survey Dashboard
+
+* After users submit responses, store the data and visualize it in a new dashboard:
+
+  * **Title**: “Customer Survey Dashboard”
+  * **Placement**: Add it as a new item under the Dashboards menu.
+  * **Content**: Show response trends, satisfaction scores, common suggestions, etc.
+
+---
+
+Please ensure the codebase is clean, modular, and easy to extend in the future. Let me know if you need sample data or further clarification on any point. Thank you!
+
+---
+
+หากคุณต้องการให้แปล Prompt ข้างต้นเป็นภาษาไทยด้วย ก็แจ้งได้เลยนะครับ.

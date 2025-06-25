@@ -40,6 +40,15 @@ export default function Documents() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUploadZone, setShowUploadZone] = useState(false);
 
+  // Parse search query from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, []);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

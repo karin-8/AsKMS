@@ -8,14 +8,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Bot, User, Send } from "lucide-react";
+import { X, Bot, User, Send, FileText } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-interface ChatModalProps {
+interface DocumentChatModalProps {
   isOpen: boolean;
   onClose: () => void;
+  documentId: number;
+  documentName: string;
 }
 
 interface ChatMessage {
@@ -25,7 +27,12 @@ interface ChatMessage {
   createdAt: string;
 }
 
-export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
+export default function DocumentChatModal({ 
+  isOpen, 
+  onClose, 
+  documentId, 
+  documentName 
+}: DocumentChatModalProps) {
   const [message, setMessage] = useState("");
   const [currentConversationId, setCurrentConversationId] = useState<
     number | null
@@ -34,11 +41,12 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Create initial conversation when modal opens
+  // Create conversation for document when modal opens
   const createConversationMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chat/conversations", {
-        title: `Chat ${new Date().toLocaleDateString()}`,
+        title: `Chat with ${documentName}`,
+        documentId: documentId,
       });
       return response.json();
     },
@@ -50,49 +58,36 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
   // Get messages for current conversation
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
-    queryFn: async () => {
-      if (!currentConversationId) return [];
-      const response = await apiRequest(
-        "GET",
-        `/api/chat/conversations/${currentConversationId}/messages`,
-      );
-      return await response.json();
-    },
     enabled: !!currentConversationId,
+    retry: false,
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!currentConversationId) throw new Error("No conversation");
-
       const response = await apiRequest("POST", "/api/chat/messages", {
         conversationId: currentConversationId,
         content,
+        documentId: documentId,
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          "/api/chat/conversations",
-          currentConversationId,
-          "messages",
-        ],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setMessage("");
+      queryClient.invalidateQueries({
+        queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+      });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error sending message",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to send message.",
         variant: "destructive",
       });
     },
   });
 
-  // Auto-scroll to bottom when new messages arrive
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -124,11 +119,17 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
               </div>
-              <DialogTitle>AI Assistant</DialogTitle>
+              <div>
+                <DialogTitle>Chat with Document</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">{documentName}</p>
+              </div>
             </div>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
 
@@ -137,17 +138,17 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
           <div className="space-y-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-blue-600" />
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-green-600" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-900">
-                    Hello! I can help you search and analyze your documents.
-                    What would you like to know?
+                    Hello! I can help you analyze and answer questions about "{documentName}".
+                    What would you like to know about this document?
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Just now</p>
                 </div>
@@ -157,26 +158,19 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 <div key={msg.id} className="flex items-start space-x-3">
                   <div
                     className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      msg.role === "assistant" ? "bg-blue-100" : "bg-gray-100"
+                      msg.role === "assistant" ? "bg-green-100" : "bg-gray-100"
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <Bot className="w-5 h-5 text-blue-600" />
+                      <Bot className="w-5 h-5 text-green-600" />
                     ) : (
                       <User className="w-5 h-5 text-gray-600" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
                       {msg.content}
-                      {msg.role === "assistant" && (
-                        <div className="mt-3">
-                          <p className="text-xs text-gray-500 italic">
-                            Is there anything else you'd like me to help with?
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {new Date(msg.createdAt).toLocaleTimeString()}
                     </p>
@@ -186,8 +180,8 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
             )}
             {sendMessageMutation.isPending && (
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-blue-600" />
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-green-600" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
@@ -216,7 +210,7 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
           >
             <Input
               type="text"
-              placeholder="Ask about your documents..."
+              placeholder={`Ask about "${documentName}"...`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -230,7 +224,7 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 sendMessageMutation.isPending ||
                 !currentConversationId
               }
-              className="bg-blue-500 hover:bg-blue-600"
+              className="bg-green-500 hover:bg-green-600"
             >
               <Send className="w-4 h-4" />
             </Button>

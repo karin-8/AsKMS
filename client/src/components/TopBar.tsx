@@ -29,7 +29,7 @@ export default function TopBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+      window.location.href = `/documents?search=${encodeURIComponent(searchQuery)}`;
     }
   };
 
