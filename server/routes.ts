@@ -684,6 +684,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Final results count: ${results.length}`);
+      
+      // Log the search action for audit
+      await storage.createAuditLog({
+        userId,
+        action: 'search',
+        resourceType: 'document',
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        success: true,
+        details: {
+          query: query,
+          searchType: searchType,
+          resultsCount: results.length
+        }
+      });
+      
       res.json(results);
     } catch (error) {
       console.error("Search error:", error);
@@ -823,6 +839,23 @@ ${document.summary}`;
       }
 
       console.log("Translation successful, returning result");
+      
+      // Log the translation action for audit
+      await storage.createAuditLog({
+        userId,
+        action: 'translate',
+        resourceType: 'document',
+        resource: documentId.toString(),
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        success: true,
+        details: {
+          documentId: documentId,
+          targetLanguage: targetLanguage,
+          contentLength: translatedText.length
+        }
+      });
+      
       res.json({ translatedText });
     } catch (error) {
       console.error("Translation error:", error);
@@ -942,6 +975,21 @@ ${document.summary}`;
       
       // Log access
       await storage.logDocumentAccess(id, userId, 'download');
+      
+      // Log the download action for audit
+      await storage.createAuditLog({
+        userId,
+        action: 'download',
+        resourceType: 'document',
+        resource: id.toString(),
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        success: true,
+        details: {
+          fileName: document.name,
+          fileSize: document.fileSize
+        }
+      });
       
       // Set proper headers to prevent corruption
       res.setHeader('Content-Type', document.mimeType);
