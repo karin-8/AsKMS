@@ -30,7 +30,13 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+  onOpenChat?: () => void;
+}
+
+export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: SidebarProps = {}) {
   const [location] = useLocation();
 
   return (

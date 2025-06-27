@@ -22,7 +22,7 @@ import {
   Star,
   Trash2
 } from "lucide-react";
-import Sidebar from "@/components/Layout/Sidebar";
+import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import StatsCards from "@/components/Stats/StatsCards";
 import CategoryStatsCards from "@/components/Stats/CategoryStatsCards";
