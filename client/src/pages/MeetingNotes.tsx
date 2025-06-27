@@ -62,47 +62,87 @@ export default function MeetingNotes() {
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>("demo-token"); // Demo mode
   const { toast } = useToast();
 
-  // Check for auth token in URL on component mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const authError = urlParams.get('error');
-    
-    if (token) {
-      setAuthToken(token);
-      localStorage.setItem('teams_auth_token', token);
-      // Clean URL
-      window.history.replaceState({}, document.title, "/meeting-notes");
-      toast({
-        title: "Authentication successful",
-        description: "Connected to Microsoft Teams successfully.",
-      });
-    } else if (authError) {
-      setError(`Authentication failed: ${authError}`);
-      toast({
-        title: "Authentication failed",
-        description: `Error: ${authError}`,
-        variant: "destructive",
-      });
-    } else {
-      // Check localStorage for existing token
-      const savedToken = localStorage.getItem('teams_auth_token');
-      if (savedToken) {
-        setAuthToken(savedToken);
-      }
-    }
-  }, [toast]);
+  // Demo data for showing the interface
+  const demoUser: User = {
+    name: "John Smith",
+    email: "john.smith@company.com",
+    user_id: "demo-user"
+  };
 
-  // Fetch user info and meetings when authenticated
-  useEffect(() => {
-    if (authToken) {
-      fetchUserInfo();
-      fetchMeetings();
+  const demoMeetings: Meeting[] = [
+    {
+      id: "meeting-1",
+      subject: "Q1 Planning Review",
+      start: {
+        dateTime: "2025-01-15T09:00:00Z",
+        timeZone: "UTC"
+      },
+      end: {
+        dateTime: "2025-01-15T10:00:00Z",
+        timeZone: "UTC"
+      },
+      attendees: [
+        { emailAddress: { name: "John Smith", address: "john.smith@company.com" } },
+        { emailAddress: { name: "Sarah Johnson", address: "sarah.j@company.com" } },
+        { emailAddress: { name: "Mike Wilson", address: "mike.w@company.com" } }
+      ],
+      isOnlineMeeting: true,
+      onlineMeetingProvider: "teamsForBusiness"
+    },
+    {
+      id: "meeting-2",
+      subject: "Product Development Sync",
+      start: {
+        dateTime: "2025-01-14T14:30:00Z",
+        timeZone: "UTC"
+      },
+      end: {
+        dateTime: "2025-01-14T15:30:00Z",
+        timeZone: "UTC"
+      },
+      attendees: [
+        { emailAddress: { name: "John Smith", address: "john.smith@company.com" } },
+        { emailAddress: { name: "Emily Chen", address: "emily.chen@company.com" } },
+        { emailAddress: { name: "David Rodriguez", address: "david.r@company.com" } },
+        { emailAddress: { name: "Lisa Park", address: "lisa.park@company.com" } }
+      ],
+      isOnlineMeeting: true,
+      onlineMeetingProvider: "teamsForBusiness"
+    },
+    {
+      id: "meeting-3",
+      subject: "Weekly Team Standup",
+      start: {
+        dateTime: "2025-01-13T10:00:00Z",
+        timeZone: "UTC"
+      },
+      end: {
+        dateTime: "2025-01-13T10:30:00Z",
+        timeZone: "UTC"
+      },
+      attendees: [
+        { emailAddress: { name: "John Smith", address: "john.smith@company.com" } },
+        { emailAddress: { name: "Alex Turner", address: "alex.turner@company.com" } },
+        { emailAddress: { name: "Maria Garcia", address: "maria.g@company.com" } }
+      ],
+      isOnlineMeeting: true,
+      onlineMeetingProvider: "teamsForBusiness"
     }
-  }, [authToken]);
+  ];
+
+  // Initialize demo data on component mount
+  useEffect(() => {
+    // Simulate loading and then show demo data
+    setLoading(true);
+    setTimeout(() => {
+      setUser(demoUser);
+      setMeetings(demoMeetings);
+      setLoading(false);
+    }, 1000);
+  }, []);
 
   const fetchUserInfo = async () => {
     try {
@@ -204,64 +244,141 @@ export default function MeetingNotes() {
   };
 
   const fetchMeetingNotes = async (meetingId: string): Promise<MeetingNotes | null> => {
-    try {
-      const response = await fetch(`${TEAMS_API_BASE}/api/meeting-notes/${meetingId}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    // Demo notes data
+    const demoNotes: { [key: string]: MeetingNotes } = {
+      "meeting-1": {
+        meeting_id: "meeting-1",
+        notes: `Q1 Planning Review - Meeting Notes
 
-      if (response.ok) {
-        return await response.json();
-      } else {
-        throw new Error('Failed to fetch meeting notes');
+Attendees: John Smith, Sarah Johnson, Mike Wilson
+
+Key Discussion Points:
+1. Q1 Budget allocation and resource planning
+2. Project prioritization for the quarter
+3. Team capacity and hiring needs
+
+Decisions Made:
+• Approved $150K budget for Product Development team
+• Agreed to prioritize mobile app development over web redesign
+• Authorized hiring 2 additional developers
+
+Action Items:
+- Sarah: Finalize budget proposal by Jan 20 
+- Mike: Interview candidates for developer positions by Jan 25
+- John: Review project timelines and update stakeholders by Jan 18
+
+Next Meeting: Q1 Mid-quarter review scheduled for February 15th`,
+        source: "Teams Chat",
+        last_modified: "2025-01-15T10:05:00Z"
+      },
+      "meeting-2": {
+        meeting_id: "meeting-2", 
+        notes: `Product Development Sync - Meeting Notes
+
+Attendees: John Smith, Emily Chen, David Rodriguez, Lisa Park
+
+Sprint Review:
+• Completed 85% of planned user stories
+• Mobile authentication module finished ahead of schedule
+• API integration delayed due to third-party dependencies
+
+Current Blockers:
+- Waiting for security audit approval
+- Payment gateway integration pending vendor response
+- UI testing delayed due to design changes
+
+Technical Decisions:
+• Adopted React Native for cross-platform development
+• Implemented JWT authentication with refresh tokens
+• Selected PostgreSQL for data persistence
+
+Action Items:
+- Emily: Follow up with security team for audit status
+- David: Contact payment vendor for integration timeline
+- Lisa: Finalize new UI designs by end of week
+- John: Update project roadmap with current status
+
+Next Sprint Planning: Thursday, Jan 16 at 2:00 PM`,
+        source: "OneNote",
+        last_modified: "2025-01-14T15:35:00Z"
+      },
+      "meeting-3": {
+        meeting_id: "meeting-3",
+        notes: `Weekly Team Standup - Meeting Notes
+
+Attendees: John Smith, Alex Turner, Maria Garcia
+
+Team Updates:
+
+Alex Turner:
+- Completed user registration flow
+- Working on email verification feature
+- Blocked: Need design approval for confirmation page
+
+Maria Garcia:
+- Finished database migration scripts
+- Implemented user profile management
+- Next: Working on account settings page
+
+John Smith:
+- Reviewed pull requests from last week
+- Conducted code review sessions
+- Planning: Preparing for client demo next week
+
+General Discussion:
+• Team velocity is improving - ahead of schedule
+• Client feedback on prototype was positive
+• Need to schedule team building event
+
+Upcoming:
+- Client demo: Friday, Jan 17 at 3:00 PM
+- Code freeze: Wednesday, Jan 22
+- Team lunch: Friday, Jan 24`,
+        source: "Teams Chat",
+        last_modified: "2025-01-13T10:35:00Z"
       }
-    } catch (err) {
-      console.error('Error fetching meeting notes:', err);
-      toast({
-        title: "Error",
-        description: "Failed to fetch meeting notes.",
-        variant: "destructive",
-      });
-      return null;
-    }
+    };
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return demoNotes[meetingId] || null;
   };
 
   const exportToPdf = async (meeting: Meeting, notes: string) => {
+    // Demo PDF export - create a simple text file instead
     try {
-      const response = await fetch(`${TEAMS_API_BASE}/api/export-notes`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meeting_id: meeting.id,
-          notes: notes,
-        }),
-      });
+      const pdfContent = `${meeting.subject} - Meeting Notes
 
-      if (response.ok) {
-        const data = await response.json();
-        // Create download link
-        const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${data.pdf_base64}`;
-        link.download = data.filename;
-        link.click();
-        
-        toast({
-          title: "Export successful",
-          description: "Meeting notes exported to PDF.",
-        });
-      } else {
-        throw new Error('Failed to export PDF');
-      }
+Date: ${new Date(meeting.start.dateTime).toLocaleDateString()}
+Time: ${new Date(meeting.start.dateTime).toLocaleTimeString()} - ${new Date(meeting.end.dateTime).toLocaleTimeString()}
+
+Attendees:
+${meeting.attendees.map(a => `- ${a.emailAddress.name} (${a.emailAddress.address})`).join('\n')}
+
+Meeting Notes:
+${notes}
+
+Generated by AI-KMS Meeting Notes Integration
+Date Exported: ${new Date().toLocaleString()}`;
+
+      const blob = new Blob([pdfContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `meeting-notes-${meeting.subject.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export successful",
+        description: "Meeting notes exported successfully.",
+      });
     } catch (err) {
-      console.error('Error exporting PDF:', err);
+      console.error('Error exporting notes:', err);
       toast({
         title: "Error",
-        description: "Failed to export meeting notes to PDF.",
+        description: "Failed to export meeting notes.",
         variant: "destructive",
       });
     }
