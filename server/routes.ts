@@ -56,6 +56,11 @@ const storage_multer = multer.diskStorage({
 const upload = multer({
   storage: storage_multer,
   fileFilter: (req, file, cb) => {
+    // Ensure proper UTF-8 encoding for filename
+    if (file.originalname) {
+      file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    }
+    
     const allowedMimes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -715,11 +720,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const file of files) {
         try {
+          // Fix Thai filename encoding if needed
+          let correctedFileName = file.originalname;
+          try {
+            // Check if filename contains Thai characters that are garbled
+            if (file.originalname.includes('à¸') || file.originalname.includes('à¹')) {
+              // Try to decode and re-encode properly
+              const buffer = Buffer.from(file.originalname, 'latin1');
+              correctedFileName = buffer.toString('utf8');
+              console.log(`Fixed Thai filename: ${file.originalname} -> ${correctedFileName}`);
+            }
+          } catch (error) {
+            console.warn('Failed to fix filename encoding:', error);
+            // Keep original filename if encoding fix fails
+          }
+          
           // Process the document with enhanced AI classification
           const { content, summary, tags, category, categoryColor } = await processDocument(file.path, file.mimetype);
           
           const documentData = {
-            name: file.originalname,
+            name: correctedFileName,
             fileName: file.filename,
             filePath: file.path,
             fileSize: file.size,
@@ -736,12 +756,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const document = await storage.createDocument(documentData);
           uploadedDocuments.push(document);
           
-          console.log(`Document processed: ${file.originalname} -> Category: ${category}, Tags: ${tags?.join(', ')}`);
+          console.log(`Document processed: ${correctedFileName} -> Category: ${category}, Tags: ${tags?.join(', ')}`);
         } catch (error) {
-          console.error(`Error processing file ${file.originalname}:`, error);
+          // Fix Thai filename encoding for error fallback too
+          let correctedFileName = file.originalname;
+          try {
+            if (file.originalname.includes('à¸') || file.originalname.includes('à¹')) {
+              const buffer = Buffer.from(file.originalname, 'latin1');
+              correctedFileName = buffer.toString('utf8');
+            }
+          } catch (encodingError) {
+            console.warn('Failed to fix filename encoding in error handler:', encodingError);
+          }
+          
+          console.error(`Error processing file ${correctedFileName}:`, error);
           // Still create document without AI processing
           const documentData = {
-            name: file.originalname,
+            name: correctedFileName,
             fileName: file.filename,
             filePath: file.path,
             fileSize: file.size,
@@ -783,7 +814,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set proper headers to prevent corruption
       res.setHeader('Content-Type', document.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.name)}"`);
+      // Use RFC 5987 encoding for Thai filenames to ensure proper display
+      const encodedFilename = encodeURIComponent(document.name);
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFilename}`);
       res.setHeader('Content-Length', fsSync.statSync(filePath).size);
       
       const fileStream = fsSync.createReadStream(filePath);
