@@ -24,6 +24,7 @@ import UserActivity from "@/pages/dashboards/UserActivity";
 import SystemHealth from "@/pages/dashboards/SystemHealth";
 import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
+import AuditMonitoring from "@/pages/AuditMonitoring";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +56,7 @@ function Router() {
           <Route path="/admin" component={Admin} />
           <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
+          <Route path="/audit-monitoring" component={AuditMonitoring} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
           
           {/* Dashboard Routes */}

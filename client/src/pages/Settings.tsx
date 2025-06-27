@@ -590,6 +590,17 @@ export default function Settings() {
                         View Keys
                       </Button>
                     </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-800">Audit & Monitoring</h4>
+                        <p className="text-xs text-slate-500">Track user actions and API interactions for compliance</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = "/audit-monitoring"}>
+                        <Shield className="w-4 h-4 mr-2" />
+                        View Audit Logs
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
