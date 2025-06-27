@@ -474,7 +474,7 @@ export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   action: varchar("action").notNull(), // 'login', 'logout', 'upload', 'download', 'search', 'translate', 'delete', 'update', 'create', 'api_call'
-  resource: varchar("resource"), // document_id, user_id, category_id, etc.
+  resourceId: varchar("resource_id"), // document_id, user_id, category_id, etc.
   resourceType: varchar("resource_type"), // 'document', 'user', 'category', 'api', 'system'
   details: jsonb("details"), // Additional metadata
   ipAddress: varchar("ip_address"),
@@ -483,6 +483,7 @@ export const auditLogs = pgTable("audit_logs", {
   errorMessage: text("error_message"),
   duration: integer("duration"), // in milliseconds
   timestamp: timestamp("timestamp").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
