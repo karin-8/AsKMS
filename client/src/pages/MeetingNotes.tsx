@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/Sidebar";
-import MeetingItem from "@/components/MeetingItem";
+import { MeetingItem } from "@/components/MeetingItem";
 import { 
   Calendar,
   Clock,

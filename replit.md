@@ -122,10 +122,6 @@ Changelog:
 - June 25, 2025. Enhanced chat scrolling behavior to auto-scroll to latest messages when reopening dialogs
 - June 25, 2025. Implemented advanced semantic search with custom embeddings - added OpenAI text-embedding-3-small integration, document chunking, hybrid search capabilities, and comprehensive search analytics
 - June 27, 2025. Fixed three critical issues: 1) Added user/department metadata to document details with uploader information display, 2) Enhanced delete document functionality with improved error handling and logging, 3) Fixed translation system by removing problematic database schema columns and implementing direct OpenAI translation
-- June 27, 2025. Implemented Microsoft Teams Meeting Notes Integration with demo interface - added MeetingNotes page and MeetingItem component with expandable meeting details, notes display, export functionality, and copy-to-clipboard features
-- June 27, 2025. Enhanced sidebar UI - moved King Power logo above navigation menu with 3x enlarged size for improved brand visibility
-- June 27, 2025. Fixed duplicate header display - removed redundant 4urney AI-KMS branding from TopBar component to eliminate duplication with sidebar logo, ensuring clean single header display across all pages
-- June 27, 2025. Restored Dashboards submenu functionality - added expandable "Dashboards" menu in Sidebar with AI Interaction and Customer Survey submenu options, fixed navigation routing for dashboard pages, and resolved DOM nesting warnings by using span elements instead of anchor tags in Link components
 ```
 
 ## User Preferences
