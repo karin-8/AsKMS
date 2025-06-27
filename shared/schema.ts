@@ -80,7 +80,6 @@ export const documentTranslations = pgTable("document_translations", {
   documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
   language: varchar("language").notNull(), // 'thai', 'english', 'chinese'
   translatedSummary: text("translated_summary"),
-  translatedContent: text("translated_content"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
