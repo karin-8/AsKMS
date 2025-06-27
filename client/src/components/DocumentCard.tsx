@@ -599,7 +599,38 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                         : 'Unknown'}
                     </p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Uploaded By</label>
+                    <p className="text-sm text-gray-900">
+                      {(documentDetails as any).uploaderName || 'Unknown User'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Department</label>
+                    <p className="text-sm text-gray-900">
+                      {(documentDetails as any).departmentName || 'No Department'}
+                    </p>
+                  </div>
                 </div>
+
+                {/* User Information */}
+                {((documentDetails as any).uploaderEmail || (documentDetails as any).uploaderRole) && (
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Uploader Information</h4>
+                    <div className="space-y-1">
+                      {(documentDetails as any).uploaderEmail && (
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Email:</span> {(documentDetails as any).uploaderEmail}
+                        </p>
+                      )}
+                      {(documentDetails as any).uploaderRole && (
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Role:</span> {(documentDetails as any).uploaderRole}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Classification */}
                 {(documentDetails as any).aiCategory && (

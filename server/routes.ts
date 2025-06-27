@@ -729,19 +729,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const documentId = parseInt(req.params.id);
       const { targetLanguage } = req.body;
       
+      console.log(`Translation request: documentId=${documentId}, targetLanguage=${targetLanguage}, userId=${userId}`);
+      
       if (!targetLanguage) {
+        console.log("Missing target language in request");
         return res.status(400).json({ message: "Target language is required" });
       }
 
       // Get document
       const document = await storage.getDocument(documentId, userId);
       if (!document) {
+        console.log(`Document ${documentId} not found for user ${userId}`);
         return res.status(404).json({ message: "Document not found" });
       }
 
       if (!document.summary) {
+        console.log(`Document ${documentId} has no summary to translate`);
         return res.status(400).json({ message: "Document has no summary to translate" });
       }
+
+      console.log(`Found document: ${document.name}, summary length: ${document.summary.length}`);
 
       // Check if translation already exists in database
       const { documentTranslations } = await import('@shared/schema');
