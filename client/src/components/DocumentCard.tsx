@@ -26,6 +26,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import DocumentChatModal from "./Chat/DocumentChatModal";
+import ContentSummaryModal from "./ContentSummaryModal";
 
 interface DocumentCardProps {
   document: {
@@ -60,7 +61,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
 
   // Fetch document details when needed
   const { data: documentDetails, isLoading: detailsLoading } = useQuery({
-    queryKey: ["/api/documents", doc.id],
+    queryKey: [`/api/documents/${doc.id}`],
     enabled: showDetails,
     retry: false,
   });
@@ -553,7 +554,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
         isOpen={showChatWithDocument}
         onClose={() => setShowChatWithDocument(false)}
         documentId={doc.id}
-        documentName={doc.name || doc.originalName}
+        documentName={doc.name || doc.originalName || ""}
       />
 
       {/* Document Details Dialog */}
