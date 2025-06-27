@@ -7,6 +7,7 @@ import {
   documentAccess,
   dataConnections,
   aiAssistantFeedback,
+  departments,
   type User,
   type UpsertUser,
   type Category,
@@ -167,7 +168,7 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getDocument(id: number, userId: string): Promise<Document | undefined> {
+  async getDocument(id: number, userId: string): Promise<any> {
     const [document] = await db
       .select({
         ...getTableColumns(documents),
