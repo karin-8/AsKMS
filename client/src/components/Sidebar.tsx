@@ -14,6 +14,7 @@ import {
   Building,
   Video,
 } from "lucide-react";
+import kingPowerLogo from "@assets/kingpower_1750867302870.webp";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -47,6 +48,15 @@ export default function Sidebar() {
             <p className="text-xs text-slate-500">Knowledge Management</p>
           </div>
         </div>
+      </div>
+
+      {/* King Power Logo */}
+      <div className="p-6 flex justify-center">
+        <img 
+          src={kingPowerLogo} 
+          alt="King Power" 
+          className="w-48 h-auto object-contain"
+        />
       </div>
 
       {/* Navigation */}
