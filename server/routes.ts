@@ -750,13 +750,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Found document: ${document.name}, summary length: ${document.summary.length}`);
 
-      // Skip cache lookup for now to ensure translation works
-      console.log("Skipping cache lookup, proceeding with fresh translation");
-
-      // No cached translation, create new one with OpenAI
+      // Create translation using OpenAI directly
       if (!process.env.OPENAI_API_KEY) {
         return res.status(500).json({ message: "Translation service not available" });
       }
+
+      console.log("Creating fresh translation with OpenAI");
 
       const OpenAI = await import('openai');
       const openai = new OpenAI.default({
@@ -766,6 +765,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const prompt = `Translate the following text to ${targetLanguage}. Maintain the same tone and meaning. Only return the translated text without any additional explanation:
 
 ${document.summary}`;
+
+      console.log(`Sending translation request to OpenAI for ${targetLanguage}`);
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -781,13 +782,14 @@ ${document.summary}`;
 
       const translatedText = response.choices[0].message.content?.trim();
       
+      console.log(`OpenAI response received, translated text length: ${translatedText?.length || 0}`);
+      
       if (!translatedText) {
-        return res.status(500).json({ message: "Translation failed" });
+        console.log("OpenAI translation failed - no content returned");
+        return res.status(500).json({ message: "Translation failed - no content from OpenAI" });
       }
 
-      // Skip caching for now - focus on working translation
-      console.log("Translation successful, returning result without caching");
-
+      console.log("Translation successful, returning result");
       res.json({ translatedText });
     } catch (error) {
       console.error("Translation error:", error);
