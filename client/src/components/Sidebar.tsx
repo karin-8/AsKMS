@@ -12,6 +12,7 @@ import {
   Brain,
   BookType,
   Building,
+  Video,
 } from "lucide-react";
 
 const navigation = [
