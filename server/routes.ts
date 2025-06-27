@@ -663,27 +663,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
       
-      // Get document with user and department information
-      const [document] = await db
-        .select({
-          ...getTableColumns(documents),
-          uploaderName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`.as('uploaderName'),
-          uploaderEmail: users.email,
-          uploaderRole: users.role,
-          departmentName: departments.name,
-        })
-        .from(documents)
-        .leftJoin(users, eq(documents.userId, users.id))
-        .leftJoin(departments, eq(users.departmentId, departments.id))
-        .where(and(eq(documents.id, id), eq(documents.userId, userId)));
+      // Get basic document first
+      const document = await storage.getDocument(id, userId);
       
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
       
+      // Get user information separately to avoid complex query issues
+      const [uploaderInfo] = await db
+        .select({
+          uploaderName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`.as('uploaderName'),
+          uploaderEmail: users.email,
+          uploaderRole: users.role,
+          departmentName: departments.name,
+        })
+        .from(users)
+        .leftJoin(departments, eq(users.departmentId, departments.id))
+        .where(eq(users.id, document.userId));
+      
+      // Combine document with uploader info
+      const documentWithUploader = {
+        ...document,
+        uploaderName: uploaderInfo?.uploaderName || 'Unknown User',
+        uploaderEmail: uploaderInfo?.uploaderEmail || '',
+        uploaderRole: uploaderInfo?.uploaderRole || 'user',
+        departmentName: uploaderInfo?.departmentName || 'No Department',
+      };
+      
       // Log access
       await storage.logDocumentAccess(id, userId, 'view');
-      res.json(document);
+      res.json(documentWithUploader);
     } catch (error) {
       console.error("Error fetching document:", error);
       res.status(500).json({ message: "Failed to fetch document" });
@@ -735,7 +745,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if translation already exists in database
       const { documentTranslations } = await import('@shared/schema');
-      const { eq, and } = await import('drizzle-orm');
       
       const [existingTranslation] = await db.select()
         .from(documentTranslations)
@@ -979,21 +988,36 @@ ${document.summary}`;
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
       
-      // Get document to delete file
+      console.log(`Delete request for document ${id} by user ${userId}`);
+      
+      // Get document to verify ownership and get file path
       const document = await storage.getDocument(id, userId);
-      if (document) {
+      if (!document) {
+        console.log(`Document ${id} not found for user ${userId}`);
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      console.log(`Found document: ${document.name}, filePath: ${document.filePath}`);
+      
+      // Delete physical file first
+      if (document.filePath) {
         try {
           await fs.unlink(document.filePath);
+          console.log(`Successfully deleted file: ${document.filePath}`);
         } catch (error) {
           console.error("Error deleting file:", error);
+          // Continue with database deletion even if file deletion fails
         }
       }
       
+      // Delete from database
       await storage.deleteDocument(id, userId);
-      res.json({ success: true });
+      console.log(`Successfully deleted document ${id} from database`);
+      
+      res.json({ success: true, message: "Document deleted successfully" });
     } catch (error) {
       console.error("Error deleting document:", error);
-      res.status(500).json({ message: "Failed to delete document" });
+      res.status(500).json({ message: "Failed to delete document", error: error.message });
     }
   });
 
