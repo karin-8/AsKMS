@@ -121,7 +121,7 @@ Changelog:
 - June 25, 2025. Fixed chat modal positioning (starts higher on screen) and added bidirectional resize capability including upward expansion
 - June 25, 2025. Enhanced chat scrolling behavior to auto-scroll to latest messages when reopening dialogs
 - June 25, 2025. Implemented advanced semantic search with custom embeddings - added OpenAI text-embedding-3-small integration, document chunking, hybrid search capabilities, and comprehensive search analytics
-- June 27, 2025. Working on three critical fixes: 1) Add user/department metadata to document details, 2) Fix delete document functionality, 3) Fix translation system with database caching
+- June 27, 2025. Fixed three critical issues: 1) Added user/department metadata to document details with uploader information display, 2) Enhanced delete document functionality with improved error handling and logging, 3) Fixed translation system API call parameter order and added debugging
 ```
 
 ## User Preferences

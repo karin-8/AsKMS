@@ -65,10 +65,16 @@ export default function ContentSummaryModal({
           break;
       }
 
-      const response = await apiRequest(`/api/documents/${documentId}/translate`, 'POST', {
+      console.log(`Requesting translation for document ${documentId} to ${targetLang}`);
+      
+      const response = await apiRequest('POST', `/api/documents/${documentId}/translate`, {
         targetLanguage: targetLang
       });
-      return (response as any).translatedText;
+      
+      const result = await response.json();
+      console.log('Translation response:', result);
+      
+      return result.translatedText;
     },
     onSuccess: (translatedText, targetLanguage) => {
       setTranslations(prev => ({
