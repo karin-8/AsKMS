@@ -663,6 +663,15 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Content Summary Modal with Translation */}
+      <ContentSummaryModal
+        isOpen={showSummary}
+        onClose={() => setShowSummary(false)}
+        documentName={doc.name || doc.originalName || ""}
+        summary={doc.summary || ""}
+        tags={doc.tags}
+      />
     </>
   );
 }

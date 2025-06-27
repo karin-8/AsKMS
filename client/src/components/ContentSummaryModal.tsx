@@ -67,7 +67,7 @@ export default function ContentSummaryModal({
         text: summary,
         targetLanguage: targetLang
       });
-      return response.translatedText;
+      return (response as any).translatedText;
     },
     onSuccess: (translatedText, targetLanguage) => {
       setTranslations(prev => ({
