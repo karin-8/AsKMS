@@ -750,19 +750,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Found document: ${document.name}, summary length: ${document.summary.length}`);
 
-      // Check if translation already exists in database
-      const { documentTranslations } = await import('@shared/schema');
-      
-      const [existingTranslation] = await db.select()
-        .from(documentTranslations)
-        .where(and(
-          eq(documentTranslations.documentId, documentId),
-          eq(documentTranslations.language, targetLanguage.toLowerCase())
-        ));
-
-      if (existingTranslation) {
-        return res.json({ translatedText: existingTranslation.translatedSummary });
-      }
+      // Skip cache lookup for now to ensure translation works
+      console.log("Skipping cache lookup, proceeding with fresh translation");
 
       // No cached translation, create new one with OpenAI
       if (!process.env.OPENAI_API_KEY) {
@@ -796,17 +785,8 @@ ${document.summary}`;
         return res.status(500).json({ message: "Translation failed" });
       }
 
-      // Cache translation in database
-      try {
-        await db.insert(documentTranslations).values({
-          documentId,
-          language: targetLanguage.toLowerCase(),
-          translatedSummary: translatedText,
-        });
-      } catch (error) {
-        console.error("Error caching translation:", error);
-        // Continue anyway, return the translation
-      }
+      // Skip caching for now - focus on working translation
+      console.log("Translation successful, returning result without caching");
 
       res.json({ translatedText });
     } catch (error) {
