@@ -468,3 +468,29 @@ export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermis
 
 export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
 export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
+
+// Audit logs for compliance tracking
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  action: varchar("action").notNull(), // 'login', 'logout', 'upload', 'download', 'search', 'translate', 'delete', 'update', 'create', 'api_call'
+  resource: varchar("resource"), // document_id, user_id, category_id, etc.
+  resourceType: varchar("resource_type"), // 'document', 'user', 'category', 'api', 'system'
+  details: jsonb("details"), // Additional metadata
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+  duration: integer("duration"), // in milliseconds
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;

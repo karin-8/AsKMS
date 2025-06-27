@@ -8,6 +8,7 @@ import {
   dataConnections,
   aiAssistantFeedback,
   departments,
+  auditLogs,
   type User,
   type UpsertUser,
   type Category,
@@ -25,9 +26,11 @@ import {
   type UpdateDataConnection,
   type AiAssistantFeedback,
   type InsertAiAssistantFeedback,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, count, sql, ilike, getTableColumns } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -92,6 +95,24 @@ export interface IStorage {
   updateDataConnection(id: number, connection: UpdateDataConnection, userId: string): Promise<DataConnection>;
   deleteDataConnection(id: number, userId: string): Promise<void>;
   testDataConnection(id: number, userId: string): Promise<{ success: boolean; message: string }>;
+  
+  // Audit logging operations
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(userId: string, options?: { 
+    limit?: number; 
+    offset?: number; 
+    action?: string; 
+    resourceType?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<AuditLog[]>;
+  getAuditStats(userId: string): Promise<{
+    totalActions: number;
+    todayActions: number;
+    failedActions: number;
+    topActions: Array<{ action: string; count: number }>;
+    recentActivity: AuditLog[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -515,6 +536,115 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       return { success: false, message: `Connection test failed: ${error.message}` };
     }
+  }
+
+  // Audit logging operations
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db
+      .insert(auditLogs)
+      .values(log)
+      .returning();
+    return auditLog;
+  }
+
+  async getAuditLogs(userId: string, options: { 
+    limit?: number; 
+    offset?: number; 
+    action?: string; 
+    resourceType?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  } = {}): Promise<AuditLog[]> {
+    const { limit = 100, offset = 0, action, resourceType, dateFrom, dateTo } = options;
+    
+    let conditions = [eq(auditLogs.userId, userId)];
+    
+    if (action) {
+      conditions.push(eq(auditLogs.action, action));
+    }
+    
+    if (resourceType) {
+      conditions.push(eq(auditLogs.resourceType, resourceType));
+    }
+    
+    if (dateFrom) {
+      conditions.push(gte(auditLogs.timestamp, dateFrom));
+    }
+    
+    if (dateTo) {
+      conditions.push(lte(auditLogs.timestamp, dateTo));
+    }
+
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(and(...conditions))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getAuditStats(userId: string): Promise<{
+    totalActions: number;
+    todayActions: number;
+    failedActions: number;
+    topActions: Array<{ action: string; count: number }>;
+    recentActivity: AuditLog[];
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Total actions
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId));
+
+    // Today's actions
+    const [todayResult] = await db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.userId, userId),
+        gte(auditLogs.timestamp, today)
+      ));
+
+    // Failed actions
+    const [failedResult] = await db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.userId, userId),
+        eq(auditLogs.success, false)
+      ));
+
+    // Top actions
+    const topActionsResult = await db
+      .select({
+        action: auditLogs.action,
+        count: count()
+      })
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .groupBy(auditLogs.action)
+      .orderBy(desc(count()))
+      .limit(5);
+
+    // Recent activity
+    const recentActivity = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(10);
+
+    return {
+      totalActions: totalResult.count,
+      todayActions: todayResult.count,
+      failedActions: failedResult.count,
+      topActions: topActionsResult,
+      recentActivity
+    };
   }
 }
 
