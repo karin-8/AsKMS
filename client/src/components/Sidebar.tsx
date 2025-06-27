@@ -21,6 +21,7 @@ const navigation = [
   { name: "My Documents", href: "/documents", icon: FolderOpen },
   { name: "Search & Discovery", href: "/search", icon: Search },
   { name: "AI Assistant", href: "/ai-assistant", icon: MessageSquare },
+  { name: "Meeting Notes", href: "/meeting-notes", icon: Video },
   { name: "Integrations", href: "/integrations", icon: Building },
   { name: "Categories & Tags", href: "/categories", icon: Tags },
   { name: "User Management", href: "/user-management", icon: Users },

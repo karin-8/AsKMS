@@ -25,6 +25,7 @@ import SystemHealth from "@/pages/dashboards/SystemHealth";
 import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
 import AuditMonitoring from "@/pages/AuditMonitoring";
+import MeetingNotes from "@/pages/MeetingNotes";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -52,6 +53,7 @@ function Router() {
           <Route path="/search" component={Search} />
           <Route path="/categories" component={Categories} />
           <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/meeting-notes" component={MeetingNotes} />
           <Route path="/integrations" component={Integrations} />
           <Route path="/admin" component={Admin} />
           <Route path="/user-management" component={UserManagement} />
