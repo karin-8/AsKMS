@@ -26,7 +26,7 @@ import {
   type InsertAiAssistantFeedback,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, count, sql, ilike } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql, ilike, getTableColumns } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -169,8 +169,16 @@ export class DatabaseStorage implements IStorage {
 
   async getDocument(id: number, userId: string): Promise<Document | undefined> {
     const [document] = await db
-      .select()
+      .select({
+        ...getTableColumns(documents),
+        uploaderName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`.as('uploaderName'),
+        uploaderEmail: users.email,
+        uploaderRole: users.role,
+        departmentName: departments.name,
+      })
       .from(documents)
+      .leftJoin(users, eq(documents.userId, users.id))
+      .leftJoin(departments, eq(users.departmentId, departments.id))
       .where(and(eq(documents.id, id), eq(documents.userId, userId)));
     return document;
   }

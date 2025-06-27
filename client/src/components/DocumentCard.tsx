@@ -668,6 +668,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
       <ContentSummaryModal
         isOpen={showSummary}
         onClose={() => setShowSummary(false)}
+        documentId={doc.id}
         documentName={doc.name || doc.originalName || ""}
         summary={doc.summary || ""}
         tags={doc.tags}

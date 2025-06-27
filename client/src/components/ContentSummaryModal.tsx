@@ -34,6 +34,7 @@ const languageLabels = {
 export default function ContentSummaryModal({ 
   isOpen, 
   onClose, 
+  documentId,
   documentName, 
   summary, 
   tags 
@@ -64,8 +65,7 @@ export default function ContentSummaryModal({
           break;
       }
 
-      const response = await apiRequest('/api/translate', 'POST', {
-        text: summary,
+      const response = await apiRequest(`/api/documents/${documentId}/translate`, 'POST', {
         targetLanguage: targetLang
       });
       return (response as any).translatedText;
