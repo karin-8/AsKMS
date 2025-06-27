@@ -125,6 +125,7 @@ Changelog:
 - June 27, 2025. Implemented Microsoft Teams Meeting Notes Integration with demo interface - added MeetingNotes page and MeetingItem component with expandable meeting details, notes display, export functionality, and copy-to-clipboard features
 - June 27, 2025. Enhanced sidebar UI - moved King Power logo above navigation menu with 3x enlarged size for improved brand visibility
 - June 27, 2025. Fixed duplicate header display - removed redundant 4urney AI-KMS branding from TopBar component to eliminate duplication with sidebar logo, ensuring clean single header display across all pages
+- June 27, 2025. Restored Dashboards submenu functionality - added expandable "Dashboards" menu in Sidebar with AI Interaction and Customer Survey submenu options, fixed navigation routing for dashboard pages, and resolved DOM nesting warnings by using span elements instead of anchor tags in Link components
 ```
 
 ## User Preferences

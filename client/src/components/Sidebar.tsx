@@ -91,9 +91,9 @@ export default function Sidebar({
           const isActive = location === item.href;
           return (
             <Link key={item.name} href={item.href}>
-              <a
+              <span
                 className={cn(
-                  "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
                   isActive
                     ? "bg-primary text-white"
                     : "text-slate-700 hover:bg-slate-100",
@@ -101,7 +101,7 @@ export default function Sidebar({
               >
                 <item.icon className="w-4 h-4" />
                 <span>{item.name}</span>
-              </a>
+              </span>
             </Link>
           );
         })}
@@ -127,9 +127,9 @@ export default function Sidebar({
                 const isActive = location === item.href;
                 return (
                   <Link key={item.name} href={item.href}>
-                    <a
+                    <span
                       className={cn(
-                        "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
                         isActive
                           ? "bg-primary text-white"
                           : "text-slate-700 hover:bg-slate-100",
@@ -137,7 +137,7 @@ export default function Sidebar({
                     >
                       <item.icon className="w-4 h-4" />
                       <span>{item.name}</span>
-                    </a>
+                    </span>
                   </Link>
                 );
               })}
@@ -154,9 +154,9 @@ export default function Sidebar({
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href}>
-                <a
+                <span
                   className={cn(
-                    "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
                     isActive
                       ? "bg-primary text-white"
                       : "text-slate-700 hover:bg-slate-100",
@@ -164,7 +164,7 @@ export default function Sidebar({
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                </a>
+                </span>
               </Link>
             );
           })}
