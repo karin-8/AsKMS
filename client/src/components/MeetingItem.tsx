@@ -231,3 +231,5 @@ export function MeetingItem({
     </Card>
   );
 }
+
+export default MeetingItem;
