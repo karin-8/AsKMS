@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface ContentSummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  documentId: number;
   documentName: string;
   summary: string;
   tags?: string[];

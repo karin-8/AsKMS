@@ -74,6 +74,17 @@ export const documents = pgTable("documents", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Document translations for caching
+export const documentTranslations = pgTable("document_translations", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  language: varchar("language").notNull(), // 'thai', 'english', 'chinese'
+  translatedSummary: text("translated_summary"),
+  translatedContent: text("translated_content"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Chat conversations
 export const chatConversations = pgTable("chat_conversations", {
   id: serial("id").primaryKey(),
@@ -167,6 +178,14 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
     references: [categories.id],
   }),
   accessLogs: many(documentAccess),
+  translations: many(documentTranslations),
+}));
+
+export const documentTranslationsRelations = relations(documentTranslations, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentTranslations.documentId],
+    references: [documents.id],
+  }),
 }));
 
 export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
@@ -365,10 +384,8 @@ export type InsertChatConversation = z.infer<typeof insertChatConversationSchema
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type DocumentAccess = typeof documentAccess.$inferSelect;
-export type DocumentChunk = typeof documentChunks.$inferSelect;
-export type InsertDocumentChunk = typeof documentChunks.$inferInsert;
-export type SearchSession = typeof searchSessions.$inferSelect;
-export type InsertSearchSession = typeof searchSessions.$inferInsert;
+export type DocumentTranslation = typeof documentTranslations.$inferSelect;
+export type InsertDocumentTranslation = typeof documentTranslations.$inferInsert;
 export type DataConnection = typeof dataConnections.$inferSelect;
 export type InsertDataConnection = z.infer<typeof insertDataConnectionSchema>;
 export type UpdateDataConnection = z.infer<typeof updateDataConnectionSchema>;

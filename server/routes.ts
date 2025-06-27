@@ -699,15 +699,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Translation API endpoint
-  app.post('/api/translate', isAuthenticated, async (req: any, res) => {
+  // Translation API endpoint with database caching
+  app.post('/api/documents/:id/translate', isAuthenticated, async (req: any, res) => {
     try {
-      const { text, targetLanguage } = req.body;
+      const userId = req.user.claims.sub;
+      const documentId = parseInt(req.params.id);
+      const { targetLanguage } = req.body;
       
-      if (!text || !targetLanguage) {
-        return res.status(400).json({ message: "Text and target language are required" });
+      if (!targetLanguage) {
+        return res.status(400).json({ message: "Target language is required" });
       }
 
+      // Get document
+      const document = await storage.getDocument(documentId, userId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      if (!document.summary) {
+        return res.status(400).json({ message: "Document has no summary to translate" });
+      }
+
+      // Check if translation already exists in database
+      const { documentTranslations } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const [existingTranslation] = await db.select()
+        .from(documentTranslations)
+        .where(and(
+          eq(documentTranslations.documentId, documentId),
+          eq(documentTranslations.language, targetLanguage.toLowerCase())
+        ));
+
+      if (existingTranslation) {
+        return res.json({ translatedText: existingTranslation.translatedSummary });
+      }
+
+      // No cached translation, create new one with OpenAI
       if (!process.env.OPENAI_API_KEY) {
         return res.status(500).json({ message: "Translation service not available" });
       }
@@ -719,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const prompt = `Translate the following text to ${targetLanguage}. Maintain the same tone and meaning. Only return the translated text without any additional explanation:
 
-${text}`;
+${document.summary}`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -737,6 +765,18 @@ ${text}`;
       
       if (!translatedText) {
         return res.status(500).json({ message: "Translation failed" });
+      }
+
+      // Cache translation in database
+      try {
+        await db.insert(documentTranslations).values({
+          documentId,
+          language: targetLanguage.toLowerCase(),
+          translatedSummary: translatedText,
+        });
+      } catch (error) {
+        console.error("Error caching translation:", error);
+        // Continue anyway, return the translation
       }
 
       res.json({ translatedText });
