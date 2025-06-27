@@ -1,0 +1,2 @@
+This is a test file that can be safely deleted.
+It's used to test the delete functionality.

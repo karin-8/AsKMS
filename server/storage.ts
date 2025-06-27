@@ -168,18 +168,10 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
   }
 
-  async getDocument(id: number, userId: string): Promise<any> {
+  async getDocument(id: number, userId: string): Promise<Document | undefined> {
     const [document] = await db
-      .select({
-        ...getTableColumns(documents),
-        uploaderName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`.as('uploaderName'),
-        uploaderEmail: users.email,
-        uploaderRole: users.role,
-        departmentName: departments.name,
-      })
+      .select()
       .from(documents)
-      .leftJoin(users, eq(documents.userId, users.id))
-      .leftJoin(departments, eq(users.departmentId, departments.id))
       .where(and(eq(documents.id, id), eq(documents.userId, userId)));
     return document;
   }

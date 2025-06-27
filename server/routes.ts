@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, getTableColumns } from "drizzle-orm";
 import { 
   insertCategorySchema, 
   insertDocumentSchema, 
@@ -662,7 +662,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
-      const document = await storage.getDocument(id, userId);
+      
+      // Get document with user and department information
+      const [document] = await db
+        .select({
+          ...getTableColumns(documents),
+          uploaderName: sql<string>`COALESCE(${users.firstName} || ' ' || ${users.lastName}, ${users.email})`.as('uploaderName'),
+          uploaderEmail: users.email,
+          uploaderRole: users.role,
+          departmentName: departments.name,
+        })
+        .from(documents)
+        .leftJoin(users, eq(documents.userId, users.id))
+        .leftJoin(departments, eq(users.departmentId, departments.id))
+        .where(and(eq(documents.id, id), eq(documents.userId, userId)));
       
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
