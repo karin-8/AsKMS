@@ -20,6 +20,7 @@ import {
   ChevronDown,
   MessageSquare,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -136,6 +137,21 @@ export default function Sidebar({
                 >
                   <FolderOpen className="w-5 h-5 mr-3" />
                   <span>Categories</span>
+                </Button>
+              </Link>
+
+              <Link href="/achievements" onClick={onMobileClose}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/achievements")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
+                  <Trophy className="w-5 h-5 mr-3" />
+                  <span>Achievements</span>
                 </Button>
               </Link>
 
