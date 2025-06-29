@@ -354,13 +354,57 @@ export class DatabaseStorage implements IStorage {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [stats] = await db
+    // Get user's department for shared documents
+    const [userInfo] = await db
+      .select({ departmentId: users.departmentId })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    // Count owned documents
+    const ownedDocsQuery = db
       .select({
         totalDocuments: count(documents.id),
         storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
       })
       .from(documents)
       .where(eq(documents.userId, userId));
+
+    // Count documents shared with user directly
+    const userSharedDocsQuery = db
+      .select({
+        totalDocuments: count(documents.id),
+        storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+      })
+      .from(documents)
+      .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
+      .where(eq(documentUserPermissions.userId, userId));
+
+    // Count documents shared with user's department (if user has department)
+    let deptSharedDocsQuery = null;
+    if (userInfo?.departmentId) {
+      deptSharedDocsQuery = db
+        .select({
+          totalDocuments: count(documents.id),
+          storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+        })
+        .from(documents)
+        .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
+        .where(eq(documentDepartmentPermissions.departmentId, userInfo.departmentId));
+    }
+
+    const [ownedStats, userSharedStats, deptSharedStats] = await Promise.all([
+      ownedDocsQuery,
+      userSharedDocsQuery,
+      deptSharedDocsQuery
+    ]);
+
+    const totalDocuments = Number(ownedStats[0]?.totalDocuments || 0) + 
+                          Number(userSharedStats[0]?.totalDocuments || 0) + 
+                          Number(deptSharedStats?.[0]?.totalDocuments || 0);
+
+    const storageUsed = Number(ownedStats[0]?.storageUsed || 0) + 
+                      Number(userSharedStats[0]?.storageUsed || 0) + 
+                      Number(deptSharedStats?.[0]?.storageUsed || 0);
 
     const [processedToday] = await db
       .select({ count: count(documents.id) })
@@ -384,9 +428,9 @@ export class DatabaseStorage implements IStorage {
       );
 
     return {
-      totalDocuments: Number(stats.totalDocuments) || 0,
+      totalDocuments,
       processedToday: Number(processedToday.count) || 0,
-      storageUsed: Math.round((Number(stats.storageUsed) || 0) / (1024 * 1024)), // Convert to MB
+      storageUsed: Math.round(storageUsed / (1024 * 1024)), // Convert to MB
       aiQueries: Number(aiQueries.count) || 0,
     };
   }
