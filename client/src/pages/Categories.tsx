@@ -309,7 +309,7 @@ export default function Categories() {
                             <div className="flex items-center space-x-2 mt-2">
                               <Badge variant="outline" className="text-xs">
                                 <FileText className="w-3 h-3 mr-1" />
-                                {getDocumentCountForCategory(category.id)} documents
+                                {category.documentCount || 0} documents
                               </Badge>
                             </div>
                           </div>
