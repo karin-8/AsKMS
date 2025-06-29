@@ -10,6 +10,14 @@ export interface SearchResult {
   aiCategory?: string;
   similarity: number;
   createdAt: string;
+  // Include all fields needed for proper display
+  categoryId?: number;
+  tags?: string[];
+  size?: number;
+  fileType?: string;
+  isFavorite?: boolean;
+  updatedAt?: string;
+  userId?: string;
 }
 
 export interface SearchOptions {
@@ -104,6 +112,14 @@ export class SemanticSearchServiceV2 {
             aiCategory: doc.aiCategory || undefined,
             similarity: vectorResult.similarity,
             createdAt: doc.createdAt.toISOString(),
+            // Include all fields needed for proper display
+            categoryId: doc.categoryId,
+            tags: doc.tags,
+            size: doc.fileSize,
+            fileType: doc.mimeType,
+            isFavorite: doc.isFavorite,
+            updatedAt: doc.updatedAt.toISOString(),
+            userId: doc.userId
           });
           
           processedDocs.add(docId);
@@ -137,6 +153,14 @@ export class SemanticSearchServiceV2 {
         aiCategory: doc.aiCategory || undefined,
         similarity: 0.8, // Default similarity for keyword matches
         createdAt: doc.createdAt.toISOString(),
+        // Include all fields needed for proper display
+        categoryId: doc.categoryId,
+        tags: doc.tags,
+        size: doc.fileSize,
+        fileType: doc.mimeType,
+        isFavorite: doc.isFavorite,
+        updatedAt: doc.updatedAt?.toISOString(),
+        userId: doc.userId
       }));
     } catch (error) {
       console.error("Error performing keyword search:", error);
