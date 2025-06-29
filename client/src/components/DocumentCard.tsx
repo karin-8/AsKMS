@@ -72,6 +72,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   });
 
   const getFileIcon = (mimeType: string) => {
+    if (!mimeType) return FileText;
     if (mimeType.includes('pdf')) return FilePen;
     if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return FileSpreadsheet;
     if (mimeType.includes('image')) return FileImage;
@@ -80,6 +81,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   };
 
   const getFileIconColor = (mimeType: string) => {
+    if (!mimeType) return 'bg-gray-100 text-gray-600';
     if (mimeType.includes('pdf')) return 'bg-red-100 text-red-600';
     if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'bg-green-100 text-green-600';
     if (mimeType.includes('image')) return 'bg-purple-100 text-purple-600';

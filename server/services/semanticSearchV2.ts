@@ -56,9 +56,12 @@ export class SemanticSearchServiceV2 {
 
     try {
       // Use vector service for semantic search
+      console.log(`SemanticSearchV2: Searching for "${query}" for user ${userId}`);
       const vectorResults = await vectorService.searchDocuments(query, userId, limit * 2);
+      console.log(`SemanticSearchV2: Vector service returned ${vectorResults.length} results`);
 
       if (vectorResults.length === 0) {
+        console.log("SemanticSearchV2: No vector results found");
         return [];
       }
 

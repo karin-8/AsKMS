@@ -133,7 +133,12 @@ export class VectorService {
     limit: number = 10
   ): Promise<Array<{ document: VectorDocument; similarity: number }>> {
     try {
+      console.log(`VectorService: Total documents in memory: ${this.documents.length}`);
+      const userDocs = this.documents.filter(doc => doc.metadata.userId === userId);
+      console.log(`VectorService: Documents for user ${userId}: ${userDocs.length}`);
+      
       if (this.documents.length === 0) {
+        console.log("VectorService: No documents in vector database");
         return [];
       }
 
