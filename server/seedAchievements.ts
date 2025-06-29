@@ -264,3 +264,14 @@ export async function seedAchievements() {
     console.error("Error seeding achievements:", error);
   }
 }
+
+// Run the seed function if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedAchievements().then(() => {
+    console.log("Seeding completed");
+    process.exit(0);
+  }).catch((error) => {
+    console.error("Seeding failed:", error);
+    process.exit(1);
+  });
+}
