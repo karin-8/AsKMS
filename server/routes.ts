@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { db } from "./db";
-import { eq, sql, and, getTableColumns } from "drizzle-orm";
+import { eq, sql, and, gte, getTableColumns } from "drizzle-orm";
 import { 
   insertCategorySchema, 
   insertDocumentSchema, 
@@ -18,7 +18,8 @@ import {
   documentUserPermissions,
   documentDepartmentPermissions,
   documents,
-  categories
+  categories,
+  auditLogs
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -183,6 +184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userWithDept) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+
       
       res.json(userWithDept);
     } catch (error) {
