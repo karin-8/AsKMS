@@ -229,27 +229,46 @@ export class VectorService {
     return dotProduct / (magnitudeA * magnitudeB);
   }
 
-  getDocumentCount(): number {
-    return this.documents.length;
+  async getDocumentCount(): Promise<number> {
+    const result = await db.select().from(documentVectors);
+    return result.length;
   }
 
-  getDocumentsByUser(userId: string): VectorDocument[] {
-    return this.documents.filter(doc => doc.metadata.userId === userId);
+  async getDocumentsByUser(userId: string): Promise<VectorDocument[]> {
+    const dbVectors = await db.select()
+      .from(documentVectors)
+      .where(eq(documentVectors.userId, userId));
+
+    return dbVectors.map(dbVector => ({
+      id: `${dbVector.documentId}_chunk_${dbVector.chunkIndex}`,
+      content: dbVector.content,
+      embedding: dbVector.embedding,
+      metadata: {
+        originalDocumentId: dbVector.documentId.toString(),
+        userId: dbVector.userId,
+        chunkIndex: dbVector.chunkIndex,
+        totalChunks: dbVector.totalChunks
+      },
+      chunkIndex: dbVector.chunkIndex,
+      totalChunks: dbVector.totalChunks
+    }));
   }
 
-  getDocumentChunkStats(userId: string): { [docId: string]: { chunks: number; totalLength: number } } {
+  async getDocumentChunkStats(userId: string): Promise<{ [docId: string]: { chunks: number; totalLength: number } }> {
+    const dbVectors = await db.select()
+      .from(documentVectors)
+      .where(eq(documentVectors.userId, userId));
+
     const stats: { [docId: string]: { chunks: number; totalLength: number } } = {};
     
-    this.documents
-      .filter(doc => doc.metadata.userId === userId)
-      .forEach(doc => {
-        const originalDocId = doc.metadata.originalDocumentId || doc.id;
-        if (!stats[originalDocId]) {
-          stats[originalDocId] = { chunks: 0, totalLength: 0 };
-        }
-        stats[originalDocId].chunks++;
-        stats[originalDocId].totalLength += doc.content.length;
-      });
+    dbVectors.forEach(dbVector => {
+      const originalDocId = dbVector.documentId.toString();
+      if (!stats[originalDocId]) {
+        stats[originalDocId] = { chunks: 0, totalLength: 0 };
+      }
+      stats[originalDocId].chunks++;
+      stats[originalDocId].totalLength += dbVector.content.length;
+    });
     
     return stats;
   }

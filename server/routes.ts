@@ -1417,9 +1417,9 @@ ${document.summary}`;
   app.get('/api/vector/stats', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const userDocuments = vectorService.getDocumentsByUser(userId);
-      const totalDocuments = vectorService.getDocumentCount();
-      const chunkStats = vectorService.getDocumentChunkStats(userId);
+      const userDocuments = await vectorService.getDocumentsByUser(userId);
+      const totalDocuments = await vectorService.getDocumentCount();
+      const chunkStats = await vectorService.getDocumentChunkStats(userId);
       
       // Group chunks by original document
       const documentMap = new Map();
