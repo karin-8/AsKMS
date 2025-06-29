@@ -28,18 +28,6 @@ import {
   type InsertAiAssistantFeedback,
   type AuditLog,
   type InsertAuditLog,
-  achievements,
-  type Achievement,
-  type InsertAchievement,
-  userAchievements,
-  type UserAchievement,
-  type InsertUserAchievement,
-  userActivity,
-  type UserActivity,
-  type InsertUserActivity,
-  userStats,
-  type UserStats,
-  type InsertUserStats,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte } from "drizzle-orm";
@@ -67,7 +55,7 @@ export interface IStorage {
   toggleDocumentFavorite(id: number, userId: string): Promise<Document>;
   
   // Stats operations
-  getDashboardStats(userId: string): Promise<{
+  getUserStats(userId: string): Promise<{
     totalDocuments: number;
     processedToday: number;
     storageUsed: number;
@@ -125,21 +113,6 @@ export interface IStorage {
     topActions: Array<{ action: string; count: number }>;
     recentActivity: AuditLog[];
   }>;
-  
-  // Achievement system operations
-  getAchievements(): Promise<Achievement[]>;
-  getUserAchievements(userId: string): Promise<UserAchievement[]>;
-  getUserStats(userId: string): Promise<UserStats | undefined>;
-  recordUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
-  updateUserStats(userId: string, updates: Partial<UserStats>): Promise<UserStats>;
-  checkAndUnlockAchievements(userId: string): Promise<UserAchievement[]>;
-  getLeaderboard(limit?: number): Promise<Array<{
-    userId: string;
-    userName: string;
-    totalPoints: number;
-    rank: number;
-  }>>;
-  getRecentAchievements(userId: string, limit?: number): Promise<UserAchievement[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -299,7 +272,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Stats operations
-  async getDashboardStats(userId: string): Promise<{
+  async getUserStats(userId: string): Promise<{
     totalDocuments: number;
     processedToday: number;
     storageUsed: number;
@@ -698,204 +671,6 @@ export class DatabaseStorage implements IStorage {
       topActions: topActionsResult,
       recentActivity
     };
-  }
-
-  // Achievement system operations
-  async getAchievements(): Promise<Achievement[]> {
-    return await db.select().from(achievements).where(eq(achievements.isActive, true));
-  }
-
-  async getUserAchievements(userId: string): Promise<UserAchievement[]> {
-    return await db.select({
-      id: userAchievements.id,
-      userId: userAchievements.userId,
-      achievementId: userAchievements.achievementId,
-      unlockedAt: userAchievements.unlockedAt,
-      isNotified: userAchievements.isNotified,
-      achievement: achievements
-    })
-    .from(userAchievements)
-    .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
-    .where(eq(userAchievements.userId, userId))
-    .orderBy(desc(userAchievements.unlockedAt));
-  }
-
-  async getUserStats(userId: string): Promise<UserStats | undefined> {
-    const [stats] = await db.select().from(userStats).where(eq(userStats.userId, userId));
-    if (!stats) {
-      // Initialize user stats if not exists
-      const [newStats] = await db.insert(userStats).values({
-        userId,
-        totalPoints: 0,
-        documentsRead: 0,
-        searchesPerformed: 0,
-        chatInteractions: 0,
-        feedbackProvided: 0,
-        favoritesAdded: 0,
-        currentStreak: 0,
-        longestStreak: 0
-      }).returning();
-      return newStats;
-    }
-    return stats;
-  }
-
-  async recordUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
-    const [newActivity] = await db.insert(userActivity).values(activity).returning();
-    
-    // Update user stats
-    await this.updateUserActivityStats(activity.userId, activity.activityType, activity.points);
-    
-    // Check for new achievements
-    await this.checkAndUnlockAchievements(activity.userId);
-    
-    return newActivity;
-  }
-
-  async updateUserStats(userId: string, updates: Partial<UserStats>): Promise<UserStats> {
-    const [updatedStats] = await db
-      .update(userStats)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(userStats.userId, userId))
-      .returning();
-    return updatedStats;
-  }
-
-  async checkAndUnlockAchievements(userId: string): Promise<UserAchievement[]> {
-    const currentStats = await this.getUserStats(userId);
-    if (!currentStats) return [];
-
-    const allAchievements = await this.getAchievements();
-    const unlockedAchievements = await this.getUserAchievements(userId);
-    const unlockedIds = new Set(unlockedAchievements.map(ua => ua.achievementId));
-
-    const newUnlocks: UserAchievement[] = [];
-
-    for (const achievement of allAchievements) {
-      if (unlockedIds.has(achievement.id)) continue;
-
-      let shouldUnlock = false;
-
-      switch (achievement.type) {
-        case 'document_read':
-          shouldUnlock = currentStats.documentsRead >= achievement.pointsRequired;
-          break;
-        case 'search':
-          shouldUnlock = currentStats.searchesPerformed >= achievement.pointsRequired;
-          break;
-        case 'chat':
-          shouldUnlock = currentStats.chatInteractions >= achievement.pointsRequired;
-          break;
-        case 'feedback':
-          shouldUnlock = currentStats.feedbackProvided >= achievement.pointsRequired;
-          break;
-        case 'favorite':
-          shouldUnlock = currentStats.favoritesAdded >= achievement.pointsRequired;
-          break;
-        case 'streak':
-          shouldUnlock = currentStats.longestStreak >= achievement.pointsRequired;
-          break;
-        case 'points':
-          shouldUnlock = currentStats.totalPoints >= achievement.pointsRequired;
-          break;
-      }
-
-      if (shouldUnlock) {
-        const [newUnlock] = await db.insert(userAchievements).values({
-          userId,
-          achievementId: achievement.id
-        }).returning();
-        newUnlocks.push(newUnlock);
-      }
-    }
-
-    return newUnlocks;
-  }
-
-  async getLeaderboard(limit: number = 10): Promise<Array<{
-    userId: string;
-    userName: string;
-    totalPoints: number;
-    rank: number;
-  }>> {
-    const results = await db.select({
-      userId: userStats.userId,
-      totalPoints: userStats.totalPoints,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      email: users.email
-    })
-    .from(userStats)
-    .innerJoin(users, eq(userStats.userId, users.id))
-    .orderBy(desc(userStats.totalPoints))
-    .limit(limit);
-
-    return results.map((result, index) => ({
-      userId: result.userId,
-      userName: `${result.firstName || ''} ${result.lastName || ''}`.trim() || result.email || 'Anonymous',
-      totalPoints: result.totalPoints,
-      rank: index + 1
-    }));
-  }
-
-  async getRecentAchievements(userId: string, limit: number = 5): Promise<UserAchievement[]> {
-    return await db.select({
-      id: userAchievements.id,
-      userId: userAchievements.userId,
-      achievementId: userAchievements.achievementId,
-      unlockedAt: userAchievements.unlockedAt,
-      isNotified: userAchievements.isNotified,
-      achievement: achievements
-    })
-    .from(userAchievements)
-    .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
-    .where(eq(userAchievements.userId, userId))
-    .orderBy(desc(userAchievements.unlockedAt))
-    .limit(limit);
-  }
-
-  private async updateUserActivityStats(userId: string, activityType: string, points: number): Promise<void> {
-    const updates: Partial<UserStats> = { totalPoints: sql`${userStats.totalPoints} + ${points}` };
-
-    switch (activityType) {
-      case 'document_read':
-        updates.documentsRead = sql`${userStats.documentsRead} + 1`;
-        break;
-      case 'search':
-        updates.searchesPerformed = sql`${userStats.searchesPerformed} + 1`;
-        break;
-      case 'chat':
-        updates.chatInteractions = sql`${userStats.chatInteractions} + 1`;
-        break;
-      case 'feedback':
-        updates.feedbackProvided = sql`${userStats.feedbackProvided} + 1`;
-        break;
-      case 'favorite':
-        updates.favoritesAdded = sql`${userStats.favoritesAdded} + 1`;
-        break;
-    }
-
-    // Update streak logic
-    const currentStats = await this.getUserStats(userId);
-    if (currentStats) {
-      const today = new Date().toDateString();
-      const lastActive = currentStats.lastActiveDate?.toDateString();
-      
-      if (lastActive === today) {
-        // Same day, no streak change
-      } else if (lastActive === new Date(Date.now() - 86400000).toDateString()) {
-        // Yesterday, continue streak
-        updates.currentStreak = sql`${userStats.currentStreak} + 1`;
-        updates.longestStreak = sql`GREATEST(${userStats.longestStreak}, ${userStats.currentStreak} + 1)`;
-      } else {
-        // Streak broken, start new
-        updates.currentStreak = 1;
-      }
-      
-      updates.lastActiveDate = new Date();
-    }
-
-    await db.update(userStats).set(updates).where(eq(userStats.userId, userId));
   }
 }
 
