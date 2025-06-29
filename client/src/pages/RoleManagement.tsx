@@ -28,9 +28,12 @@ export default function RoleManagement() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      await apiRequest(`/api/admin/users/${userId}/role`, {
+      return await apiRequest(`/api/admin/users/${userId}/role`, {
         method: "PUT",
-        body: { role },
+        body: JSON.stringify({ role }),
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
     },
     onSuccess: () => {

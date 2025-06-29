@@ -28,6 +28,7 @@ const allNavigation = [
   { name: "Integrations", href: "/integrations", icon: Building, roles: ["admin", "user"] },
   { name: "Categories & Tags", href: "/categories", icon: Tags, roles: ["admin", "user"] },
   { name: "User Management", href: "/user-management", icon: Users, roles: ["admin"] },
+  { name: "Role Management", href: "/role-management", icon: Users, roles: ["admin"] },
   { name: "Live Chat Widget", href: "/live-chat-widget", icon: MessageSquare, roles: ["admin"] },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
 ];

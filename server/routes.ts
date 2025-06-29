@@ -441,6 +441,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user role
+  app.put('/api/admin/users/:userId/role', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+
+      // Validate role
+      if (!['admin', 'user', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role. Must be 'admin', 'user', or 'viewer'" });
+      }
+
+      await db.update(users)
+        .set({ 
+          role: role,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      // Log role change for audit
+      try {
+        await storage.createAuditLog({
+          userId: req.user.claims.sub,
+          action: 'role_change',
+          resourceType: 'user',
+          resourceId: userId,
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+          details: {
+            targetUser: userId,
+            newRole: role
+          }
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for role change:", auditError);
+      }
+
+      res.json({ message: "User role updated successfully" });
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
   app.get('/api/admin/permissions', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userPermissions = await db
