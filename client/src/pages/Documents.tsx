@@ -168,152 +168,160 @@ export default function Documents() {
           {/* Filters and Search */}
           <Card className="border border-slate-200 mb-6">
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="md:col-span-2 relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search documents, content, or tags..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+              <div className="space-y-4">
+                {/* Search Row */}
+                <div className="flex gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search documents, content, or tags..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  <Select value={searchType} onValueChange={(value: "keyword" | "semantic" | "hybrid") => setSearchType(value)}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="keyword">Keyword Search</SelectItem>
+                      <SelectItem value="semantic">AI Semantic Search</SelectItem>
+                      <SelectItem value="hybrid">Hybrid Search</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                <Select value={searchType} onValueChange={(value: "keyword" | "semantic" | "hybrid") => setSearchType(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keyword">Keyword Search</SelectItem>
-                    <SelectItem value="semantic">AI Semantic Search</SelectItem>
-                    <SelectItem value="hybrid">Hybrid Search</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex items-center gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-36 justify-between">
-                        Categories ({filterCategories.length})
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-0">
-                      <Command>
-                        <CommandInput placeholder="Search categories..." />
-                        <CommandEmpty>No categories found.</CommandEmpty>
-                        <CommandGroup className="max-h-64 overflow-auto">
-                          {aiCategories.map((category: string) => (
-                            <CommandItem
-                              key={category}
-                              onSelect={() => {
-                                setFilterCategories(prev =>
-                                  prev.includes(category)
-                                    ? prev.filter(c => c !== category)
-                                    : [...prev, category]
-                                );
-                              }}
-                            >
-                              <Checkbox
-                                checked={filterCategories.includes(category)}
-                                className="mr-2"
-                              />
-                              {category}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-28 justify-between">
-                        Tags ({filterTags.length})
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-0">
-                      <Command>
-                        <CommandInput placeholder="Search tags..." />
-                        <CommandEmpty>No tags found.</CommandEmpty>
-                        <CommandGroup className="max-h-64 overflow-auto">
-                          {allTags.map((tag: string) => (
-                            <CommandItem
-                              key={tag}
-                              onSelect={() => {
-                                setFilterTags(prev =>
-                                  prev.includes(tag)
-                                    ? prev.filter(t => t !== tag)
-                                    : [...prev, tag]
-                                );
-                              }}
-                            >
-                              <Checkbox
-                                checked={filterTags.includes(tag)}
-                                className="mr-2"
-                              />
-                              {tag}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                {/* Filters Row */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="border-dashed">
+                          Categories ({filterCategories.length})
+                          <ChevronDown className="w-4 h-4 ml-1" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0">
+                        <Command>
+                          <CommandInput placeholder="Search categories..." />
+                          <CommandEmpty>No categories found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {aiCategories.map((category: string) => (
+                              <CommandItem
+                                key={category}
+                                onSelect={() => {
+                                  setFilterCategories(prev =>
+                                    prev.includes(category)
+                                      ? prev.filter(c => c !== category)
+                                      : [...prev, category]
+                                  );
+                                }}
+                              >
+                                <Checkbox
+                                  checked={filterCategories.includes(category)}
+                                  className="mr-2"
+                                />
+                                {category}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="border-dashed">
+                          Tags ({filterTags.length})
+                          <ChevronDown className="w-4 h-4 ml-1" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0">
+                        <Command>
+                          <CommandInput placeholder="Search tags..." />
+                          <CommandEmpty>No tags found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {allTags.map((tag: string) => (
+                              <CommandItem
+                                key={tag}
+                                onSelect={() => {
+                                  setFilterTags(prev =>
+                                    prev.includes(tag)
+                                      ? prev.filter(t => t !== tag)
+                                      : [...prev, tag]
+                                  );
+                                }}
+                              >
+                                <Checkbox
+                                  checked={filterTags.includes(tag)}
+                                  className="mr-2"
+                                />
+                                {tag}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
 
-                  <Button
-                    variant={showFavoritesOnly ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                    className={showFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
-                  >
-                    <Star className="w-4 h-4 mr-1" />
-                    Favorites
-                  </Button>
-                  
-                  {(filterCategories.length > 0 || filterTags.length > 0 || showFavoritesOnly) && (
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant={showFavoritesOnly ? "default" : "outline"}
                       size="sm"
-                      onClick={() => {
-                        setFilterCategories([]);
-                        setFilterTags([]);
-                        setShowFavoritesOnly(false);
-                      }}
-                      className="text-slate-500 hover:text-slate-700"
+                      onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                      className={showFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
                     >
-                      Clear All
+                      <Star className="w-4 h-4 mr-1" />
+                      Favorites
                     </Button>
-                  )}
-                </div>
-                
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="size">File Size</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant={viewMode === "grid" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setViewMode("grid")}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
+                    
+                    {(filterCategories.length > 0 || filterTags.length > 0 || showFavoritesOnly) && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setFilterCategories([]);
+                          setFilterTags([]);
+                          setShowFavoritesOnly(false);
+                        }}
+                        className="text-slate-500 hover:text-slate-700"
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newest">Newest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="size">File Size</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant={viewMode === "grid" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("grid")}
+                      >
+                        <Grid3X3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === "list" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("list")}
+                      >
+                        <List className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

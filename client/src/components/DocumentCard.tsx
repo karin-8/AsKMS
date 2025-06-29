@@ -137,7 +137,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Toggle favorite mutation
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/documents/${doc.id}/favorite`, "POST");
+      await apiRequest("POST", `/api/documents/${doc.id}/favorite`);
     },
     onSuccess: () => {
       setIsFavorite(!isFavorite);
