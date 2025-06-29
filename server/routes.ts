@@ -29,7 +29,7 @@ import * as fsSync from "fs";
 import { processDocument, generateChatResponse } from "./services/openai";
 import { documentProcessor } from "./services/documentProcessor";
 import { vectorService } from "./services/vectorService";
-import { SemanticSearchService } from "./services/semanticSearch";
+import { semanticSearchServiceV2 } from "./services/semanticSearchV2";
 
 // File upload configuration
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -89,7 +89,7 @@ const upload = multer({
   }
 });
 
-const semanticSearchService = new SemanticSearchService();
+// Using semanticSearchServiceV2 from import
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -779,7 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (searchType === 'semantic') {
         console.log("Performing semantic search...");
         try {
-          results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'semantic' });
+          results = await semanticSearchServiceV2.searchDocuments(query, userId, { searchType: 'semantic' });
           console.log(`Semantic search returned ${results.length} results`);
         } catch (semanticError) {
           console.error("Semantic search failed, falling back to keyword:", semanticError);
@@ -789,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else { // hybrid
         console.log("Performing hybrid search...");
         try {
-          results = await semanticSearchService.searchDocuments(query, userId, { searchType: 'hybrid' });
+          results = await semanticSearchServiceV2.searchDocuments(query, userId, { searchType: 'hybrid' });
           console.log(`Hybrid search returned ${results.length} results`);
         } catch (hybridError) {
           console.error("Hybrid search failed, falling back to keyword:", hybridError);
