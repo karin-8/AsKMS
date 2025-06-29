@@ -1896,12 +1896,20 @@ ${document.summary}`;
   app.post("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log("Creating agent chatbot with data:", JSON.stringify(req.body, null, 2));
+      console.log("User ID:", userId);
+      
       const agentData = { ...req.body, userId };
+      console.log("Final agent data:", JSON.stringify(agentData, null, 2));
+      
       const agent = await storage.createAgentChatbot(agentData);
+      console.log("Agent created successfully:", agent);
       res.status(201).json(agent);
     } catch (error) {
       console.error("Error creating agent chatbot:", error);
-      res.status(500).json({ message: "Failed to create agent chatbot" });
+      console.error("Error details:", error.message);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to create agent chatbot", error: error.message });
     }
   });
 
