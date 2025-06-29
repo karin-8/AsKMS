@@ -1799,6 +1799,69 @@ ${document.summary}`;
     }
   });
 
+  // Achievement system routes
+  app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get('/api/achievements/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userAchievements = await storage.getUserAchievements(userId);
+      res.json(userAchievements);
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ message: "Failed to fetch user achievements" });
+    }
+  });
+
+  app.get('/api/achievements/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userStats = await storage.getUserStats(userId);
+      res.json(userStats);
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      res.status(500).json({ message: "Failed to fetch user stats" });
+    }
+  });
+
+  app.get('/api/achievements/leaderboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const leaderboard = await storage.getLeaderboard(limit);
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  app.post('/api/achievements/activity', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { activityType, points, metadata } = req.body;
+      
+      const activity = await storage.recordUserActivity({
+        userId,
+        activityType,
+        points: points || 0,
+        metadata
+      });
+      
+      res.json(activity);
+    } catch (error) {
+      console.error("Error recording activity:", error);
+      res.status(500).json({ message: "Failed to record activity" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
