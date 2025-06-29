@@ -400,15 +400,53 @@ export async function generateChatResponse(
   specificDocumentId?: number,
 ): Promise<string> {
   try {
-    // Prepare context from documents
-    const documentContext = documents
-      .filter((doc) => doc.content && doc.content.trim().length > 0)
-      .slice(0, specificDocumentId ? 1 : 5) // If specific document, use only that one
-      .map(
-        (doc) =>
-          `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 1500)}`,
-      )
-      .join("\n\n");
+    let documentContext = "";
+    
+    if (specificDocumentId && documents.length > 0) {
+      // For specific document chat, use vector search to get relevant content
+      const { vectorService } = await import('./vectorService');
+      const userId = documents[0].userId; // Assume all documents belong to the same user
+      
+      try {
+        // Search for relevant chunks from the specific document
+        const vectorResults = await vectorService.searchDocuments(userMessage, userId, 10);
+        
+        // Filter results to only include chunks from the specific document
+        const specificDocResults = vectorResults.filter(result => 
+          result.document.metadata.originalDocumentId === specificDocumentId.toString() ||
+          result.document.id === specificDocumentId.toString()
+        );
+        
+        if (specificDocResults.length > 0) {
+          // Use the most relevant chunks
+          documentContext = specificDocResults
+            .slice(0, 5) // Take top 5 most relevant chunks
+            .map(result => 
+              `Document: ${documents[0].name}\nRelevant Content: ${result.document.content}`
+            )
+            .join("\n\n");
+        } else {
+          // Fallback to document summary and first part if no vector results
+          const doc = documents[0];
+          documentContext = `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent Preview: ${doc.content?.substring(0, 2000)}`;
+        }
+      } catch (vectorError) {
+        console.error("Vector search failed for document chat, using fallback:", vectorError);
+        // Fallback to using more content from the document
+        const doc = documents[0];
+        documentContext = `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 3000)}`;
+      }
+    } else {
+      // For general chat, use limited document content
+      documentContext = documents
+        .filter((doc) => doc.content && doc.content.trim().length > 0)
+        .slice(0, 5)
+        .map(
+          (doc) =>
+            `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent: ${doc.content?.substring(0, 1500)}`,
+        )
+        .join("\n\n");
+    }
 
     const systemMessage = specificDocumentId 
       ? `You are an AI assistant helping users analyze and understand specific documents. You are currently focusing on a specific document provided in the context below.

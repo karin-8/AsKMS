@@ -99,7 +99,6 @@ export class SemanticSearchService {
           name: documents.name,
           content: documents.content,
           summary: documents.summary,
-          category: documents.category,
           aiCategory: documents.aiCategory,
           createdAt: documents.createdAt,
         })
@@ -111,18 +110,25 @@ export class SemanticSearchService {
           ),
         );
 
-      // Apply filters
+      // Apply category filter by rebuilding the query
       if (categoryFilter && categoryFilter !== "all") {
-        documentsQuery = documentsQuery.where(
-          and(
-            eq(documents.userId, userId),
-            sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`,
-            or(
-              eq(documents.category, categoryFilter),
+        documentsQuery = db
+          .select({
+            id: documents.id,
+            name: documents.name,
+            content: documents.content,
+            summary: documents.summary,
+            aiCategory: documents.aiCategory,
+            createdAt: documents.createdAt,
+          })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.userId, userId),
+              sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`,
               eq(documents.aiCategory, categoryFilter),
             ),
-          ),
-        );
+          );
       }
 
       if (dateRange) {
