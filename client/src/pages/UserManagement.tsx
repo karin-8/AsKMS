@@ -130,11 +130,8 @@ export default function UserManagement() {
   });
 
   const updateUserDepartmentMutation = useMutation({
-    mutationFn: ({ userId, departmentId }: { userId: string; departmentId: number }) => apiRequest(`/api/admin/users/${userId}/department`, {
-      method: 'PUT',
-      body: JSON.stringify({ departmentId }),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: ({ userId, departmentId }: { userId: string; departmentId: number }) => 
+      apiRequest('PUT', `/api/admin/users/${userId}/department`, { departmentId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       setIsAssignUserOpen(false);
@@ -142,8 +139,13 @@ export default function UserManagement() {
       setSelectedDepartmentId("");
       toast({ title: "User department updated successfully" });
     },
-    onError: () => {
-      toast({ title: "Failed to update user department", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Error updating user department:", error);
+      toast({ 
+        title: "Failed to update user department", 
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive" 
+      });
     }
   });
 
