@@ -1867,6 +1867,114 @@ ${document.summary}`;
     }
   });
 
+  // Agent Chatbot API routes
+  app.get("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const agents = await storage.getAgentChatbots(userId);
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching agent chatbots:", error);
+      res.status(500).json({ message: "Failed to fetch agent chatbots" });
+    }
+  });
+
+  app.get("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const agent = await storage.getAgentChatbot(parseInt(req.params.id), userId);
+      if (!agent) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      res.json(agent);
+    } catch (error) {
+      console.error("Error fetching agent chatbot:", error);
+      res.status(500).json({ message: "Failed to fetch agent chatbot" });
+    }
+  });
+
+  app.post("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const agentData = { ...req.body, userId };
+      const agent = await storage.createAgentChatbot(agentData);
+      res.status(201).json(agent);
+    } catch (error) {
+      console.error("Error creating agent chatbot:", error);
+      res.status(500).json({ message: "Failed to create agent chatbot" });
+    }
+  });
+
+  app.put("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const agent = await storage.updateAgentChatbot(
+        parseInt(req.params.id),
+        req.body,
+        userId
+      );
+      res.json(agent);
+    } catch (error) {
+      console.error("Error updating agent chatbot:", error);
+      res.status(500).json({ message: "Failed to update agent chatbot" });
+    }
+  });
+
+  app.delete("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.deleteAgentChatbot(parseInt(req.params.id), userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting agent chatbot:", error);
+      res.status(500).json({ message: "Failed to delete agent chatbot" });
+    }
+  });
+
+  app.get("/api/agent-chatbots/:id/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documents = await storage.getAgentChatbotDocuments(
+        parseInt(req.params.id),
+        userId
+      );
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching agent documents:", error);
+      res.status(500).json({ message: "Failed to fetch agent documents" });
+    }
+  });
+
+  app.post("/api/agent-chatbots/:agentId/documents/:documentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const agentDocument = await storage.addDocumentToAgent(
+        parseInt(req.params.agentId),
+        parseInt(req.params.documentId),
+        userId
+      );
+      res.status(201).json(agentDocument);
+    } catch (error) {
+      console.error("Error adding document to agent:", error);
+      res.status(500).json({ message: "Failed to add document to agent" });
+    }
+  });
+
+  app.delete("/api/agent-chatbots/:agentId/documents/:documentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.removeDocumentFromAgent(
+        parseInt(req.params.agentId),
+        parseInt(req.params.documentId),
+        userId
+      );
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing document from agent:", error);
+      res.status(500).json({ message: "Failed to remove document from agent" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

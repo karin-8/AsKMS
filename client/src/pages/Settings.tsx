@@ -34,7 +34,8 @@ import {
   XCircle,
   Loader2,
   X,
-  Building
+  Building,
+  Bot
 } from "lucide-react";
 
 interface DataConnection {
@@ -198,6 +199,7 @@ export default function Settings() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   
+  const [activeTab, setActiveTab] = useState("general");
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<DataConnection | null>(null);

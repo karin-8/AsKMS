@@ -26,6 +26,7 @@ import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
 import AuditMonitoring from "@/pages/AuditMonitoring";
 import MeetingNotes from "@/pages/MeetingNotes";
+import CreateAgentChatbot from "@/pages/CreateAgentChatbot";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
