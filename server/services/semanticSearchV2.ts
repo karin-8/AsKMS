@@ -6,17 +6,17 @@ export interface SearchResult {
   id: number;
   name: string;
   content: string;
-  summary?: string;
-  aiCategory?: string;
+  summary?: string | null;
+  aiCategory?: string | null;
   similarity: number;
   createdAt: string;
   // Include all fields needed for proper display
-  categoryId?: number;
-  tags?: string[];
+  categoryId?: number | null;
+  tags?: string[] | null;
   size?: number;
   fileType?: string;
-  isFavorite?: boolean;
-  updatedAt?: string;
+  isFavorite?: boolean | null;
+  updatedAt?: string | null;
   userId?: string;
 }
 
@@ -108,8 +108,8 @@ export class SemanticSearchServiceV2 {
             id: doc.id,
             name: doc.name,
             content: doc.content || "",
-            summary: doc.summary || undefined,
-            aiCategory: doc.aiCategory || undefined,
+            summary: doc.summary,
+            aiCategory: doc.aiCategory,
             similarity: vectorResult.similarity,
             createdAt: doc.createdAt.toISOString(),
             // Include all fields needed for proper display
@@ -118,7 +118,7 @@ export class SemanticSearchServiceV2 {
             size: doc.fileSize,
             fileType: doc.mimeType,
             isFavorite: doc.isFavorite,
-            updatedAt: doc.updatedAt.toISOString(),
+            updatedAt: doc.updatedAt?.toISOString() || null,
             userId: doc.userId
           });
           
@@ -149,8 +149,8 @@ export class SemanticSearchServiceV2 {
         id: doc.id,
         name: doc.name,
         content: doc.content || "",
-        summary: doc.summary || undefined,
-        aiCategory: doc.aiCategory || undefined,
+        summary: doc.summary,
+        aiCategory: doc.aiCategory,
         similarity: 0.8, // Default similarity for keyword matches
         createdAt: doc.createdAt.toISOString(),
         // Include all fields needed for proper display
@@ -159,7 +159,7 @@ export class SemanticSearchServiceV2 {
         size: doc.fileSize,
         fileType: doc.mimeType,
         isFavorite: doc.isFavorite,
-        updatedAt: doc.updatedAt?.toISOString(),
+        updatedAt: doc.updatedAt?.toISOString() || null,
         userId: doc.userId
       }));
     } catch (error) {
