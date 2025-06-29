@@ -40,6 +40,15 @@ export default function FileUpload({
   const [errors, setErrors] = useState<string[]>([]);
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('FileUpload onDrop:', { 
+      acceptedFiles: acceptedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })),
+      rejectedFiles: rejectedFiles.map(({ file, errors }) => ({ 
+        name: file.name, 
+        type: file.type, 
+        errors: errors.map((e: any) => e.code) 
+      }))
+    });
+    
     const newErrors: string[] = [];
     
     // Handle rejected files
@@ -70,10 +79,16 @@ export default function FileUpload({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: acceptedTypes.reduce((acc, type) => {
-      acc[type] = [];
-      return acc;
-    }, {} as Record<string, string[]>),
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+      'application/json': ['.json'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+    },
     maxSize,
     multiple: true,
   });
@@ -95,6 +110,7 @@ export default function FileUpload({
     if (file.type.includes('word')) return FileText;
     if (file.type.includes('spreadsheet') || file.type.includes('excel')) return FileSpreadsheet;
     if (file.type.includes('image')) return FileImage;
+    if (file.type === 'application/json' || file.name.endsWith('.json')) return FileText;
     return File;
   };
 
