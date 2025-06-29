@@ -13,6 +13,7 @@ import {
   BookType,
   Building,
   Video,
+  Bot,
 } from "lucide-react";
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Search & Discovery", href: "/search", icon: Search },
   { name: "AI Assistant", href: "/ai-assistant", icon: MessageSquare },
   { name: "Meeting Notes", href: "/meeting-notes", icon: Video },
+  { name: "Create Agent Chatbot", href: "/create-agent-chatbot", icon: Bot },
   { name: "Integrations", href: "/integrations", icon: Building },
   { name: "Categories & Tags", href: "/categories", icon: Tags },
   { name: "User Management", href: "/user-management", icon: Users },
