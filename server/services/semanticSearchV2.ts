@@ -10,11 +10,11 @@ export interface SearchResult {
   aiCategory?: string | null;
   similarity: number;
   createdAt: string;
-  // Include all fields needed for proper display
+  // Include all fields needed for proper display (matching DocumentCard interface)
   categoryId?: number | null;
   tags?: string[] | null;
-  size?: number;
-  fileType?: string;
+  fileSize?: number; // Changed from size to fileSize
+  mimeType?: string; // Changed from fileType to mimeType
   isFavorite?: boolean | null;
   updatedAt?: string | null;
   userId?: string;
@@ -69,8 +69,8 @@ export class SemanticSearchServiceV2 {
       console.log(`SemanticSearchV2: Vector service returned ${vectorResults.length} results`);
 
       if (vectorResults.length === 0) {
-        console.log("SemanticSearchV2: No vector results found");
-        return [];
+        console.log("SemanticSearchV2: No vector results found, falling back to keyword search");
+        return await performKeywordSearch(userId, query, limit);
       }
 
       // Get unique document IDs from vector results
@@ -110,13 +110,14 @@ export class SemanticSearchServiceV2 {
             content: doc.content || "",
             summary: doc.summary,
             aiCategory: doc.aiCategory,
+            aiCategoryColor: doc.aiCategoryColor,
             similarity: vectorResult.similarity,
             createdAt: doc.createdAt.toISOString(),
-            // Include all fields needed for proper display
+            // Include all fields needed for proper display (matching DocumentCard interface)
             categoryId: doc.categoryId,
             tags: doc.tags,
-            size: doc.fileSize,
-            fileType: doc.mimeType,
+            fileSize: doc.fileSize, // Use fileSize instead of size
+            mimeType: doc.mimeType, // Use mimeType instead of fileType
             isFavorite: doc.isFavorite,
             updatedAt: doc.updatedAt?.toISOString() || null,
             userId: doc.userId
@@ -153,11 +154,11 @@ export class SemanticSearchServiceV2 {
         aiCategory: doc.aiCategory,
         similarity: 0.8, // Default similarity for keyword matches
         createdAt: doc.createdAt.toISOString(),
-        // Include all fields needed for proper display
+        // Include all fields needed for proper display (matching DocumentCard interface)
         categoryId: doc.categoryId,
         tags: doc.tags,
-        size: doc.fileSize,
-        fileType: doc.mimeType,
+        fileSize: doc.fileSize, // Use fileSize instead of size
+        mimeType: doc.mimeType, // Use mimeType instead of fileType
         isFavorite: doc.isFavorite,
         updatedAt: doc.updatedAt?.toISOString() || null,
         userId: doc.userId
