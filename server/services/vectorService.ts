@@ -1,5 +1,7 @@
 import OpenAI from "openai";
-import { Document } from "@shared/schema";
+import { Document, documentVectors, InsertDocumentVector } from "@shared/schema";
+import { db } from '../db';
+import { eq, and } from "drizzle-orm";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -16,7 +18,6 @@ interface VectorDocument {
 }
 
 export class VectorService {
-  private documents: VectorDocument[] = [];
 
   // Split text into chunks of approximately 3000 characters with 300 character overlap
   private splitTextIntoChunks(text: string, maxChunkSize: number = 3000, overlap: number = 300): string[] {

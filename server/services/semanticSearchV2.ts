@@ -70,8 +70,8 @@ export class SemanticSearchServiceV2 {
       console.log(`SemanticSearchV2: Vector service returned ${vectorResults.length} results`);
 
       if (vectorResults.length === 0) {
-        console.log("SemanticSearchV2: No vector results found, falling back to keyword search");
-        return await performKeywordSearch(userId, query, limit);
+        console.log("SemanticSearchV2: No vector results found");
+        return []; // Semantic search should return empty when no vector data
       }
 
       // Get unique document IDs from vector results

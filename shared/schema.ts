@@ -85,6 +85,18 @@ export const documentTranslations = pgTable("document_translations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Document vectors for semantic search
+export const documentVectors = pgTable("document_vectors", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  totalChunks: integer("total_chunks").notNull(),
+  content: text("content").notNull(),
+  embedding: real("embedding").array().notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Chat conversations
 export const chatConversations = pgTable("chat_conversations", {
   id: serial("id").primaryKey(),
@@ -386,6 +398,8 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type DocumentAccess = typeof documentAccess.$inferSelect;
 export type DocumentTranslation = typeof documentTranslations.$inferSelect;
 export type InsertDocumentTranslation = typeof documentTranslations.$inferInsert;
+export type DocumentVector = typeof documentVectors.$inferSelect;
+export type InsertDocumentVector = typeof documentVectors.$inferInsert;
 export type DataConnection = typeof dataConnections.$inferSelect;
 export type InsertDataConnection = z.infer<typeof insertDataConnectionSchema>;
 export type UpdateDataConnection = z.infer<typeof updateDataConnectionSchema>;
