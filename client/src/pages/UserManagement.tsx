@@ -630,15 +630,15 @@ export default function UserManagement() {
               <div>
                 <Label>First Name</Label>
                 <Input 
-                  value={editingUser.firstName} 
-                  onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                  value={editingUser.firstName || ""} 
+                  onChange={(e) => setEditingUser({...editingUser!, firstName: e.target.value})}
                 />
               </div>
               <div>
                 <Label>Last Name</Label>
                 <Input 
-                  value={editingUser.lastName} 
-                  onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                  value={editingUser.lastName || ""} 
+                  onChange={(e) => setEditingUser({...editingUser!, lastName: e.target.value})}
                 />
               </div>
               <div>

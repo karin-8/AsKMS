@@ -9,6 +9,8 @@ import {
   aiAssistantFeedback,
   departments,
   auditLogs,
+  documentUserPermissions,
+  documentDepartmentPermissions,
   type User,
   type UpsertUser,
   type Category,
@@ -180,6 +182,8 @@ export class DatabaseStorage implements IStorage {
         .offset(offset);
     }
 
+    // For now, just return user's own documents
+    // TODO: Add shared documents functionality later
     return await db
       .select()
       .from(documents)
