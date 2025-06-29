@@ -644,17 +644,17 @@ export default function UserManagement() {
               <div>
                 <Label>Department</Label>
                 <Select 
-                  value={editingUser.departmentId?.toString() || ""} 
+                  value={editingUser.departmentId?.toString() || "none"} 
                   onValueChange={(value) => setEditingUser({
                     ...editingUser, 
-                    departmentId: value ? parseInt(value) : undefined
+                    departmentId: value === "none" ? undefined : parseInt(value)
                   })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Department</SelectItem>
+                    <SelectItem value="none">No Department</SelectItem>
                     {(departments as Department[]).map((dept) => (
                       <SelectItem key={dept.id} value={dept.id.toString()}>
                         {dept.name}
