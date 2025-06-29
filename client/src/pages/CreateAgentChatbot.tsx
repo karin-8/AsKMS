@@ -95,10 +95,7 @@ export default function CreateAgentChatbot() {
   // Create agent mutation
   const createAgentMutation = useMutation({
     mutationFn: async (agentData: CreateAgentForm & { documentIds: number[] }) => {
-      return await apiRequest("/api/agent-chatbots", {
-        method: "POST",
-        body: JSON.stringify(agentData),
-      });
+      return await apiRequest("POST", "/api/agent-chatbots", agentData);
     },
     onSuccess: () => {
       toast({

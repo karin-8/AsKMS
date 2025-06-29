@@ -78,9 +78,7 @@ export default function AgentChatbots() {
   // Delete agent mutation
   const deleteAgentMutation = useMutation({
     mutationFn: async (agentId: number) => {
-      return await apiRequest(`/api/agent-chatbots/${agentId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/agent-chatbots/${agentId}`);
     },
     onSuccess: () => {
       toast({
@@ -112,10 +110,7 @@ export default function AgentChatbots() {
   // Toggle agent status mutation
   const toggleAgentMutation = useMutation({
     mutationFn: async ({ agentId, isActive }: { agentId: number; isActive: boolean }) => {
-      return await apiRequest(`/api/agent-chatbots/${agentId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-      });
+      return await apiRequest("PUT", `/api/agent-chatbots/${agentId}`, { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/agent-chatbots'] });
