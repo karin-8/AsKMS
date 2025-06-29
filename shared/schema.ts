@@ -374,7 +374,7 @@ export const updateDataConnectionSchema = createInsertSchema(dataConnections).om
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type Category = typeof categories.$inferSelect;
+export type Category = typeof categories.$inferSelect & { documentCount?: number };
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
