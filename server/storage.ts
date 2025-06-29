@@ -300,11 +300,51 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocument(id: number, userId: string): Promise<Document | undefined> {
-    const [document] = await db
+    // First try to get the document if user owns it
+    const [ownedDocument] = await db
       .select()
       .from(documents)
       .where(and(eq(documents.id, id), eq(documents.userId, userId)));
-    return document;
+    
+    if (ownedDocument) {
+      return ownedDocument;
+    }
+    
+    // Check if document is shared directly with user
+    const [userSharedDocument] = await db
+      .select()
+      .from(documents)
+      .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
+      .where(and(
+        eq(documents.id, id),
+        eq(documentUserPermissions.userId, userId)
+      ));
+    
+    if (userSharedDocument) {
+      return userSharedDocument.documents;
+    }
+    
+    // Check if document is shared with user's department
+    const [currentUser] = await db.select({ departmentId: users.departmentId })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (currentUser?.departmentId) {
+      const [deptSharedDocument] = await db
+        .select()
+        .from(documents)
+        .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
+        .where(and(
+          eq(documents.id, id),
+          eq(documentDepartmentPermissions.departmentId, currentUser.departmentId)
+        ));
+      
+      if (deptSharedDocument) {
+        return deptSharedDocument.documents;
+      }
+    }
+    
+    return undefined;
   }
 
   async createDocument(document: InsertDocument): Promise<Document> {
