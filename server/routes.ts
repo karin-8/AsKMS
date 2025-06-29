@@ -486,16 +486,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let result;
       if (userId) {
+        // Check if permission already exists
+        const existing = await db.select().from(documentUserPermissions)
+          .where(and(
+            eq(documentUserPermissions.documentId, parseInt(documentId)),
+            eq(documentUserPermissions.userId, userId)
+          ));
+        
+        if (existing.length > 0) {
+          return res.status(400).json({ message: "Permission already exists for this user" });
+        }
+        
         [result] = await db.insert(documentUserPermissions).values({
           documentId: parseInt(documentId),
           userId,
-          permission
+          permissionType: permission
         }).returning();
       } else {
+        // Check if permission already exists
+        const existing = await db.select().from(documentDepartmentPermissions)
+          .where(and(
+            eq(documentDepartmentPermissions.documentId, parseInt(documentId)),
+            eq(documentDepartmentPermissions.departmentId, parseInt(departmentId))
+          ));
+        
+        if (existing.length > 0) {
+          return res.status(400).json({ message: "Permission already exists for this department" });
+        }
+        
         [result] = await db.insert(documentDepartmentPermissions).values({
           documentId: parseInt(documentId),
           departmentId: parseInt(departmentId),
-          permission
+          permissionType: permission
         }).returning();
       }
 

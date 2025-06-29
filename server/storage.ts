@@ -172,25 +172,94 @@ export class DatabaseStorage implements IStorage {
   async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
     const { categoryId, limit = 1000, offset = 0 } = options;
     
+    // Get user's own documents
+    let ownDocumentsQuery = db.select().from(documents);
+    
     if (categoryId) {
-      return await db
-        .select()
-        .from(documents)
-        .where(and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)!))
-        .orderBy(desc(documents.updatedAt))
-        .limit(limit)
-        .offset(offset);
+      ownDocumentsQuery = ownDocumentsQuery.where(
+        and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)!)
+      );
+    } else {
+      ownDocumentsQuery = ownDocumentsQuery.where(eq(documents.userId, userId));
     }
-
-    // For now, just return user's own documents
-    // TODO: Add shared documents functionality later
-    return await db
-      .select()
+    
+    const ownDocuments = await ownDocumentsQuery.orderBy(desc(documents.updatedAt));
+    
+    // Get documents shared directly with the user
+    const userSharedDocuments = await db
+      .select({
+        id: documents.id,
+        name: documents.name,
+        description: documents.description,
+        fileName: documents.fileName,
+        filePath: documents.filePath,
+        fileSize: documents.fileSize,
+        mimeType: documents.mimeType,
+        content: documents.content,
+        summary: documents.summary,
+        tags: documents.tags,
+        categoryId: documents.categoryId,
+        userId: documents.userId,
+        isFavorite: documents.isFavorite,
+        createdAt: documents.createdAt,
+        updatedAt: documents.updatedAt,
+        processedAt: documents.processedAt,
+        aiCategory: documents.aiCategory,
+        aiCategoryColor: documents.aiCategoryColor,
+        isPublic: documents.isPublic
+      })
       .from(documents)
-      .where(eq(documents.userId, userId))
-      .orderBy(desc(documents.updatedAt))
-      .limit(limit)
-      .offset(offset);
+      .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
+      .where(eq(documentUserPermissions.userId, userId));
+    
+    // Get user's department
+    const [currentUser] = await db.select({ departmentId: users.departmentId })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    let departmentSharedDocuments: any[] = [];
+    
+    // Get documents shared with user's department
+    if (currentUser?.departmentId) {
+      departmentSharedDocuments = await db
+        .select({
+          id: documents.id,
+          name: documents.name,
+          description: documents.description,
+          fileName: documents.fileName,
+          filePath: documents.filePath,
+          fileSize: documents.fileSize,
+          mimeType: documents.mimeType,
+          content: documents.content,
+          summary: documents.summary,
+          tags: documents.tags,
+          categoryId: documents.categoryId,
+          userId: documents.userId,
+          isFavorite: documents.isFavorite,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+          processedAt: documents.processedAt,
+          aiCategory: documents.aiCategory,
+          aiCategoryColor: documents.aiCategoryColor,
+          isPublic: documents.isPublic
+        })
+        .from(documents)
+        .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
+        .where(eq(documentDepartmentPermissions.departmentId, currentUser.departmentId));
+    }
+    
+    // Combine all documents and remove duplicates
+    const allDocuments = [...ownDocuments, ...userSharedDocuments, ...departmentSharedDocuments];
+    const uniqueDocuments = allDocuments.filter((doc, index, self) => 
+      index === self.findIndex(d => d.id === doc.id)
+    );
+    
+    // Sort by updated date and apply pagination
+    const sortedDocuments = uniqueDocuments
+      .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+      .slice(offset, offset + limit);
+    
+    return sortedDocuments;
   }
 
   async getDocument(id: number, userId: string): Promise<Document | undefined> {
@@ -360,10 +429,9 @@ export class DatabaseStorage implements IStorage {
   // Access logging
   async logDocumentAccess(documentId: number, userId: string, accessType: string, metadata?: any): Promise<void> {
     await db.insert(documentAccess).values({
-      documentId,
-      userId,
-      accessType,
-      metadata: metadata || null,
+      documentId: documentId,
+      userId: userId,
+      accessType: accessType,
     });
   }
 
