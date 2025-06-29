@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Home,
   FileText,
@@ -35,6 +36,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const [location] = useLocation();
   const [isDashboardExpanded, setIsDashboardExpanded] = useState(false);
+  const { user } = useAuth();
 
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
@@ -273,20 +275,23 @@ export default function Sidebar({
                 )}
               </div>
 
-              <Link href="/settings" onClick={onMobileClose}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start",
-                    isActiveRoute("/settings")
-                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
-                  )}
-                >
-                  <Settings className="w-5 h-5 mr-3" />
-                  <span>Settings</span>
-                </Button>
-              </Link>
+              {/* Only show Settings for admin users */}
+              {((user as any)?.role === "admin") && (
+                <Link href="/settings" onClick={onMobileClose}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start",
+                      isActiveRoute("/settings")
+                        ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                    )}
+                  >
+                    <Settings className="w-5 h-5 mr-3" />
+                    <span>Settings</span>
+                  </Button>
+                </Link>
+              )}
 
               <Link href="/survey" onClick={onMobileClose}>
                 <Button
