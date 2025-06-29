@@ -1352,15 +1352,32 @@ ${document.summary}`;
       const userId = req.user.claims.sub;
       const userDocuments = vectorService.getDocumentsByUser(userId);
       const totalDocuments = vectorService.getDocumentCount();
+      const chunkStats = vectorService.getDocumentChunkStats(userId);
+      
+      // Group chunks by original document
+      const documentMap = new Map();
+      userDocuments.forEach(doc => {
+        const originalDocId = doc.metadata.originalDocumentId || doc.id;
+        if (!documentMap.has(originalDocId)) {
+          documentMap.set(originalDocId, {
+            id: originalDocId,
+            name: doc.metadata.documentName,
+            type: doc.metadata.mimeType,
+            chunks: 0,
+            totalLength: 0
+          });
+        }
+        const entry = documentMap.get(originalDocId);
+        entry.chunks++;
+        entry.totalLength += doc.content.length;
+      });
       
       res.json({
         userDocuments: userDocuments.length,
         totalDocuments,
-        vectorized: userDocuments.map(doc => ({
-          id: doc.id,
-          name: doc.metadata.documentName,
-          type: doc.metadata.mimeType
-        }))
+        uniqueDocuments: documentMap.size,
+        chunkStats,
+        vectorized: Array.from(documentMap.values())
       });
     } catch (error) {
       console.error("Error getting vector stats:", error);

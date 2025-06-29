@@ -11,35 +11,101 @@ interface VectorDocument {
   content: string;
   embedding: number[];
   metadata: Record<string, any>;
+  chunkIndex?: number;
+  totalChunks?: number;
 }
 
 export class VectorService {
   private documents: VectorDocument[] = [];
 
+  // Split text into chunks of approximately 3000 characters with 300 character overlap
+  private splitTextIntoChunks(text: string, maxChunkSize: number = 3000, overlap: number = 300): string[] {
+    const chunks: string[] = [];
+    let start = 0;
+
+    while (start < text.length) {
+      let end = start + maxChunkSize;
+      
+      // Try to break at a sentence or paragraph boundary
+      if (end < text.length) {
+        const lastPeriod = text.lastIndexOf('.', end);
+        const lastNewline = text.lastIndexOf('\n', end);
+        const lastBreak = Math.max(lastPeriod, lastNewline);
+        
+        if (lastBreak > start + maxChunkSize * 0.5) {
+          end = lastBreak + 1;
+        }
+      }
+      
+      chunks.push(text.slice(start, end).trim());
+      start = end - overlap;
+      
+      if (start >= text.length) break;
+    }
+
+    return chunks.filter(chunk => chunk.length > 50); // Filter out very small chunks
+  }
+
   async addDocument(id: string, content: string, metadata: Record<string, any>): Promise<string> {
     try {
-      // Generate embedding for the document content
-      const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: content.substring(0, 8000), // Limit content for embedding
-      });
-
-      const embedding = response.data[0].embedding;
-
-      // Remove existing document if it exists
+      // Remove existing document chunks if they exist
       this.removeDocument(id);
 
-      // Add new document
-      const vectorDoc: VectorDocument = {
-        id,
-        content,
-        embedding,
-        metadata
-      };
+      if (!content || content.trim().length === 0) {
+        throw new Error("Document content is empty");
+      }
 
-      this.documents.push(vectorDoc);
+      // Split content into chunks for better coverage
+      const chunks = this.splitTextIntoChunks(content);
+      console.log(`Document ${id}: Split into ${chunks.length} chunks for vector processing`);
+
+      let addedChunks = 0;
+
+      // Process each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        try {
+          // Generate embedding for this chunk
+          const response = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: chunk,
+          });
+
+          const embedding = response.data[0].embedding;
+
+          // Create vector document for this chunk
+          const vectorDoc: VectorDocument = {
+            id: `${id}_chunk_${i}`,
+            content: chunk,
+            embedding,
+            metadata: {
+              ...metadata,
+              originalDocumentId: id,
+              chunkIndex: i,
+              totalChunks: chunks.length,
+              chunkSize: chunk.length
+            },
+            chunkIndex: i,
+            totalChunks: chunks.length
+          };
+
+          this.documents.push(vectorDoc);
+          addedChunks++;
+
+          // Add a small delay to avoid rate limiting
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+        } catch (chunkError) {
+          console.error(`Error processing chunk ${i} of document ${id}:`, chunkError);
+          // Continue with next chunk instead of failing entirely
+        }
+      }
       
-      return `Document ${id} added to vector database`;
+      console.log(`Document ${id}: Successfully added ${addedChunks}/${chunks.length} chunks to vector database`);
+      return `Document ${id} added to vector database with ${addedChunks} chunks`;
     } catch (error) {
       console.error("Error adding document to vector database:", error);
       throw new Error("Failed to add document to vector database");
@@ -47,13 +113,24 @@ export class VectorService {
   }
 
   async removeDocument(id: string): Promise<void> {
-    this.documents = this.documents.filter(doc => doc.id !== id);
+    // Remove all chunks related to this document
+    const beforeCount = this.documents.length;
+    this.documents = this.documents.filter(doc => {
+      // Remove exact match or chunk matches
+      return doc.id !== id && !doc.id.startsWith(`${id}_chunk_`) && doc.metadata?.originalDocumentId !== id;
+    });
+    const afterCount = this.documents.length;
+    const removedCount = beforeCount - afterCount;
+    
+    if (removedCount > 0) {
+      console.log(`Removed ${removedCount} chunks for document ${id}`);
+    }
   }
 
   async searchDocuments(
     query: string, 
     userId: string, 
-    limit: number = 5
+    limit: number = 10
   ): Promise<Array<{ document: VectorDocument; similarity: number }>> {
     try {
       if (this.documents.length === 0) {
@@ -68,17 +145,46 @@ export class VectorService {
 
       const queryEmbedding = response.data[0].embedding;
 
-      // Calculate similarities and sort by relevance
-      const results = this.documents
+      // Calculate similarities for all chunks
+      const allResults = this.documents
         .filter(doc => doc.metadata.userId === userId)
         .map(doc => ({
           document: doc,
           similarity: this.cosineSimilarity(queryEmbedding, doc.embedding)
         }))
+        .sort((a, b) => b.similarity - a.similarity);
+
+      // Group by original document ID and take top chunks per document
+      const documentGroups = new Map<string, Array<{ document: VectorDocument; similarity: number }>>();
+      
+      allResults.forEach(result => {
+        const originalDocId = result.document.metadata.originalDocumentId || result.document.id;
+        if (!documentGroups.has(originalDocId)) {
+          documentGroups.set(originalDocId, []);
+        }
+        documentGroups.get(originalDocId)!.push(result);
+      });
+
+      // Take top 3 chunks per document and flatten
+      const combinedResults: Array<{ document: VectorDocument; similarity: number }> = [];
+      
+      documentGroups.forEach((chunks, docId) => {
+        // Sort chunks by similarity and take top 3 per document
+        const topChunks = chunks
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, 3);
+        
+        combinedResults.push(...topChunks);
+      });
+
+      // Sort by similarity and apply final limit
+      const finalResults = combinedResults
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
 
-      return results;
+      console.log(`Vector search for "${query}": Found ${finalResults.length} relevant chunks from ${documentGroups.size} documents`);
+      
+      return finalResults;
     } catch (error) {
       console.error("Error searching vector database:", error);
       return [];
@@ -98,6 +204,23 @@ export class VectorService {
 
   getDocumentsByUser(userId: string): VectorDocument[] {
     return this.documents.filter(doc => doc.metadata.userId === userId);
+  }
+
+  getDocumentChunkStats(userId: string): { [docId: string]: { chunks: number; totalLength: number } } {
+    const stats: { [docId: string]: { chunks: number; totalLength: number } } = {};
+    
+    this.documents
+      .filter(doc => doc.metadata.userId === userId)
+      .forEach(doc => {
+        const originalDocId = doc.metadata.originalDocumentId || doc.id;
+        if (!stats[originalDocId]) {
+          stats[originalDocId] = { chunks: 0, totalLength: 0 };
+        }
+        stats[originalDocId].chunks++;
+        stats[originalDocId].totalLength += doc.content.length;
+      });
+    
+    return stats;
   }
 }
 
