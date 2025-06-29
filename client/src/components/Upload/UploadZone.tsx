@@ -45,11 +45,38 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
     },
   });
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('UploadZone onDrop:', { 
+      acceptedFiles: acceptedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })),
+      rejectedFiles: rejectedFiles.map(({ file, errors }) => ({ 
+        name: file.name, 
+        type: file.type, 
+        errors: errors.map((e: any) => e.code) 
+      }))
+    });
+    
+    if (rejectedFiles.length > 0) {
+      rejectedFiles.forEach(({ file, errors }) => {
+        errors.forEach((error: any) => {
+          const message = error.code === 'file-invalid-type' 
+            ? `${file.name}: File type not supported`
+            : error.code === 'file-too-large'
+            ? `${file.name}: File too large`
+            : `${file.name}: ${error.message}`;
+          
+          toast({
+            title: "File rejected",
+            description: message,
+            variant: "destructive",
+          });
+        });
+      });
+    }
+    
     if (acceptedFiles.length > 0) {
       uploadMutation.mutate(acceptedFiles);
     }
-  }, [uploadMutation]);
+  }, [uploadMutation, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -63,6 +90,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
       'application/vnd.ms-powerpoint': ['.ppt'],
       'text/plain': ['.txt'],
       'text/csv': ['.csv'],
+      'application/json': ['.json'],
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
       'image/gif': ['.gif'],
@@ -99,7 +127,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
       </p>
       
       <p className="text-sm text-gray-500">
-        Supports PDF, DOCX, XLSX, PPTX, TXT, CSV, and image files up to 25MB each
+        Supports PDF, DOCX, XLSX, PPTX, TXT, CSV, JSON, and image files up to 25MB each
       </p>
       <p className="text-xs text-gray-400 mt-1">
         Files are automatically classified and tagged using AI
