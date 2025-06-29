@@ -10,10 +10,18 @@ export default function VectorizeAllButton() {
   
   const vectorizeAllMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/documents/vectorize-all", {
+      const response = await fetch("/api/documents/vectorize-all", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-      return response;
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({

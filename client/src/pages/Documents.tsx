@@ -31,6 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
+import VectorizeAllButton from "@/components/VectorizeAllButton";
 
 export default function Documents() {
   const { toast } = useToast();
@@ -334,13 +335,16 @@ export default function Documents() {
                 <CardTitle className="text-lg font-semibold text-slate-800">
                   Documents ({filteredDocuments?.length || 0})
                 </CardTitle>
-                <Button 
-                  onClick={() => setShowUploadZone(!showUploadZone)}
-                  className="bg-primary text-white hover:bg-blue-700"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Documents
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <VectorizeAllButton />
+                  <Button 
+                    onClick={() => setShowUploadZone(!showUploadZone)}
+                    className="bg-primary text-white hover:bg-blue-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Documents
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
