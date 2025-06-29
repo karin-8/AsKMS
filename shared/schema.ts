@@ -513,7 +513,80 @@ export const userFavoritesRelations = relations(userFavorites, ({ one }) => ({
   }),
 }));
 
+// Agent Chatbot tables
+export const agentChatbots = pgTable("agent_chatbots", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  systemPrompt: text("system_prompt").notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  channels: jsonb("channels").$type<string[]>().default([]).notNull(), // ['lineoa', 'facebook', 'tiktok']
+  lineOaConfig: jsonb("lineoa_config").$type<{
+    lineOaId?: string;
+    lineOaName?: string;
+    accessToken?: string;
+  }>(),
+  facebookConfig: jsonb("facebook_config").$type<{
+    pageId?: string;
+    pageName?: string;
+    accessToken?: string;
+  }>(),
+  tiktokConfig: jsonb("tiktok_config").$type<{
+    accountId?: string;
+    accountName?: string;
+    accessToken?: string;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const agentChatbotDocuments = pgTable("agent_chatbot_documents", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agentChatbots.id, { onDelete: "cascade" }).notNull(),
+  documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for Agent Chatbots
+export const agentChatbotsRelations = relations(agentChatbots, ({ one, many }) => ({
+  user: one(users, {
+    fields: [agentChatbots.userId],
+    references: [users.id],
+  }),
+  agentDocuments: many(agentChatbotDocuments),
+}));
+
+export const agentChatbotDocumentsRelations = relations(agentChatbotDocuments, ({ one }) => ({
+  agent: one(agentChatbots, {
+    fields: [agentChatbotDocuments.agentId],
+    references: [agentChatbots.id],
+  }),
+  document: one(documents, {
+    fields: [agentChatbotDocuments.documentId],
+    references: [documents.id],
+  }),
+}));
+
+// Insert schemas
+export const insertAgentChatbotSchema = createInsertSchema(agentChatbots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAgentChatbotDocumentSchema = createInsertSchema(agentChatbotDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertUserFavorite = typeof userFavorites.$inferInsert;
+
+// Agent Chatbot types
+export type AgentChatbot = typeof agentChatbots.$inferSelect;
+export type InsertAgentChatbot = z.infer<typeof insertAgentChatbotSchema>;
+export type AgentChatbotDocument = typeof agentChatbotDocuments.$inferSelect;
+export type InsertAgentChatbotDocument = z.infer<typeof insertAgentChatbotDocumentSchema>;

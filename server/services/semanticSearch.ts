@@ -19,48 +19,74 @@ export interface SearchResult {
 export interface SearchOptions {
   limit?: number;
   threshold?: number; // Minimum similarity threshold
-  searchType?: 'semantic' | 'keyword' | 'hybrid';
+  searchType?: "semantic" | "keyword" | "hybrid";
   categoryFilter?: string;
   dateRange?: { from: Date; to: Date };
 }
 
 export class SemanticSearchService {
-  private similarityThreshold = 0.7; // Default threshold for semantic similarity
+  private similarityThreshold = 0.9; // Default threshold for semantic similarity
 
   async searchDocuments(
     query: string,
     userId: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<SearchResult[]> {
     const {
       limit = 20,
       threshold = this.similarityThreshold,
-      searchType = 'hybrid',
+      searchType = "hybrid",
       categoryFilter,
-      dateRange
+      dateRange,
     } = options;
 
     // Log search session (simplified for now)
-    console.log(`Search session: ${userId} searched for "${query}" using ${searchType}`);
+    console.log(
+      `Search session: ${userId} searched for "${query}" using ${searchType}`,
+    );
 
     switch (searchType) {
-      case 'semantic':
-        return this.performSemanticSearch(query, userId, { limit, threshold, categoryFilter, dateRange });
-      case 'keyword':
-        return this.performKeywordSearch(query, userId, { limit, categoryFilter, dateRange });
-      case 'hybrid':
-        return this.performHybridSearch(query, userId, { limit, threshold, categoryFilter, dateRange });
+      case "semantic":
+        return this.performSemanticSearch(query, userId, {
+          limit,
+          threshold,
+          categoryFilter,
+          dateRange,
+        });
+      case "keyword":
+        return this.performKeywordSearch(query, userId, {
+          limit,
+          categoryFilter,
+          dateRange,
+        });
+      case "hybrid":
+        return this.performHybridSearch(query, userId, {
+          limit,
+          threshold,
+          categoryFilter,
+          dateRange,
+        });
       default:
-        return this.performHybridSearch(query, userId, { limit, threshold, categoryFilter, dateRange });
+        return this.performHybridSearch(query, userId, {
+          limit,
+          threshold,
+          categoryFilter,
+          dateRange,
+        });
     }
   }
 
   private async performSemanticSearch(
     query: string,
     userId: string,
-    options: Omit<SearchOptions, 'searchType'>
+    options: Omit<SearchOptions, "searchType">,
   ): Promise<SearchResult[]> {
-    const { limit = 20, threshold = this.similarityThreshold, categoryFilter, dateRange } = options;
+    const {
+      limit = 20,
+      threshold = this.similarityThreshold,
+      categoryFilter,
+      dateRange,
+    } = options;
 
     try {
       // Generate embedding for the query
@@ -81,21 +107,21 @@ export class SemanticSearchService {
         .where(
           and(
             eq(documents.userId, userId),
-            sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`
-          )
+            sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`,
+          ),
         );
 
       // Apply filters
-      if (categoryFilter && categoryFilter !== 'all') {
+      if (categoryFilter && categoryFilter !== "all") {
         documentsQuery = documentsQuery.where(
           and(
             eq(documents.userId, userId),
             sql`${documents.content} IS NOT NULL AND LENGTH(${documents.content}) > 0`,
             or(
               eq(documents.category, categoryFilter),
-              eq(documents.aiCategory, categoryFilter)
-            )
-          )
+              eq(documents.aiCategory, categoryFilter),
+            ),
+          ),
         );
       }
 
@@ -105,8 +131,8 @@ export class SemanticSearchService {
             eq(documents.userId, userId),
             sql`${documents.embedding} IS NOT NULL`,
             sql`${documents.createdAt} >= ${dateRange.from}`,
-            sql`${documents.createdAt} <= ${dateRange.to}`
-          )
+            sql`${documents.createdAt} <= ${dateRange.to}`,
+          ),
         );
       }
 
@@ -120,22 +146,28 @@ export class SemanticSearchService {
 
         try {
           const docEmbedding = JSON.parse(doc.embedding);
-          const similarity = embeddingService.calculateSimilarity(queryEmbedding, docEmbedding);
+          const similarity = embeddingService.calculateSimilarity(
+            queryEmbedding,
+            docEmbedding,
+          );
 
           if (similarity >= threshold) {
             results.push({
               id: doc.id,
               name: doc.name,
-              content: doc.content || '',
+              content: doc.content || "",
               summary: doc.summary || undefined,
               category: doc.category || undefined,
               aiCategory: doc.aiCategory || undefined,
               similarity,
-              createdAt: doc.createdAt?.toISOString() || '',
+              createdAt: doc.createdAt?.toISOString() || "",
             });
           }
         } catch (error) {
-          console.error(`Error parsing embedding for document ${doc.id}:`, error);
+          console.error(
+            `Error parsing embedding for document ${doc.id}:`,
+            error,
+          );
         }
       }
 
@@ -152,36 +184,39 @@ export class SemanticSearchService {
   private async performKeywordSearch(
     query: string,
     userId: string,
-    options: Omit<SearchOptions, 'searchType'>
+    options: Omit<SearchOptions, "searchType">,
   ): Promise<SearchResult[]> {
     const { limit = 20, categoryFilter, dateRange } = options;
 
     try {
-      const searchTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
+      const searchTerms = query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((term) => term.length > 2);
 
       let whereConditions = eq(documents.userId, userId);
 
       // Add text search conditions
       if (searchTerms.length > 0) {
-        const searchConditions = searchTerms.map(term => 
+        const searchConditions = searchTerms.map((term) =>
           or(
             ilike(documents.name, `%${term}%`),
             ilike(documents.content, `%${term}%`),
             ilike(documents.summary, `%${term}%`),
-            sql`${documents.tags} && ARRAY[${term}]::text[]`
-          )
+            sql`${documents.tags} && ARRAY[${term}]::text[]`,
+          ),
         );
         whereConditions = and(whereConditions, or(...searchConditions));
       }
 
       // Apply filters
-      if (categoryFilter && categoryFilter !== 'all') {
+      if (categoryFilter && categoryFilter !== "all") {
         whereConditions = and(
           whereConditions,
           or(
             eq(documents.category, categoryFilter),
-            eq(documents.aiCategory, categoryFilter)
-          )
+            eq(documents.aiCategory, categoryFilter),
+          ),
         );
       }
 
@@ -189,7 +224,7 @@ export class SemanticSearchService {
         whereConditions = and(
           whereConditions,
           sql`${documents.createdAt} >= ${dateRange.from}`,
-          sql`${documents.createdAt} <= ${dateRange.to}`
+          sql`${documents.createdAt} <= ${dateRange.to}`,
         );
       }
 
@@ -208,15 +243,15 @@ export class SemanticSearchService {
         .orderBy(desc(documents.createdAt))
         .limit(limit);
 
-      return results.map(doc => ({
+      return results.map((doc) => ({
         id: doc.id,
         name: doc.name,
-        content: doc.content || '',
+        content: doc.content || "",
         summary: doc.summary || undefined,
         category: doc.category || undefined,
         aiCategory: doc.aiCategory || undefined,
         similarity: 0.8, // Fixed similarity for keyword search
-        createdAt: doc.createdAt?.toISOString() || '',
+        createdAt: doc.createdAt?.toISOString() || "",
       }));
     } catch (error) {
       console.error("Error performing keyword search:", error);
@@ -227,7 +262,7 @@ export class SemanticSearchService {
   private async performHybridSearch(
     query: string,
     userId: string,
-    options: Omit<SearchOptions, 'searchType'>
+    options: Omit<SearchOptions, "searchType">,
   ): Promise<SearchResult[]> {
     const { limit = 20 } = options;
     const halfLimit = Math.ceil(limit / 2);
@@ -235,23 +270,29 @@ export class SemanticSearchService {
     try {
       // Get results from both semantic and keyword search
       const [semanticResults, keywordResults] = await Promise.all([
-        this.performSemanticSearch(query, userId, { ...options, limit: halfLimit }),
-        this.performKeywordSearch(query, userId, { ...options, limit: halfLimit })
+        this.performSemanticSearch(query, userId, {
+          ...options,
+          limit: halfLimit,
+        }),
+        this.performKeywordSearch(query, userId, {
+          ...options,
+          limit: halfLimit,
+        }),
       ]);
 
       // Combine and deduplicate results
       const combinedResults = new Map<number, SearchResult>();
 
       // Add semantic results with higher weight
-      semanticResults.forEach(result => {
+      semanticResults.forEach((result) => {
         combinedResults.set(result.id, {
           ...result,
-          similarity: result.similarity * 1.2 // Boost semantic results
+          similarity: result.similarity * 1.2, // Boost semantic results
         });
       });
 
       // Add keyword results, boosting if not already present
-      keywordResults.forEach(result => {
+      keywordResults.forEach((result) => {
         if (combinedResults.has(result.id)) {
           // Combine scores if document appears in both results
           const existing = combinedResults.get(result.id)!;
@@ -290,9 +331,11 @@ export class SemanticSearchService {
       // Combine document text for embedding
       const textToEmbed = [
         document.name,
-        document.summary || '',
-        document.content || ''
-      ].filter(Boolean).join('\n\n');
+        document.summary || "",
+        document.content || "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
       if (!textToEmbed.trim()) {
         console.warn(`No content to embed for document ${documentId}`);
@@ -314,22 +357,29 @@ export class SemanticSearchService {
         .where(eq(documents.id, documentId));
 
       // Generate chunk embeddings for better search granularity
-      await this.generateChunkEmbeddings(documentId, document.content || '');
-
+      await this.generateChunkEmbeddings(documentId, document.content || "");
     } catch (error) {
-      console.error(`Error generating embedding for document ${documentId}:`, error);
+      console.error(
+        `Error generating embedding for document ${documentId}:`,
+        error,
+      );
       throw error;
     }
   }
 
-  private async generateChunkEmbeddings(documentId: number, content: string): Promise<void> {
+  private async generateChunkEmbeddings(
+    documentId: number,
+    content: string,
+  ): Promise<void> {
     try {
       if (!content || content.trim().length === 0) {
         return;
       }
 
       // Delete existing chunks
-      await db.delete(documentChunks).where(eq(documentChunks.documentId, documentId));
+      await db
+        .delete(documentChunks)
+        .where(eq(documentChunks.documentId, documentId));
 
       // Chunk the content
       const chunks = embeddingService.chunkText(content);
@@ -356,11 +406,18 @@ export class SemanticSearchService {
         await db.insert(documentChunks).values(chunkInserts);
       }
     } catch (error) {
-      console.error(`Error generating chunk embeddings for document ${documentId}:`, error);
+      console.error(
+        `Error generating chunk embeddings for document ${documentId}:`,
+        error,
+      );
     }
   }
 
-  private async logSearchSession(query: string, userId: string, searchType: string): Promise<void> {
+  private async logSearchSession(
+    query: string,
+    userId: string,
+    searchType: string,
+  ): Promise<void> {
     try {
       const queryEmbedding = await embeddingService.generateEmbedding(query);
 
@@ -377,7 +434,9 @@ export class SemanticSearchService {
     }
   }
 
-  async reindexAllDocuments(userId: string): Promise<{ processed: number; failed: number }> {
+  async reindexAllDocuments(
+    userId: string,
+  ): Promise<{ processed: number; failed: number }> {
     try {
       const userDocuments = await db
         .select({ id: documents.id })

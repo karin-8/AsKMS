@@ -12,6 +12,8 @@ import {
   documentUserPermissions,
   documentDepartmentPermissions,
   userFavorites,
+  agentChatbots,
+  agentChatbotDocuments,
   type User,
   type UpsertUser,
   type Category,
@@ -33,6 +35,10 @@ import {
   type InsertAuditLog,
   type UserFavorite,
   type InsertUserFavorite,
+  type AgentChatbot,
+  type InsertAgentChatbot,
+  type AgentChatbotDocument,
+  type InsertAgentChatbotDocument,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte } from "drizzle-orm";
@@ -118,6 +124,16 @@ export interface IStorage {
     topActions: Array<{ action: string; count: number }>;
     recentActivity: AuditLog[];
   }>;
+  
+  // Agent Chatbot operations
+  getAgentChatbots(userId: string): Promise<AgentChatbot[]>;
+  getAgentChatbot(id: number, userId: string): Promise<AgentChatbot | undefined>;
+  createAgentChatbot(agent: InsertAgentChatbot): Promise<AgentChatbot>;
+  updateAgentChatbot(id: number, agent: Partial<InsertAgentChatbot>, userId: string): Promise<AgentChatbot>;
+  deleteAgentChatbot(id: number, userId: string): Promise<void>;
+  getAgentChatbotDocuments(agentId: number, userId: string): Promise<AgentChatbotDocument[]>;
+  addDocumentToAgent(agentId: number, documentId: number, userId: string): Promise<AgentChatbotDocument>;
+  removeDocumentFromAgent(agentId: number, documentId: number, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -873,6 +889,99 @@ export class DatabaseStorage implements IStorage {
       topActions: topActionsResult,
       recentActivity
     };
+  }
+
+  // Agent Chatbot operations
+  async getAgentChatbots(userId: string): Promise<AgentChatbot[]> {
+    return await db
+      .select()
+      .from(agentChatbots)
+      .where(eq(agentChatbots.userId, userId))
+      .orderBy(desc(agentChatbots.createdAt));
+  }
+
+  async getAgentChatbot(id: number, userId: string): Promise<AgentChatbot | undefined> {
+    const [agent] = await db
+      .select()
+      .from(agentChatbots)
+      .where(and(eq(agentChatbots.id, id), eq(agentChatbots.userId, userId)));
+    return agent;
+  }
+
+  async createAgentChatbot(agent: InsertAgentChatbot): Promise<AgentChatbot> {
+    const [newAgent] = await db
+      .insert(agentChatbots)
+      .values(agent)
+      .returning();
+    return newAgent;
+  }
+
+  async updateAgentChatbot(id: number, agent: Partial<InsertAgentChatbot>, userId: string): Promise<AgentChatbot> {
+    const [updated] = await db
+      .update(agentChatbots)
+      .set({ ...agent, updatedAt: new Date() })
+      .where(and(eq(agentChatbots.id, id), eq(agentChatbots.userId, userId)))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Agent not found");
+    }
+    return updated;
+  }
+
+  async deleteAgentChatbot(id: number, userId: string): Promise<void> {
+    await db
+      .delete(agentChatbots)
+      .where(and(eq(agentChatbots.id, id), eq(agentChatbots.userId, userId)));
+  }
+
+  async getAgentChatbotDocuments(agentId: number, userId: string): Promise<AgentChatbotDocument[]> {
+    // First verify the agent belongs to the user
+    const agent = await this.getAgentChatbot(agentId, userId);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+
+    return await db
+      .select()
+      .from(agentChatbotDocuments)
+      .where(eq(agentChatbotDocuments.agentId, agentId));
+  }
+
+  async addDocumentToAgent(agentId: number, documentId: number, userId: string): Promise<AgentChatbotDocument> {
+    // Verify the agent belongs to the user
+    const agent = await this.getAgentChatbot(agentId, userId);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+
+    // Verify the user has access to the document
+    const document = await this.getDocument(documentId, userId);
+    if (!document) {
+      throw new Error("Document not found or no access");
+    }
+
+    const [agentDocument] = await db
+      .insert(agentChatbotDocuments)
+      .values({ agentId, documentId })
+      .returning();
+
+    return agentDocument;
+  }
+
+  async removeDocumentFromAgent(agentId: number, documentId: number, userId: string): Promise<void> {
+    // Verify the agent belongs to the user
+    const agent = await this.getAgentChatbot(agentId, userId);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+
+    await db
+      .delete(agentChatbotDocuments)
+      .where(and(
+        eq(agentChatbotDocuments.agentId, agentId),
+        eq(agentChatbotDocuments.documentId, documentId)
+      ));
   }
 }
 
