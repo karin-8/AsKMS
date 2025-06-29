@@ -1385,6 +1385,74 @@ ${document.summary}`;
     }
   });
 
+  // Re-vectorize all documents endpoint
+  app.post('/api/vector/reindex-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documents = await storage.getDocuments(userId);
+      
+      let processedCount = 0;
+      let errorCount = 0;
+      const results: any[] = [];
+      
+      for (const document of documents) {
+        if (document.content && document.content.trim().length > 0) {
+          try {
+            await vectorService.addDocument(
+              document.id.toString(),
+              document.content,
+              {
+                userId,
+                documentName: document.name,
+                mimeType: document.mimeType,
+                tags: document.tags || [],
+              }
+            );
+            
+            processedCount++;
+            results.push({
+              id: document.id,
+              name: document.name,
+              status: 'success'
+            });
+            
+            // Add delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+          } catch (error) {
+            console.error(`Error re-vectorizing document ${document.id}:`, error);
+            errorCount++;
+            results.push({
+              id: document.id,
+              name: document.name,
+              status: 'error',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        } else {
+          results.push({
+            id: document.id,
+            name: document.name,
+            status: 'skipped',
+            reason: 'No content to vectorize'
+          });
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Re-indexing completed. Processed: ${processedCount}, Errors: ${errorCount}`,
+        processed: processedCount,
+        errors: errorCount,
+        total: documents.length,
+        results
+      });
+    } catch (error) {
+      console.error("Error re-indexing documents:", error);
+      res.status(500).json({ message: "Failed to re-index documents" });
+    }
+  });
+
   app.post('/api/documents/:id/reprocess', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

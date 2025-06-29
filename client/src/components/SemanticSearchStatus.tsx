@@ -18,6 +18,11 @@ export default function SemanticSearchStatus() {
     queryKey: ["/api/stats"],
   });
 
+  // Get vector database stats
+  const { data: vectorStats } = useQuery({
+    queryKey: ["/api/vector/stats"],
+  });
+
   // Get documents to check embedding status
   const { data: documents } = useQuery({
     queryKey: ["/api/documents"],
@@ -26,16 +31,17 @@ export default function SemanticSearchStatus() {
   const reindexMutation = useMutation({
     mutationFn: async () => {
       setIsReindexing(true);
-      return await apiRequest("/api/documents/reindex", "POST");
+      return await apiRequest("/api/vector/reindex-all", "POST");
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setIsReindexing(false);
       toast({
-        title: "Reindexing Complete",
-        description: `Successfully processed ${data.processed} documents. ${data.failed} failed.`,
+        title: "Re-indexing Complete",
+        description: `Successfully processed ${data.processed} documents. ${data.errors} failed.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vector/stats"] });
     },
     onError: (error: Error) => {
       setIsReindexing(false);
@@ -47,13 +53,16 @@ export default function SemanticSearchStatus() {
     },
   });
 
-  if (!documents || !stats) {
+  if (!documents || !stats || !vectorStats) {
     return null;
   }
 
-  const totalDocuments = documents.length;
-  const documentsWithEmbeddings = documents.filter((doc: any) => doc.isInVectorDb).length;
-  const embeddingProgress = totalDocuments > 0 ? (documentsWithEmbeddings / totalDocuments) * 100 : 0;
+  const documentsArray = Array.isArray(documents) ? documents : [];
+  const vectorizedDocs = Array.isArray(vectorStats.vectorized) ? vectorStats.vectorized : [];
+  const totalDocuments = documentsArray.length;
+  const totalChunks = vectorStats.userDocuments || 0;
+  const uniqueDocuments = vectorStats.uniqueDocuments || 0;
+  const embeddingProgress = totalDocuments > 0 ? (uniqueDocuments / totalDocuments) * 100 : 0;
 
   const getStatusColor = () => {
     if (embeddingProgress === 100) return "text-green-600";
@@ -85,7 +94,7 @@ export default function SemanticSearchStatus() {
             </div>
             <Progress value={embeddingProgress} className="h-2" />
             <div className="flex items-center justify-between text-xs text-gray-600">
-              <span>{documentsWithEmbeddings} / {totalDocuments} documents</span>
+              <span>{uniqueDocuments} / {totalDocuments} documents</span>
               <span className={getStatusColor()}>{Math.round(embeddingProgress)}%</span>
             </div>
           </div>

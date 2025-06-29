@@ -122,6 +122,7 @@ Changelog:
 - June 25, 2025. Enhanced chat scrolling behavior to auto-scroll to latest messages when reopening dialogs
 - June 25, 2025. Implemented advanced semantic search with custom embeddings - added OpenAI text-embedding-3-small integration, document chunking, hybrid search capabilities, and comprehensive search analytics
 - June 27, 2025. Fixed three critical issues: 1) Added user/department metadata to document details with uploader information display, 2) Enhanced delete document functionality with improved error handling and logging, 3) Fixed translation system by removing problematic database schema columns and implementing direct OpenAI translation
+- June 29, 2025. Enhanced vector database system with intelligent document chunking - documents now split into 3000-character chunks with 300-character overlap, supporting comprehensive content coverage (minimum 3 A4 pages), improved search results with top 3 chunks per document, and added re-indexing capabilities for better chat performance
 ```
 
 ## User Preferences
