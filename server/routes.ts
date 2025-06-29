@@ -368,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // User management routes
   // Admin User Management Routes
-  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const allUsers = await db.select({
         id: users.id,
@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/departments', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/departments', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const allDepartments = await db.select().from(departments);
       res.json(allDepartments);
@@ -441,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/permissions', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/permissions', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userPermissions = await db
         .select({
