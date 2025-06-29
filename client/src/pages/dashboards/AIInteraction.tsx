@@ -28,25 +28,21 @@ export default function AIInteraction() {
   const queryTrendData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
-    
     return {
       date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      queries: Math.floor(Math.random() * 50) + 10, // Mock data
-      responses: Math.floor(Math.random() * 45) + 8
+      queries: Math.floor(Math.random() * 50) + 20,
+      responses: Math.floor(Math.random() * 45) + 18
     };
   });
 
-  // Query categories
-  const queryCategoriesData = [
-    { category: 'General Search', count: 145, color: '#0088FE' },
-    { category: 'HR Related', count: 89, color: '#00C49F' },
-    { category: 'IT & Technical', count: 67, color: '#FFBB28' },
-    { category: 'Policy & Compliance', count: 43, color: '#FF8042' },
-    { category: 'Financial', count: 32, color: '#8884D8' }
-  ];
+  // Topic distribution (based on documents categories)
+  const topicData = documents.slice(0, 5).map((doc: any) => ({
+    topic: doc.aiCategory || 'General',
+    queries: Math.floor(Math.random() * 30) + 5
+  }));
 
   // Document hits - most referenced documents
-  const documentHits = documents.slice(0, 10).map((doc: any, index) => ({
+  const documentHits = documents.slice(0, 10).map((doc: any, index: number) => ({
     name: doc.name,
     hits: Math.floor(Math.random() * 50) + 5,
     category: doc.aiCategory || 'Uncategorized'
@@ -77,196 +73,151 @@ export default function AIInteraction() {
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total AI Queries</p>
-                <p className="text-2xl font-bold text-gray-900">{aiMetrics.totalQueries}</p>
-                <p className="text-xs text-green-600 mt-1">+12% from last week</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total AI Queries</p>
+                  <p className="text-2xl font-bold text-gray-900">{aiMetrics.totalQueries}</p>
+                  <p className="text-xs text-green-600 mt-1">+12% from last week</p>
+                </div>
+                <MessageSquare className="w-8 h-8 text-blue-500" />
               </div>
-              <MessageSquare className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
-                <p className="text-2xl font-bold text-gray-900">{aiMetrics.avgResponseTime}s</p>
-                <p className="text-xs text-green-600 mt-1">-0.3s improved</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
+                  <p className="text-2xl font-bold text-gray-900">{aiMetrics.avgResponseTime}s</p>
+                  <p className="text-xs text-green-600 mt-1">-0.3s improved</p>
+                </div>
+                <Clock className="w-8 h-8 text-green-500" />
               </div>
-              <Clock className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Relevant Retrievals</p>
-                <p className="text-2xl font-bold text-gray-900">{aiMetrics.relevantRetrievals}%</p>
-                <p className="text-xs text-green-600 mt-1">+3% accuracy</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Relevant Retrievals</p>
+                  <p className="text-2xl font-bold text-gray-900">{aiMetrics.relevantRetrievals}%</p>
+                  <p className="text-xs text-green-600 mt-1">+3% accuracy</p>
+                </div>
+                <Target className="w-8 h-8 text-purple-500" />
               </div>
-              <Target className="w-8 h-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Vector Retrievals</p>
-                <p className="text-2xl font-bold text-gray-900">{aiMetrics.vectorRetrievals}</p>
-                <p className="text-xs text-blue-600 mt-1">Per session avg</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Vector Retrievals</p>
+                  <p className="text-2xl font-bold text-gray-900">{aiMetrics.vectorRetrievals}</p>
+                  <p className="text-xs text-blue-600 mt-1">Per session avg</p>
+                </div>
+                <Zap className="w-8 h-8 text-yellow-500" />
               </div>
-              <Zap className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Query Trend */}
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Query Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5" />
+                <span>Daily AI Queries</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={queryTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="queries" stroke="#8884d8" strokeWidth={2} name="Queries" />
+                  <Line type="monotone" dataKey="responses" stroke="#82ca9d" strokeWidth={2} name="Responses" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Topic Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Query Topics Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={topicData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="topic" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="queries" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Document Hits */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5" />
-              <span>Daily AI Queries</span>
-            </CardTitle>
+            <CardTitle>Most Referenced Documents</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={queryTrendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="queries" stroke="#8884d8" strokeWidth={2} name="Queries" />
-                <Line type="monotone" dataKey="responses" stroke="#82ca9d" strokeWidth={2} name="Responses" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Query Categories */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5" />
-              <span>Query Categories</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Tooltip />
-                <Legend />
-                <RechartsPieChart.Pie
-                  data={queryCategoriesData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {queryCategoriesData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </RechartsPieChart.Pie>
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Response Time Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="w-5 h-5" />
-            <span>Response Time Distribution</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={responseTimeData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="range" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#00C49F" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Document Hits Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Target className="w-5 h-5" />
-            <span>Most Referenced Documents</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {documentHits.map((doc, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Badge variant="outline" className="text-xs">
-                    #{index + 1}
-                  </Badge>
-                  <div>
-                    <p className="font-medium text-gray-900 truncate max-w-md">{doc.name}</p>
+            <div className="space-y-4">
+              {documentHits.slice(0, 8).map((doc: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 truncate">{doc.name}</h4>
                     <p className="text-sm text-gray-500">{doc.category}</p>
                   </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">{doc.hits} hits</p>
+                    <p className="text-xs text-gray-500">This week</p>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">{doc.hits} hits</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Frequent Query Patterns */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MessageSquare className="w-5 h-5" />
-            <span>Frequent Query Patterns</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              "How to apply for leave?",
-              "Company policy on remote work",
-              "IT support contact",
-              "Budget approval process",
-              "Employee benefits overview",
-              "Security guidelines",
-              "Project deadlines",
-              "Training requirements"
-            ].map((query, index) => (
-              <div key={index} className="p-3 bg-blue-50 rounded-lg text-center">
-                <p className="text-sm font-medium text-blue-900">{query}</p>
-                <p className="text-xs text-blue-600 mt-1">{Math.floor(Math.random() * 20) + 5} times</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Common Queries */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Frequently Asked Questions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                "How to apply for leave?",
+                "Company policy on remote work",
+                "IT support contact",
+                "Budget approval process",
+                "Employee benefits overview",
+                "Security guidelines",
+                "Project deadlines",
+                "Training requirements"
+              ].map((query, index) => (
+                <div key={index} className="p-3 bg-blue-50 rounded-lg text-center">
+                  <p className="text-sm font-medium text-blue-900">{query}</p>
+                  <p className="text-xs text-blue-600 mt-1">{Math.floor(Math.random() * 20) + 5} times</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
