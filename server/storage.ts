@@ -11,6 +11,7 @@ import {
   auditLogs,
   documentUserPermissions,
   documentDepartmentPermissions,
+  userFavorites,
   type User,
   type UpsertUser,
   type Category,
@@ -30,6 +31,8 @@ import {
   type InsertAiAssistantFeedback,
   type AuditLog,
   type InsertAuditLog,
+  type UserFavorite,
+  type InsertUserFavorite,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte } from "drizzle-orm";
@@ -172,8 +175,34 @@ export class DatabaseStorage implements IStorage {
   async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
     const { categoryId, limit = 1000, offset = 0 } = options;
     
-    // Get user's own documents
-    let ownDocumentsQuery = db.select().from(documents);
+    // Get user's own documents with favorite status
+    let ownDocumentsQuery = db
+      .select({
+        id: documents.id,
+        name: documents.name,
+        description: documents.description,
+        fileName: documents.fileName,
+        filePath: documents.filePath,
+        fileSize: documents.fileSize,
+        mimeType: documents.mimeType,
+        content: documents.content,
+        summary: documents.summary,
+        tags: documents.tags,
+        categoryId: documents.categoryId,
+        userId: documents.userId,
+        isFavorite: sql<boolean>`CASE WHEN ${userFavorites.id} IS NOT NULL THEN true ELSE false END`.as('isFavorite'),
+        createdAt: documents.createdAt,
+        updatedAt: documents.updatedAt,
+        processedAt: documents.processedAt,
+        aiCategory: documents.aiCategory,
+        aiCategoryColor: documents.aiCategoryColor,
+        isPublic: documents.isPublic
+      })
+      .from(documents)
+      .leftJoin(userFavorites, and(
+        eq(userFavorites.documentId, documents.id),
+        eq(userFavorites.userId, userId)
+      ));
     
     if (categoryId) {
       ownDocumentsQuery = ownDocumentsQuery.where(
@@ -200,7 +229,7 @@ export class DatabaseStorage implements IStorage {
         tags: documents.tags,
         categoryId: documents.categoryId,
         userId: documents.userId,
-        isFavorite: documents.isFavorite,
+        isFavorite: sql<boolean>`CASE WHEN ${userFavorites.id} IS NOT NULL THEN true ELSE false END`.as('isFavorite'),
         createdAt: documents.createdAt,
         updatedAt: documents.updatedAt,
         processedAt: documents.processedAt,
@@ -210,6 +239,10 @@ export class DatabaseStorage implements IStorage {
       })
       .from(documents)
       .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
+      .leftJoin(userFavorites, and(
+        eq(userFavorites.documentId, documents.id),
+        eq(userFavorites.userId, userId)
+      ))
       .where(eq(documentUserPermissions.userId, userId));
     
     // Get user's department
@@ -235,7 +268,7 @@ export class DatabaseStorage implements IStorage {
           tags: documents.tags,
           categoryId: documents.categoryId,
           userId: documents.userId,
-          isFavorite: documents.isFavorite,
+          isFavorite: sql<boolean>`CASE WHEN ${userFavorites.id} IS NOT NULL THEN true ELSE false END`.as('isFavorite'),
           createdAt: documents.createdAt,
           updatedAt: documents.updatedAt,
           processedAt: documents.processedAt,
@@ -245,6 +278,10 @@ export class DatabaseStorage implements IStorage {
         })
         .from(documents)
         .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
+        .leftJoin(userFavorites, and(
+          eq(userFavorites.documentId, documents.id),
+          eq(userFavorites.userId, userId)
+        ))
         .where(eq(documentDepartmentPermissions.departmentId, currentUser.departmentId));
     }
     
@@ -336,12 +373,28 @@ export class DatabaseStorage implements IStorage {
     const document = await this.getDocument(id, userId);
     if (!document) throw new Error("Document not found");
     
-    const [updated] = await db
-      .update(documents)
-      .set({ isFavorite: !document.isFavorite })
-      .where(and(eq(documents.id, id), eq(documents.userId, userId)))
-      .returning();
-    return updated;
+    // Check if user has already favorited this document
+    const [existingFavorite] = await db
+      .select()
+      .from(userFavorites)
+      .where(and(eq(userFavorites.documentId, id), eq(userFavorites.userId, userId)));
+    
+    if (existingFavorite) {
+      // Remove from favorites
+      await db
+        .delete(userFavorites)
+        .where(and(eq(userFavorites.documentId, id), eq(userFavorites.userId, userId)));
+    } else {
+      // Add to favorites
+      await db
+        .insert(userFavorites)
+        .values({
+          documentId: id,
+          userId: userId,
+        });
+    }
+    
+    return document;
   }
 
   // Stats operations
