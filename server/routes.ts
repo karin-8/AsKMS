@@ -1021,6 +1021,24 @@ ${document.summary}`;
         }
       }
 
+      // Log document upload for audit
+      try {
+        await storage.createAuditLog({
+          userId,
+          action: 'upload',
+          resourceType: 'document',
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+          details: {
+            documentsCount: uploadedDocuments.length,
+            documentNames: uploadedDocuments.map(doc => doc.name)
+          }
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for upload:", auditError);
+      }
+
       res.json(uploadedDocuments);
     } catch (error) {
       console.error("Error uploading documents:", error);
@@ -1155,6 +1173,25 @@ ${document.summary}`;
       await storage.deleteDocument(id, userId);
       console.log(`Successfully deleted document ${id} from database`);
       
+      // Log document deletion for audit
+      try {
+        await storage.createAuditLog({
+          userId,
+          action: 'delete',
+          resourceType: 'document',
+          resourceId: id.toString(),
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+          details: {
+            documentName: document.name,
+            fileSize: document.fileSize
+          }
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for delete:", auditError);
+      }
+      
       res.json({ success: true, message: "Document deleted successfully" });
     } catch (error) {
       console.error("Error deleting document:", error);
@@ -1235,6 +1272,27 @@ ${document.summary}`;
           query: content,
           conversationId: conversationId
         });
+      }
+
+      // Log chat interaction for audit
+      try {
+        await storage.createAuditLog({
+          userId,
+          action: 'chat',
+          resourceType: 'ai_assistant',
+          resourceId: conversationId?.toString(),
+          ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          success: true,
+          details: {
+            messageLength: content.length,
+            hasDocumentContext: !!documentId,
+            documentId: documentId || null,
+            responseLength: aiResponse.length
+          }
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for chat:", auditError);
       }
 
       res.json([userMessage, assistantMessage]);

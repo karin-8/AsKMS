@@ -112,10 +112,61 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
-    })(req, res, next);
+    })(req, res, async (err: any) => {
+      // Log successful login for audit
+      if (!err && req.user) {
+        try {
+          const user = req.user as any;
+          const userId = user.claims?.sub;
+          if (userId) {
+            const { storage } = await import('./storage');
+            await storage.createAuditLog({
+              userId,
+              action: 'login',
+              resourceType: 'auth',
+              ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+              userAgent: req.headers['user-agent'] || 'unknown',
+              success: true,
+              details: {
+                email: user.claims?.email,
+                loginMethod: 'replit-oauth'
+              }
+            });
+          }
+        } catch (auditError) {
+          console.error("Failed to create audit log for login:", auditError);
+        }
+      }
+      next(err);
+    });
   });
 
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", async (req, res) => {
+    // Log logout for audit before session destruction
+    if (req.user) {
+      try {
+        const user = req.user as any;
+        const userId = user.claims?.sub;
+        if (userId) {
+          const { storage } = await import('./storage');
+          await storage.createAuditLog({
+            userId,
+            action: 'logout',
+            resourceType: 'auth',
+            ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+            userAgent: req.headers['user-agent'] || 'unknown',
+            success: true,
+            details: {
+              email: user.claims?.email,
+              sessionDuration: Date.now() - (user.claims?.iat * 1000)
+            }
+          });
+        }
+      } catch (auditError) {
+        console.error("Failed to create audit log for logout:", auditError);
+      }
+    }
+
     req.logout(() => {
       res.redirect(
         client.buildEndSessionUrl(config, {
