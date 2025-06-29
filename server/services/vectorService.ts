@@ -49,8 +49,8 @@ export class VectorService {
 
   async addDocument(id: string, content: string, metadata: Record<string, any>): Promise<string> {
     try {
-      // Remove existing document chunks if they exist
-      this.removeDocument(id);
+      // Remove existing document chunks if they exist from database
+      await db.delete(documentVectors).where(eq(documentVectors.documentId, parseInt(id)));
 
       if (!content || content.trim().length === 0) {
         throw new Error("Document content is empty");
@@ -91,7 +91,16 @@ export class VectorService {
             totalChunks: chunks.length
           };
 
-          this.documents.push(vectorDoc);
+          // Save vector to database
+          await db.insert(documentVectors).values({
+            documentId: parseInt(id),
+            chunkIndex: i,
+            totalChunks: chunks.length,
+            content: chunk,
+            embedding,
+            userId: metadata.userId
+          });
+          
           addedChunks++;
 
           // Add a small delay to avoid rate limiting
@@ -114,17 +123,14 @@ export class VectorService {
   }
 
   async removeDocument(id: string): Promise<void> {
-    // Remove all chunks related to this document
-    const beforeCount = this.documents.length;
-    this.documents = this.documents.filter(doc => {
-      // Remove exact match or chunk matches
-      return doc.id !== id && !doc.id.startsWith(`${id}_chunk_`) && doc.metadata?.originalDocumentId !== id;
-    });
-    const afterCount = this.documents.length;
-    const removedCount = beforeCount - afterCount;
-    
-    if (removedCount > 0) {
-      console.log(`Removed ${removedCount} chunks for document ${id}`);
+    try {
+      // Remove all chunks related to this document
+      const result = await db.delete(documentVectors)
+        .where(eq(documentVectors.documentId, parseInt(id)));
+      
+      console.log(`Removed vector data for document ${id}`);
+    } catch (error) {
+      console.error(`Error removing document ${id} from vector database:`, error);
     }
   }
 
@@ -134,11 +140,15 @@ export class VectorService {
     limit: number = 10
   ): Promise<Array<{ document: VectorDocument; similarity: number }>> {
     try {
-      console.log(`VectorService: Total documents in memory: ${this.documents.length}`);
-      const userDocs = this.documents.filter(doc => doc.metadata.userId === userId);
-      console.log(`VectorService: Documents for user ${userId}: ${userDocs.length}`);
+      // Get all vectors from database for this user
+      const dbVectors = await db.select()
+        .from(documentVectors)
+        .where(eq(documentVectors.userId, userId));
       
-      if (this.documents.length === 0) {
+      console.log(`VectorService: Total documents in database: ${dbVectors.length}`);
+      console.log(`VectorService: Documents for user ${userId}: ${dbVectors.length}`);
+      
+      if (dbVectors.length === 0) {
         console.log("VectorService: No documents in vector database");
         return [];
       }
@@ -152,12 +162,27 @@ export class VectorService {
       const queryEmbedding = response.data[0].embedding;
 
       // Calculate similarities for all chunks
-      const allResults = this.documents
-        .filter(doc => doc.metadata.userId === userId)
-        .map(doc => ({
-          document: doc,
-          similarity: this.cosineSimilarity(queryEmbedding, doc.embedding)
-        }))
+      const allResults = dbVectors
+        .map(dbVector => {
+          const vectorDoc: VectorDocument = {
+            id: `${dbVector.documentId}_chunk_${dbVector.chunkIndex}`,
+            content: dbVector.content,
+            embedding: dbVector.embedding,
+            metadata: {
+              originalDocumentId: dbVector.documentId.toString(),
+              userId: dbVector.userId,
+              chunkIndex: dbVector.chunkIndex,
+              totalChunks: dbVector.totalChunks
+            },
+            chunkIndex: dbVector.chunkIndex,
+            totalChunks: dbVector.totalChunks
+          };
+
+          return {
+            document: vectorDoc,
+            similarity: this.cosineSimilarity(queryEmbedding, dbVector.embedding)
+          };
+        })
         .sort((a, b) => b.similarity - a.similarity);
 
       // Group by original document ID and take top chunks per document
