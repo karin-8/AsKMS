@@ -28,8 +28,12 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
         title: "Upload successful",
         description: `${data.length} document(s) uploaded successfully`,
       });
+      // Invalidate all document-related queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/search"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       onUploadComplete();
     },
     onError: (error) => {

@@ -168,7 +168,7 @@ export class DatabaseStorage implements IStorage {
 
   // Document operations
   async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
-    const { categoryId, limit = 50, offset = 0 } = options;
+    const { categoryId, limit = 1000, offset = 0 } = options;
     
     if (categoryId) {
       return await db
