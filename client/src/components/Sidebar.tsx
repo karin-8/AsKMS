@@ -39,8 +39,13 @@ export default function Sidebar() {
 
   // Filter navigation based on user role - default to "user" role
   const userRole = (user as any)?.role || "user";
+  console.log("User data:", user);
+  console.log("User role:", userRole);
+  
   const navigation = allNavigation.filter(item => {
-    return item.roles.includes(userRole);
+    const hasAccess = item.roles.includes(userRole);
+    console.log(`Menu: ${item.name}, Required roles: ${item.roles}, User role: ${userRole}, Has access: ${hasAccess}`);
+    return hasAccess;
   });
 
   return (
