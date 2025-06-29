@@ -337,6 +337,7 @@ export default function AuditMonitoring() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2">Timestamp</th>
+                        <th className="text-left p-2">User</th>
                         <th className="text-left p-2">Action</th>
                         <th className="text-left p-2">Resource</th>
                         <th className="text-left p-2">Status</th>
@@ -350,6 +351,19 @@ export default function AuditMonitoring() {
                         <tr key={log.id} className="border-b hover:bg-slate-50">
                           <td className="p-2">
                             {log.timestamp ? format(new Date(log.timestamp), "PPp") : 'N/A'}
+                          </td>
+                          <td className="p-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-slate-900">
+                                {log.userFirstName && log.userLastName 
+                                  ? `${log.userFirstName} ${log.userLastName}`
+                                  : log.userEmail || 'Unknown User'
+                                }
+                              </span>
+                              {log.userEmail && (log.userFirstName || log.userLastName) && (
+                                <span className="text-xs text-slate-500">{log.userEmail}</span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-2">
                             <div className="flex items-center">

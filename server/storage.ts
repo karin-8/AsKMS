@@ -557,7 +557,13 @@ export class DatabaseStorage implements IStorage {
   } = {}): Promise<AuditLog[]> {
     const { limit = 100, offset = 0, action, resourceType, dateFrom, dateTo } = options;
     
-    let conditions = [eq(auditLogs.userId, userId)];
+    let conditions: any[] = [];
+    
+    // For admin users, show all audit logs, otherwise show only user's logs
+    const currentUser = await this.getUser(userId);
+    if (!currentUser?.email?.includes('admin')) {
+      conditions.push(eq(auditLogs.userId, userId));
+    }
     
     if (action) {
       conditions.push(eq(auditLogs.action, action));
@@ -575,10 +581,30 @@ export class DatabaseStorage implements IStorage {
       conditions.push(lte(auditLogs.timestamp, dateTo));
     }
 
+    const whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
+
     return await db
-      .select()
+      .select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        resourceId: auditLogs.resourceId,
+        resourceType: auditLogs.resourceType,
+        details: auditLogs.details,
+        ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
+        success: auditLogs.success,
+        errorMessage: auditLogs.errorMessage,
+        duration: auditLogs.duration,
+        timestamp: auditLogs.timestamp,
+        createdAt: auditLogs.createdAt,
+        userEmail: users.email,
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+      })
       .from(auditLogs)
-      .where(and(...conditions))
+      .leftJoin(users, eq(auditLogs.userId, users.id))
+      .where(whereCondition)
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit)
       .offset(offset);

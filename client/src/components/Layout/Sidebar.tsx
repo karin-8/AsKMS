@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { 
-  Home, 
-  FileText, 
-  Clock, 
-  Star, 
-  Share2, 
+import {
+  Home,
+  FileText,
+  Clock,
+  Star,
+  Share2,
   Bot,
   X,
   Upload,
@@ -19,7 +19,7 @@ import {
   BarChart3,
   ChevronDown,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -28,10 +28,14 @@ interface SidebarProps {
   onOpenChat: () => void;
 }
 
-export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: SidebarProps) {
+export default function Sidebar({
+  isMobileOpen,
+  onMobileClose,
+  onOpenChat,
+}: SidebarProps) {
   const [location] = useLocation();
   const [isDashboardExpanded, setIsDashboardExpanded] = useState(false);
-  
+
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
   }) as { data: Array<{ id: number; name: string; documentCount?: number }> };
@@ -41,17 +45,17 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
   }) as { data: { totalDocuments: number } | undefined };
 
   const categoryColors = [
-    'bg-blue-500',
-    'bg-green-500', 
-    'bg-purple-500',
-    'bg-yellow-500',
-    'bg-red-500',
-    'bg-indigo-500'
+    "bg-blue-500",
+    "bg-green-500",
+    "bg-purple-500",
+    "bg-yellow-500",
+    "bg-red-500",
+    "bg-indigo-500",
   ];
 
   const isActiveRoute = (path: string) => location === path;
-  const isDashboardActive = location.startsWith('/dashboards');
-  
+  const isDashboardActive = location.startsWith("/dashboards");
+
   // Auto-expand dashboard menu if user is on a dashboard route
   useEffect(() => {
     if (isDashboardActive) {
@@ -63,14 +67,19 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
     <>
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onMobileClose} />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onMobileClose}
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-sm border-r border-gray-200 transition-transform duration-300 ease-in-out lg:translate-x-0",
-        isMobileOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <aside
+        className={cn(
+          "fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-sm border-r border-gray-200 transition-transform duration-300 ease-in-out lg:translate-x-0",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Mobile Close Button */}
           <div className="lg:hidden flex justify-end p-4">
@@ -83,24 +92,30 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
             {/* Navigation Menu */}
             <nav className="space-y-2">
               <Link href="/" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
                   <Home className="w-5 h-5 mr-3" />
                   <span>Home</span>
                 </Button>
               </Link>
-              
+
               <Link href="/documents" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/documents") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/documents")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
                   <FileText className="w-5 h-5 mr-3" />
                   <span>All Documents</span>
                   <Badge variant="secondary" className="ml-auto">
@@ -108,14 +123,17 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                   </Badge>
                 </Button>
               </Link>
-              
+
               <Link href="/categories" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/categories") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/categories")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
                   <FolderOpen className="w-5 h-5 mr-3" />
                   <span>Categories</span>
                 </Button>
@@ -123,13 +141,13 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
 
               {/* Dashboard Menu with Expandable Sub-items */}
               <div className="space-y-1">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className={cn(
                     "w-full justify-start",
-                    isDashboardActive 
-                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    isDashboardActive
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
                   )}
                   onClick={() => setIsDashboardExpanded(!isDashboardExpanded)}
                 >
@@ -144,132 +162,147 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
 
                 {isDashboardExpanded && (
                   <div className="ml-6 space-y-1">
-                    <Link href="/dashboards/document-usage" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/document-usage")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+                    <Link
+                      href="/dashboards/document-usage"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/document-usage")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         Document Usage Overview
                       </Button>
                     </Link>
 
-                    <Link href="/dashboards/ai-interaction" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/ai-interaction")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+                    <Link
+                      href="/dashboards/ai-interaction"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/ai-interaction")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         AI Agent Interaction
                       </Button>
                     </Link>
 
-                    <Link href="/dashboards/user-activity" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/user-activity")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+                    <Link
+                      href="/dashboards/user-activity"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/user-activity")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         User Activity Monitoring
                       </Button>
                     </Link>
 
-                    <Link href="/dashboards/system-health" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/system-health")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+                    <Link
+                      href="/dashboards/system-health"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/system-health")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         System Health & AI Performance
                       </Button>
                     </Link>
 
-                    <Link href="/dashboards/security-governance" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/security-governance")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+                    <Link
+                      href="/dashboards/security-governance"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/security-governance")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         Security & Governance
                       </Button>
                     </Link>
-                    
-                    <Link href="/dashboards/customer-survey" onClick={onMobileClose}>
-                      <Button variant="ghost" size="sm" className={cn(
-                        "w-full justify-start text-sm",
-                        isActiveRoute("/dashboards/customer-survey")
-                          ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                      )}>
+
+                    <Link
+                      href="/dashboards/customer-survey"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/customer-survey")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
                         Customer Survey
                       </Button>
                     </Link>
-
-
                   </div>
                 )}
               </div>
-              
+
               <Link href="/settings" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/settings") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/settings")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
                   <Settings className="w-5 h-5 mr-3" />
                   <span>Settings</span>
                 </Button>
               </Link>
-              
+
               <Link href="/survey" onClick={onMobileClose}>
-                <Button variant="ghost" className={cn(
-                  "w-full justify-start",
-                  isActiveRoute("/survey") 
-                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    isActiveRoute("/survey")
+                      ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
+                  )}
+                >
                   <Bot className="w-5 h-5 mr-3" />
                   <span>Survey</span>
                 </Button>
               </Link>
             </nav>
-
-            {/* Categories */}
-            <div>
-              <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                Categories
-              </h3>
-              <nav className="space-y-1">
-                {categories.length === 0 ? (
-                  <p className="px-3 text-sm text-gray-500">No categories yet</p>
-                ) : (
-                  categories.map((category, index: number) => (
-                    <Button
-                      key={category.id}
-                      variant="ghost"
-                      className="w-full justify-between text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={cn(
-                          "w-3 h-3 rounded-full",
-                          categoryColors[index % categoryColors.length]
-                        )} />
-                        <span>{category.name}</span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {category.documentCount || 0}
-                      </span>
-                    </Button>
-                  ))
-                )}
-              </nav>
-            </div>
 
             {/* AI Assistant */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
@@ -279,8 +312,10 @@ export default function Sidebar({ isMobileOpen, onMobileClose, onOpenChat }: Sid
                 </div>
                 <h4 className="font-medium text-gray-900">AI Assistant</h4>
               </div>
-              <p className="text-sm text-gray-600 mb-3">Ask questions about your documents</p>
-              <Button 
+              <p className="text-sm text-gray-600 mb-3">
+                Ask questions about your documents
+              </p>
+              <Button
                 className="w-full bg-blue-500 text-white hover:bg-blue-600"
                 onClick={onOpenChat}
               >
