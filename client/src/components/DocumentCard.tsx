@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import DocumentChatModal from "./Chat/DocumentChatModal";
 import ContentSummaryModal from "./ContentSummaryModal";
+import ShareDocumentDialog from "./ShareDocumentDialog";
 
 interface DocumentCardProps {
   document: {
@@ -58,6 +59,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const [showSummary, setShowSummary] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showChatWithDocument, setShowChatWithDocument] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   
   // Use doc.isFavorite directly instead of local state to prevent sync issues
   const isFavorite = doc.isFavorite || false;
@@ -204,21 +206,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   };
 
   const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: doc.name || doc.originalName,
-        url: `/documents/${doc.id}`,
-      }).then(() => {
-        toast({
-          title: "Document shared",
-          description: "Share link copied to clipboard.",
-        });
-      }).catch(() => {
-        copyToClipboard(`${window.location.origin}/documents/${doc.id}`);
-      });
-    } else {
-      copyToClipboard(`${window.location.origin}/documents/${doc.id}`);
-    }
+    setShowShareDialog(true);
   };
 
   const FileIcon = getFileIcon(doc.mimeType);
@@ -711,6 +699,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
         documentName={doc.name || doc.originalName || ""}
         summary={doc.summary || ""}
         tags={doc.tags}
+      />
+
+      {/* Share Document Dialog */}
+      <ShareDocumentDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        documentId={doc.id}
+        documentName={doc.name || doc.originalName || ""}
       />
     </>
   );
