@@ -8,6 +8,7 @@ export interface SearchResult {
   content: string;
   summary?: string | null;
   aiCategory?: string | null;
+  aiCategoryColor?: string | null;
   similarity: number;
   createdAt: string;
   // Include all fields needed for proper display (matching DocumentCard interface)
@@ -152,6 +153,7 @@ export class SemanticSearchServiceV2 {
         content: doc.content || "",
         summary: doc.summary,
         aiCategory: doc.aiCategory,
+        aiCategoryColor: doc.aiCategoryColor,
         similarity: 0.8, // Default similarity for keyword matches
         createdAt: doc.createdAt.toISOString(),
         // Include all fields needed for proper display (matching DocumentCard interface)
