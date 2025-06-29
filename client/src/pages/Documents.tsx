@@ -112,12 +112,6 @@ export default function Documents() {
   const aiCategories = documents ? Array.from(new Set(documents.map((doc: any) => doc.aiCategory).filter(Boolean))) : [];
   const allTags = documents ? Array.from(new Set(documents.flatMap((doc: any) => doc.tags || []))) : [];
 
-  // Debug log for first few documents
-  if (documents && documents.length > 0) {
-    console.log("First document data:", documents[0]);
-    console.log("Document isFavorite values:", documents.map((d: any) => ({ id: d.id, name: d.name, isFavorite: d.isFavorite })).slice(0, 3));
-  }
-
   // Filter and sort documents with multi-select support
   const filteredDocuments = documents ? documents.filter((doc: any) => {
     // Apply category filters

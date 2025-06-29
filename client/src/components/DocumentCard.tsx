@@ -57,13 +57,10 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(doc.isFavorite || false);
   const [showChatWithDocument, setShowChatWithDocument] = useState(false);
-
-  // Update favorite state when document prop changes
-  useEffect(() => {
-    setIsFavorite(doc.isFavorite || false);
-  }, [doc.isFavorite]);
+  
+  // Use doc.isFavorite directly instead of local state to prevent sync issues
+  const isFavorite = doc.isFavorite || false;
 
   // Fetch document details when needed
   const { data: documentDetails, isLoading: detailsLoading } = useQuery({
@@ -140,8 +137,8 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
       await apiRequest("POST", `/api/documents/${doc.id}/favorite`);
     },
     onSuccess: () => {
-      setIsFavorite(!isFavorite);
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents/search"] });
       toast({
         title: isFavorite ? "Removed from favorites" : "Added to favorites",
         description: `Document ${isFavorite ? 'removed from' : 'added to'} your favorites.`,
@@ -365,14 +362,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Grid view layout
   return (
     <>
-      <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group relative">
-        {/* Favorite Star Badge */}
-        {isFavorite && (
-          <div className="absolute top-2 right-2 z-10">
-            <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
-          </div>
-        )}
-        
+      <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group">
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
@@ -435,9 +425,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-medium text-sm text-gray-900 line-clamp-2 leading-tight">
-              {doc.name || doc.originalName}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-sm text-gray-900 line-clamp-2 leading-tight flex-1">
+                {doc.name || doc.originalName}
+              </h3>
+              {isFavorite && (
+                <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 flex-shrink-0" />
+              )}
+            </div>
             
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span className="flex items-center">
