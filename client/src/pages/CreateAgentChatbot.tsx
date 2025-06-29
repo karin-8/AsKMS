@@ -1,103 +1,128 @@
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Bot, FileText, MessageSquare, Settings, Plus, X } from "lucide-react";
+import { 
+  Bot, 
+  Settings, 
+  MessageSquare, 
+  FileText, 
+  Check,
+  X,
+  Search,
+  Plus,
+  ArrowLeft
+} from "lucide-react";
+import { Link } from "wouter";
 
+// Schema for form validation
 const createAgentSchema = z.object({
   name: z.string().min(1, "Agent name is required"),
   description: z.string().optional(),
-  systemPrompt: z.string().min(10, "System prompt must be at least 10 characters"),
+  systemPrompt: z.string().min(1, "System prompt is required"),
   channels: z.array(z.string()).min(1, "At least one channel is required"),
-  lineOaConfig: z.object({
-    lineOaId: z.string().optional(),
-    lineOaName: z.string().optional(),
-  }).optional(),
+  lineOaChannelId: z.string().optional(),
 });
 
 type CreateAgentForm = z.infer<typeof createAgentSchema>;
 
-// Mock LineOA data including 4urney HR
-const mockLineOAList = [
-  { id: "line-4urney-hr", name: "4urney HR", verified: true },
-  { id: "line-customer-support", name: "Customer Support Bot", verified: true },
-  { id: "line-sales-assistant", name: "Sales Assistant", verified: false },
-  { id: "line-tech-support", name: "Technical Support", verified: true },
-  { id: "line-marketing", name: "Marketing Updates", verified: false },
-];
-
-const availableChannels = [
-  { id: "lineoa", label: "Line OA", icon: MessageSquare },
-  { id: "facebook", label: "Facebook Messenger", icon: MessageSquare },
-  { id: "tiktok", label: "TikTok", icon: MessageSquare },
-];
+interface Document {
+  id: number;
+  name: string;
+  description?: string;
+  summary?: string;
+  categoryName?: string;
+}
 
 export default function CreateAgentChatbot() {
   const { toast } = useToast();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
-  const [selectedLineOA, setSelectedLineOA] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
+  // Form setup
   const form = useForm<CreateAgentForm>({
     resolver: zodResolver(createAgentSchema),
     defaultValues: {
       name: "",
       description: "",
-      systemPrompt: "You are a helpful AI assistant. Answer questions based on the provided documents and be helpful, friendly, and professional.",
+      systemPrompt: "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
       channels: [],
-      lineOaConfig: {},
+      lineOaChannelId: "",
     },
   });
 
-  // Fetch user's documents
-  const { data: documents = [], isLoading: loadingDocuments } = useQuery({
-    queryKey: ["/api/documents"],
-  });
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  // Fetch documents for RAG selection
+  const { data: documents = [] } = useQuery({
+    queryKey: ['/api/documents'],
+    enabled: isAuthenticated,
+    retry: false,
+  }) as { data: Document[] };
 
   // Create agent mutation
   const createAgentMutation = useMutation({
-    mutationFn: async (agentData: CreateAgentForm) => {
-      const response = await apiRequest("/api/agent-chatbots", {
+    mutationFn: async (agentData: CreateAgentForm & { documentIds: number[] }) => {
+      return await apiRequest("/api/agent-chatbots", {
         method: "POST",
         body: JSON.stringify(agentData),
       });
-      return response;
     },
-    onSuccess: async (agent) => {
-      // Add selected documents to the agent
-      for (const documentId of selectedDocuments) {
-        try {
-          await apiRequest(`/api/agent-chatbots/${agent.id}/documents/${documentId}`, {
-            method: "POST",
-          });
-        } catch (error) {
-          console.error("Error adding document to agent:", error);
-        }
-      }
-      
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Agent chatbot created successfully!",
       });
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
+      // Clear form and navigate back
       form.reset();
       setSelectedDocuments([]);
-      setSelectedLineOA("");
+      queryClient.invalidateQueries({ queryKey: ['/api/agent-chatbots'] });
+      window.history.back();
     },
     onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
         title: "Error",
         description: "Failed to create agent chatbot",
@@ -107,266 +132,351 @@ export default function CreateAgentChatbot() {
   });
 
   const onSubmit = (data: CreateAgentForm) => {
-    // Add LineOA config if LineOA is selected
-    if (data.channels.includes("lineoa") && selectedLineOA) {
-      const selectedLine = mockLineOAList.find(line => line.id === selectedLineOA);
-      data.lineOaConfig = {
-        lineOaId: selectedLineOA,
-        lineOaName: selectedLine?.name || "",
-      };
-    }
-
-    createAgentMutation.mutate(data);
+    createAgentMutation.mutate({
+      ...data,
+      documentIds: selectedDocuments,
+    });
   };
 
   const toggleDocument = (documentId: number) => {
     setSelectedDocuments(prev => 
-      prev.includes(documentId)
+      prev.includes(documentId) 
         ? prev.filter(id => id !== documentId)
         : [...prev, documentId]
     );
   };
 
-  const selectedChannels = form.watch("channels") || [];
+  const filteredDocuments = documents.filter(doc => 
+    doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Mock LineOA channels
+  const lineOaChannels = [
+    { id: "U1234567890", name: "4urney HR", description: "HR Support Channel" },
+    { id: "U0987654321", name: "Customer Support", description: "General Support" },
+    { id: "U1122334455", name: "Sales Inquiry", description: "Sales Team Channel" },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="flex items-center gap-3 mb-6">
-        <Bot className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Create Agent Chatbot</h1>
-          <p className="text-muted-foreground">Build your custom AI assistant with document knowledge</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex">
+      <Sidebar />
+      
+      <div className="flex-1 flex flex-col">
+        <TopBar />
+        
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+              <Link href="/agent-chatbots">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Agents
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-semibold text-slate-800 mb-2">
+                  Create Agent Chatbot
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Set up your AI-powered chatbot agent with custom prompts and document knowledge
+                </p>
+              </div>
+            </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Basic Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Basic Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Agent Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="HR Assistant Bot" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="A helpful assistant for HR-related questions..."
-                          rows={3}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="systemPrompt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>System Prompt</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="You are a helpful AI assistant..."
-                          rows={5}
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Communication Channels */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Communication Channels
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="channels"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Select Channels</FormLabel>
-                      <div className="space-y-3">
-                        {availableChannels.map((channel) => (
-                          <FormField
-                            key={channel.id}
-                            control={form.control}
-                            name="channels"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(channel.id)}
-                                    onCheckedChange={(checked) => {
-                                      const value = field.value || [];
-                                      if (checked) {
-                                        field.onChange([...value, channel.id]);
-                                      } else {
-                                        field.onChange(value.filter((v) => v !== channel.id));
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="flex items-center gap-2 font-normal">
-                                  <channel.icon className="h-4 w-4" />
-                                  {channel.label}
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* LineOA Configuration */}
-                {selectedChannels.includes("lineoa") && (
-                  <div className="border rounded-lg p-4 bg-muted/50">
-                    <label className="text-sm font-medium mb-2 block">Select Line OA</label>
-                    <Select value={selectedLineOA} onValueChange={setSelectedLineOA}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a Line OA account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockLineOAList.map((lineOA) => (
-                          <SelectItem key={lineOA.id} value={lineOA.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{lineOA.name}</span>
-                              {lineOA.verified && (
-                                <Badge variant="secondary" className="text-xs">Verified</Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* RAG Documents Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Knowledge Base Documents
-                <Badge variant="outline">{selectedDocuments.length} selected</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingDocuments ? (
-                <div className="text-center py-4">Loading documents...</div>
-              ) : documents.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No documents available. Upload some documents first.
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {documents.map((document: any) => (
-                    <div
-                      key={document.id}
-                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedDocuments.includes(document.id)
-                          ? "bg-primary/10 border-primary"
-                          : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => toggleDocument(document.id)}
-                    >
-                      <Checkbox
-                        checked={selectedDocuments.includes(document.id)}
-                        onChange={() => {}} // Controlled by parent click
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Basic Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        Basic Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Agent Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="HR Assistant Bot" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{document.name}</p>
-                        {document.description && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {document.description}
-                          </p>
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Brief description of what this agent does"
+                                className="min-h-[80px]"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Channel Selection */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Channel Selection
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="channels"
+                        render={() => (
+                          <FormItem>
+                            <FormLabel>Select Channels</FormLabel>
+                            <div className="space-y-3">
+                              {[
+                                { id: "lineoa", label: "LINE Official Account", color: "green" },
+                                { id: "facebook", label: "Facebook Messenger", color: "blue" },
+                                { id: "tiktok", label: "TikTok", color: "pink" },
+                              ].map((channel) => (
+                                <FormField
+                                  key={channel.id}
+                                  control={form.control}
+                                  name="channels"
+                                  render={({ field }) => {
+                                    return (
+                                      <FormItem
+                                        key={channel.id}
+                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                      >
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(channel.id)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...field.value, channel.id])
+                                                : field.onChange(
+                                                    field.value?.filter(
+                                                      (value) => value !== channel.id
+                                                    )
+                                                  );
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-normal">
+                                          {channel.label}
+                                        </FormLabel>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* LINE OA Channel Selection */}
+                      {form.watch("channels")?.includes("lineoa") && (
+                        <FormField
+                          control={form.control}
+                          name="lineOaChannelId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>LINE OA Channel</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a LINE OA channel" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {lineOaChannels.map((channel) => (
+                                    <SelectItem key={channel.id} value={channel.id}>
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{channel.name}</span>
+                                        <span className="text-xs text-slate-500">{channel.description}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* System Prompt */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="h-5 w-5" />
+                      AI System Prompt
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="systemPrompt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>System Prompt</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Define how your AI agent should behave and respond..."
+                              className="min-h-[120px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            This prompt defines your agent's personality, behavior, and how it should respond to users.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Document Selection for RAG */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Knowledge Base (RAG Documents)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Search */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Search documents..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+
+                      {/* Selected Documents Count */}
+                      {selectedDocuments.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            {selectedDocuments.length} documents selected
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Documents List */}
+                      <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3">
+                        {filteredDocuments.length === 0 ? (
+                          <div className="text-center py-4 text-slate-500">
+                            <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>No documents found</p>
+                          </div>
+                        ) : (
+                          filteredDocuments.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedDocuments.includes(doc.id)
+                                  ? "bg-blue-50 border-blue-200"
+                                  : "bg-white hover:bg-slate-50"
+                              }`}
+                              onClick={() => toggleDocument(doc.id)}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-slate-800">{doc.name}</h4>
+                                  {doc.categoryName && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {doc.categoryName}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {doc.description && (
+                                  <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                                    {doc.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="ml-3">
+                                {selectedDocuments.includes(doc.id) ? (
+                                  <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 border-2 border-slate-300 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          ))
                         )}
                       </div>
-                      {document.aiCategory && (
-                        <Badge variant="outline" className="text-xs">
-                          {document.aiCategory}
-                        </Badge>
-                      )}
                     </div>
-                  ))}
+                  </CardContent>
+                </Card>
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-4">
+                  <Link href="/agent-chatbots">
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button 
+                    type="submit" 
+                    disabled={createAgentMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {createAgentMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Agent
+                      </>
+                    )}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          <div className="flex justify-end gap-3">
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={() => {
-                form.reset();
-                setSelectedDocuments([]);
-                setSelectedLineOA("");
-              }}
-            >
-              Reset
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={createAgentMutation.isPending}
-              className="min-w-32"
-            >
-              {createAgentMutation.isPending ? (
-                <>Creating...</>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Agent
-                </>
-              )}
-            </Button>
+              </form>
+            </Form>
           </div>
-        </form>
-      </Form>
+        </main>
+      </div>
     </div>
   );
 }

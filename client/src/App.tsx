@@ -27,6 +27,7 @@ import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
 import AuditMonitoring from "@/pages/AuditMonitoring";
 import MeetingNotes from "@/pages/MeetingNotes";
 import CreateAgentChatbot from "@/pages/CreateAgentChatbot";
+import AgentChatbots from "@/pages/AgentChatbots";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -59,6 +60,7 @@ function Router() {
           <Route path="/admin" component={Admin} />
           <Route path="/user-management" component={UserManagement} />
           <Route path="/settings" component={Settings} />
+          <Route path="/agent-chatbots" component={AgentChatbots} />
           <Route path="/create-agent-chatbot" component={CreateAgentChatbot} />
           <Route path="/audit-monitoring" component={AuditMonitoring} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
