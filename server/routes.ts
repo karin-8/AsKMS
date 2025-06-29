@@ -72,6 +72,7 @@ const upload = multer({
       'application/vnd.ms-powerpoint',
       'text/plain',
       'text/csv',
+      'application/json',
       'image/jpeg',
       'image/jpg',
       'image/png',
@@ -81,7 +82,7 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Supported: PDF, DOCX, XLSX, PPTX, TXT, CSV, and image files.'));
+      cb(new Error('Invalid file type. Supported: PDF, DOCX, XLSX, PPTX, TXT, CSV, JSON, and image files.'));
     }
   },
   limits: {

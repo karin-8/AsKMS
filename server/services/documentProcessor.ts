@@ -74,6 +74,9 @@ export class DocumentProcessor {
         case "text/csv":
           return await fs.promises.readFile(filePath, "utf-8");
 
+        case "application/json":
+          return await this.extractFromJSON(filePath);
+
         default:
           if (fileType.startsWith("image/")) {
             // For images, we'll rely on AI processing for OCR
@@ -104,6 +107,59 @@ export class DocumentProcessor {
       console.error("DOCX extraction error:", error);
       throw new Error("Failed to extract text from DOCX");
     }
+  }
+
+  private async extractFromJSON(filePath: string): Promise<string> {
+    try {
+      const rawData = await fs.promises.readFile(filePath, "utf-8");
+      const jsonData = JSON.parse(rawData);
+      
+      // Convert JSON to readable text format
+      const formattedJson = this.formatJsonForText(jsonData);
+      return formattedJson;
+    } catch (error) {
+      console.error("JSON processing error:", error);
+      // If JSON parsing fails, return raw content
+      return await fs.promises.readFile(filePath, "utf-8");
+    }
+  }
+
+  private formatJsonForText(obj: any, indent: number = 0): string {
+    const spaces = "  ".repeat(indent);
+    let result = "";
+
+    if (Array.isArray(obj)) {
+      result += "[\n";
+      obj.forEach((item, index) => {
+        result += spaces + "  ";
+        if (typeof item === "object" && item !== null) {
+          result += this.formatJsonForText(item, indent + 1);
+        } else {
+          result += JSON.stringify(item);
+        }
+        if (index < obj.length - 1) result += ",";
+        result += "\n";
+      });
+      result += spaces + "]";
+    } else if (typeof obj === "object" && obj !== null) {
+      result += "{\n";
+      const keys = Object.keys(obj);
+      keys.forEach((key, index) => {
+        result += spaces + `  "${key}": `;
+        if (typeof obj[key] === "object" && obj[key] !== null) {
+          result += this.formatJsonForText(obj[key], indent + 1);
+        } else {
+          result += JSON.stringify(obj[key]);
+        }
+        if (index < keys.length - 1) result += ",";
+        result += "\n";
+      });
+      result += spaces + "}";
+    } else {
+      result += JSON.stringify(obj);
+    }
+
+    return result;
   }
 
   private async extractWithTextract(filePath: string): Promise<string> {

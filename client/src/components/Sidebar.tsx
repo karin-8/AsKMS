@@ -19,17 +19,52 @@ import {
 
 const allNavigation = [
   { name: "Home", href: "/", icon: Home, roles: ["admin", "user"] },
-  { name: "Upload Documents", href: "/upload", icon: Upload, roles: ["admin", "user"] },
-  { name: "My Documents", href: "/documents", icon: FolderOpen, roles: ["admin", "user"] },
-  { name: "Search & Discovery", href: "/search", icon: Search, roles: ["admin", "user"] },
-  { name: "AI Assistant", href: "/ai-assistant", icon: MessageSquare, roles: ["admin", "user"] },
-  { name: "Meeting Notes", href: "/meeting-notes", icon: Video, roles: ["admin", "user"] },
-  { name: "Agent Chatbots", href: "/agent-chatbots", icon: Bot, roles: ["admin", "user"] },
-  { name: "Integrations", href: "/integrations", icon: Building, roles: ["admin", "user"] },
-  { name: "Categories & Tags", href: "/categories", icon: Tags, roles: ["admin", "user"] },
-  { name: "User Management", href: "/user-management", icon: Users, roles: ["admin"] },
-  { name: "Role Management", href: "/role-management", icon: Users, roles: ["admin"] },
-  { name: "Live Chat Widget", href: "/live-chat-widget", icon: MessageSquare, roles: ["admin"] },
+  // { name: "Upload Documents", href: "/upload", icon: Upload, roles: ["admin", "user"] },
+  // { name: "My Documents", href: "/documents", icon: FolderOpen, roles: ["admin", "user"] },
+  // { name: "Search & Discovery", href: "/search", icon: Search, roles: ["admin", "user"] },
+  // { name: "AI Assistant", href: "/ai-assistant", icon: MessageSquare, roles: ["admin", "user"] },
+  {
+    name: "Meeting Notes",
+    href: "/meeting-notes",
+    icon: Video,
+    roles: ["admin", "user"],
+  },
+  {
+    name: "Agent Chatbots",
+    href: "/agent-chatbots",
+    icon: Bot,
+    roles: ["admin", "user"],
+  },
+  {
+    name: "Integrations",
+    href: "/integrations",
+    icon: Building,
+    roles: ["admin", "user"],
+  },
+  {
+    name: "Categories & Tags",
+    href: "/categories",
+    icon: Tags,
+    roles: ["admin", "user"],
+  },
+  {
+    name: "User Management",
+    href: "/user-management",
+    icon: Users,
+    roles: ["admin"],
+  },
+  {
+    name: "Role Management",
+    href: "/role-management",
+    icon: Users,
+    roles: ["admin"],
+  },
+  {
+    name: "Live Chat Widget",
+    href: "/live-chat-widget",
+    icon: MessageSquare,
+    roles: ["admin"],
+  },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
@@ -39,7 +74,7 @@ export default function Sidebar() {
 
   // Filter navigation based on user role - default to "user" role
   const userRole = (user as any)?.role || "user";
-  const navigation = allNavigation.filter(item => {
+  const navigation = allNavigation.filter((item) => {
     return item.roles.includes(userRole);
   });
 

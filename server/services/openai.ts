@@ -28,11 +28,32 @@ export async function processDocument(
     let content = "";
 
     // Extract content based on file type
-    if (mimeType === "text/plain" || mimeType === "text/csv") {
+    if (mimeType === "text/plain" || mimeType === "text/csv" || mimeType === "application/json") {
       content = await fs.promises.readFile(filePath, "utf-8");
       
+      // Enhanced processing for JSON files
+      if (mimeType === "application/json" || filePath.endsWith('.json')) {
+        try {
+          const jsonData = JSON.parse(content);
+          
+          // Format JSON for better AI analysis
+          const formattedContent = [
+            `JSON Data Structure:`,
+            `Type: ${Array.isArray(jsonData) ? 'Array' : 'Object'}`,
+            `Size: ${Array.isArray(jsonData) ? `${jsonData.length} items` : `${Object.keys(jsonData).length} properties`}`,
+            ``,
+            `Content Analysis:`,
+            JSON.stringify(jsonData, null, 2)
+          ].join('\n');
+          
+          content = formattedContent;
+        } catch (jsonError) {
+          console.log("JSON parsing error, using raw content:", jsonError);
+          // Keep raw content if JSON parsing fails
+        }
+      }
       // Enhanced processing for CSV files
-      if (mimeType === "text/csv" || filePath.endsWith('.csv')) {
+      else if (mimeType === "text/csv" || filePath.endsWith('.csv')) {
         try {
           const lines = content.split('\n').filter(line => line.trim());
           if (lines.length > 0) {

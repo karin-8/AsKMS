@@ -1,0 +1,58 @@
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "สมชาย ใจดี",
+      "position": "Software Engineer",
+      "department": "IT",
+      "email": "somchai@company.com",
+      "phoneNumber": "081-234-5678",
+      "hireDate": "2023-01-15",
+      "salary": 50000,
+      "skills": ["JavaScript", "React", "Node.js", "TypeScript"],
+      "address": {
+        "street": "123 ถนนสุขุมวิท",
+        "city": "กรุงเทพฯ",
+        "postalCode": "10110"
+      }
+    },
+    {
+      "id": 2,
+      "name": "สมหญิง รักเรียน",
+      "position": "UI/UX Designer",
+      "department": "Design",
+      "email": "somying@company.com",
+      "phoneNumber": "081-345-6789",
+      "hireDate": "2023-03-20",
+      "salary": 45000,
+      "skills": ["Figma", "Adobe XD", "Sketch", "Prototyping"],
+      "address": {
+        "street": "456 ถนนพระราม 4",
+        "city": "กรุงเทพฯ",
+        "postalCode": "10330"
+      }
+    },
+    {
+      "id": 3,
+      "name": "John Smith",
+      "position": "Project Manager",
+      "department": "Management",
+      "email": "john.smith@company.com",
+      "phoneNumber": "081-456-7890",
+      "hireDate": "2022-11-10",
+      "salary": 65000,
+      "skills": ["Project Management", "Agile", "Scrum", "Leadership"],
+      "address": {
+        "street": "789 Silom Road",
+        "city": "Bangkok",
+        "postalCode": "10500"
+      }
+    }
+  ],
+  "metadata": {
+    "totalEmployees": 3,
+    "lastUpdated": "2025-06-29",
+    "dataSource": "HR System",
+    "version": "1.0"
+  }
+}
