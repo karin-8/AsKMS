@@ -37,10 +37,10 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  // Filter navigation based on user role
+  // Filter navigation based on user role - default to "user" role
+  const userRole = (user as any)?.role || "user";
   const navigation = allNavigation.filter(item => {
-    if (!user || !user.role) return false;
-    return item.roles.includes(user.role);
+    return item.roles.includes(userRole);
   });
 
   return (
