@@ -360,51 +360,44 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(eq(users.id, userId));
 
-    // Count owned documents
+    // Use UNION to get all unique documents accessible to user, then count
     const ownedDocsQuery = db
       .select({
-        totalDocuments: count(documents.id),
-        storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+        id: documents.id,
+        fileSize: documents.fileSize,
       })
       .from(documents)
       .where(eq(documents.userId, userId));
 
-    // Count documents shared with user directly
     const userSharedDocsQuery = db
       .select({
-        totalDocuments: count(documents.id),
-        storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+        id: documents.id,
+        fileSize: documents.fileSize,
       })
       .from(documents)
       .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
       .where(eq(documentUserPermissions.userId, userId));
 
-    // Count documents shared with user's department (if user has department)
-    let deptSharedDocsQuery = null;
+    // Combine all accessible documents using UNION for unique results
+    let allDocsQuery = ownedDocsQuery.union(userSharedDocsQuery);
+    
     if (userInfo?.departmentId) {
-      deptSharedDocsQuery = db
+      const deptSharedDocsQuery = db
         .select({
-          totalDocuments: count(documents.id),
-          storageUsed: sql<number>`COALESCE(SUM(${documents.fileSize}), 0)`,
+          id: documents.id,
+          fileSize: documents.fileSize,
         })
         .from(documents)
         .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
         .where(eq(documentDepartmentPermissions.departmentId, userInfo.departmentId));
+      
+      allDocsQuery = allDocsQuery.union(deptSharedDocsQuery);
     }
 
-    const [ownedStats, userSharedStats, deptSharedStats] = await Promise.all([
-      ownedDocsQuery,
-      userSharedDocsQuery,
-      deptSharedDocsQuery
-    ]);
-
-    const totalDocuments = Number(ownedStats[0]?.totalDocuments || 0) + 
-                          Number(userSharedStats[0]?.totalDocuments || 0) + 
-                          Number(deptSharedStats?.[0]?.totalDocuments || 0);
-
-    const storageUsed = Number(ownedStats[0]?.storageUsed || 0) + 
-                      Number(userSharedStats[0]?.storageUsed || 0) + 
-                      Number(deptSharedStats?.[0]?.storageUsed || 0);
+    const allAccessibleDocs = await allDocsQuery;
+    
+    const totalDocuments = allAccessibleDocs.length;
+    const storageUsed = allAccessibleDocs.reduce((sum, doc) => sum + (Number(doc.fileSize) || 0), 0);
 
     const [processedToday] = await db
       .select({ count: count(documents.id) })
