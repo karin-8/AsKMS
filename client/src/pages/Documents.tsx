@@ -372,7 +372,7 @@ export default function Documents() {
                     : "space-y-2"
                 }>
                   {filteredDocuments.map((doc: any) => (
-                    <DocumentCard key={doc.id} document={doc} viewMode={viewMode} />
+                    <DocumentCard key={doc.id} document={doc} viewMode={viewMode} categories={categories} />
                   ))}
                 </div>
               ) : (

@@ -260,11 +260,25 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
             (() => {
               const category = categories.find(c => c.id === doc.categoryId);
               return category ? (
-                <Badge variant="outline" className="text-xs">
+                <Badge 
+                  variant="outline" 
+                  className="text-xs"
+                  style={{ 
+                    backgroundColor: category.color ? `${category.color}15` : undefined,
+                    borderColor: category.color || undefined,
+                    color: category.color || undefined
+                  }}
+                >
                   {category.name}
                 </Badge>
               ) : null;
             })()
+          )}
+          
+          {doc.categoryName && !doc.categoryId && (
+            <Badge variant="outline" className="text-xs">
+              {doc.categoryName}
+            </Badge>
           )}
 
           {doc.tags && doc.tags.length > 0 && (
