@@ -90,9 +90,10 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
     return 'bg-gray-100 text-gray-600';
   };
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes: number | null | undefined) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    if (isNaN(bytes)) return 'Unknown size';
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };

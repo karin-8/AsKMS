@@ -1,0 +1,12 @@
+This is a test document to verify auto-vectorization functionality.
+
+This document contains information about PVD (Provident Fund) benefits and employee retirement planning.
+
+Key topics covered:
+- PVD contribution rates
+- Investment options 
+- Withdrawal procedures
+- Tax implications
+- Leave request procedures
+
+The document should be automatically processed and added to the vector database for semantic search testing.

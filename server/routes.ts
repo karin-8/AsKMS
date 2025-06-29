@@ -1035,6 +1035,26 @@ ${document.summary}`;
           const document = await storage.createDocument(documentData);
           uploadedDocuments.push(document);
           
+          // Auto-vectorize the document if it has content
+          if (content && content.trim().length > 0) {
+            try {
+              await vectorService.addDocument(
+                document.id.toString(),
+                content,
+                {
+                  userId,
+                  documentName: document.name,
+                  mimeType: document.mimeType,
+                  tags: document.tags || [],
+                  originalDocumentId: document.id.toString()
+                }
+              );
+              console.log(`Document ${document.id} auto-vectorized successfully`);
+            } catch (vectorError) {
+              console.error(`Failed to auto-vectorize document ${document.id}:`, vectorError);
+            }
+          }
+          
           console.log(`Document processed: ${correctedFileName} -> Category: ${category}, Tags: ${tags?.join(', ')}`);
         } catch (error) {
           // Fix Thai filename encoding for error fallback too
@@ -1170,12 +1190,11 @@ ${document.summary}`;
             documentName: document.name,
             mimeType: document.mimeType,
             tags: document.tags || [],
+            originalDocumentId: id.toString()
           }
         );
         
-        // Update document to mark as in vector DB
-        await storage.updateDocument(id, { isInVectorDb: true }, userId);
-        
+        console.log(`Document ${id} manually vectorized successfully`);
         res.json({ success: true, message: "Document added to vector database" });
       } else {
         res.status(400).json({ message: "Document has no extractable content for vectorization" });
@@ -1183,6 +1202,54 @@ ${document.summary}`;
     } catch (error) {
       console.error("Error adding document to vector database:", error);
       res.status(500).json({ message: "Failed to add document to vector database" });
+    }
+  });
+
+  app.post('/api/documents/vectorize-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documents = await storage.getDocuments(userId);
+      
+      let vectorizedCount = 0;
+      let skippedCount = 0;
+      
+      console.log(`Starting to vectorize ${documents.length} documents for user ${userId}`);
+      
+      for (const doc of documents) {
+        if (doc.content && doc.content.trim().length > 0) {
+          try {
+            await vectorService.addDocument(
+              doc.id.toString(),
+              doc.content,
+              {
+                userId,
+                documentName: doc.name,
+                mimeType: doc.mimeType,
+                tags: doc.tags || [],
+                originalDocumentId: doc.id.toString()
+              }
+            );
+            vectorizedCount++;
+            console.log(`Vectorized document ${doc.id}: ${doc.name}`);
+          } catch (error) {
+            console.error(`Failed to vectorize document ${doc.id}:`, error);
+            skippedCount++;
+          }
+        } else {
+          skippedCount++;
+        }
+      }
+      
+      console.log(`Vectorization complete: ${vectorizedCount} vectorized, ${skippedCount} skipped`);
+      res.json({ 
+        success: true, 
+        message: `Vectorized ${vectorizedCount} documents, skipped ${skippedCount}`,
+        vectorizedCount,
+        skippedCount
+      });
+    } catch (error) {
+      console.error("Error vectorizing all documents:", error);
+      res.status(500).json({ message: "Failed to vectorize documents" });
     }
   });
 
