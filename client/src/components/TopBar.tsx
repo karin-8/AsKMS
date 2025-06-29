@@ -98,9 +98,16 @@ export default function TopBar() {
                   <p className="text-sm font-medium text-slate-800 truncate">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-slate-500 capitalize">
-                    {user?.role || "User"}
-                  </p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-xs text-slate-500 capitalize">
+                      {user?.role || "User"}
+                    </p>
+                    {(user as any)?.departmentId && (
+                      <Badge variant="outline" className="text-xs">
+                        Dept ID: {(user as any).departmentId}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </Button>

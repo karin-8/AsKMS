@@ -84,6 +84,8 @@ export default function UserManagement() {
   const [isCreateDepartmentOpen, setIsCreateDepartmentOpen] = useState(false);
   const [isAssignUserOpen, setIsAssignUserOpen] = useState(false);
   const [isCreatePermissionOpen, setIsCreatePermissionOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
 
   // State for forms
   const [newDepartment, setNewDepartment] = useState({ name: "", description: "" });
@@ -185,6 +187,40 @@ export default function UserManagement() {
     updateUserDepartmentMutation.mutate({ 
       userId: selectedUserId, 
       departmentId: parseInt(selectedDepartmentId) 
+    });
+  };
+
+  // Edit user mutation
+  const editUserMutation = useMutation({
+    mutationFn: (updatedUser: { firstName: string; lastName: string; departmentId?: number }) => 
+      apiRequest('PUT', `/api/users/${editingUser?.id}`, updatedUser),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      toast({ title: "User updated successfully" });
+    },
+    onError: (error: any) => {
+      console.error("Error updating user:", error);
+      toast({ 
+        title: "Failed to update user", 
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const handleEditUser = (user: UserData) => {
+    setEditingUser(user);
+    setIsEditUserOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
+    editUserMutation.mutate({
+      firstName: editingUser.firstName,
+      lastName: editingUser.lastName,
+      departmentId: editingUser.departmentId || undefined
     });
   };
 
@@ -456,7 +492,7 @@ export default function UserManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit User
                               </DropdownMenuItem>
@@ -585,6 +621,67 @@ export default function UserManagement() {
           </div>
         </main>
       </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <div className="space-y-4">
+              <div>
+                <Label>Email</Label>
+                <Input value={editingUser.email} disabled />
+              </div>
+              <div>
+                <Label>First Name</Label>
+                <Input 
+                  value={editingUser.firstName} 
+                  onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Last Name</Label>
+                <Input 
+                  value={editingUser.lastName} 
+                  onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Department</Label>
+                <Select 
+                  value={editingUser.departmentId?.toString() || ""} 
+                  onValueChange={(value) => setEditingUser({
+                    ...editingUser, 
+                    departmentId: value ? parseInt(value) : undefined
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Department</SelectItem>
+                    {(departments as Department[]).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateUser} disabled={editUserMutation.isPending}>
+                  {editUserMutation.isPending ? "Updating..." : "Update User"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
