@@ -126,7 +126,10 @@ export default function Documents() {
     const matchesTag = filterTags.length === 0 || 
                       (doc.tags && filterTags.some((tag: string) => doc.tags.includes(tag)));
     
-    return matchesCategory && matchesTag;
+    // Apply favorites filter
+    const matchesFavorites = !showFavoritesOnly || doc.isFavorite;
+    
+    return matchesCategory && matchesTag && matchesFavorites;
   }).sort((a: any, b: any) => {
     switch (sortBy) {
       case "newest":
@@ -275,6 +278,7 @@ export default function Documents() {
                       onClick={() => {
                         setFilterCategories([]);
                         setFilterTags([]);
+                        setShowFavoritesOnly(false);
                       }}
                       className="text-slate-500 hover:text-slate-700"
                     >
@@ -367,10 +371,10 @@ export default function Documents() {
                 <div className="text-center py-16 text-slate-500">
                   <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                   <h3 className="text-lg font-medium text-slate-800 mb-2">
-                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0 ? "No documents found" : "No documents yet"}
+                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0 || showFavoritesOnly ? "No documents found" : "No documents yet"}
                   </h3>
                   <p className="text-sm text-slate-500 mb-6">
-                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0
+                    {searchQuery || filterCategories.length > 0 || filterTags.length > 0 || showFavoritesOnly
                       ? "Try adjusting your search or filter criteria"
                       : "Upload your first document to get started with AI-powered knowledge management"
                     }
