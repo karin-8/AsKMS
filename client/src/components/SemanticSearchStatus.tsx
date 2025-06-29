@@ -58,10 +58,10 @@ export default function SemanticSearchStatus() {
   }
 
   const documentsArray = Array.isArray(documents) ? documents : [];
-  const vectorizedDocs = Array.isArray(vectorStats.vectorized) ? vectorStats.vectorized : [];
+  const vectorizedDocs = Array.isArray((vectorStats as any)?.vectorized) ? (vectorStats as any).vectorized : [];
   const totalDocuments = documentsArray.length;
-  const totalChunks = vectorStats.userDocuments || 0;
-  const uniqueDocuments = vectorStats.uniqueDocuments || 0;
+  const totalChunks = (vectorStats as any)?.userDocuments || 0;
+  const uniqueDocuments = (vectorStats as any)?.uniqueDocuments || 0;
   const embeddingProgress = totalDocuments > 0 ? (uniqueDocuments / totalDocuments) * 100 : 0;
 
   const getStatusColor = () => {
@@ -155,7 +155,7 @@ export default function SemanticSearchStatus() {
                 {embeddingProgress === 100 
                   ? "All documents are indexed for semantic search. You can now search by meaning and context." 
                   : embeddingProgress > 0
-                  ? `${documentsWithEmbeddings} of ${totalDocuments} documents are indexed. Reindex to enable semantic search for all documents.`
+                  ? `${uniqueDocuments} of ${totalDocuments} documents are indexed. Reindex to enable semantic search for all documents.`
                   : "No documents are indexed yet. Click 'Reindex All' to enable AI-powered semantic search."
                 }
               </p>
