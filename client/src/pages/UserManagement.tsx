@@ -115,11 +115,8 @@ export default function UserManagement() {
 
   // Mutations
   const createDepartmentMutation = useMutation({
-    mutationFn: (departmentData: { name: string; description: string }) => apiRequest('/api/admin/departments', {
-      method: 'POST',
-      body: JSON.stringify(departmentData),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: (departmentData: { name: string; description: string }) => 
+      apiRequest('POST', '/api/admin/departments', departmentData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/departments'] });
       setIsCreateDepartmentOpen(false);
@@ -157,11 +154,7 @@ export default function UserManagement() {
         ? { userId: targetId, documentId, permission }
         : { departmentId: parseInt(targetId), documentId, permission };
       
-      return apiRequest('/api/admin/permissions', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return apiRequest('POST', '/api/admin/permissions', payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/permissions'] });

@@ -102,9 +102,9 @@ export default function TopBar() {
                     <p className="text-xs text-slate-500 capitalize">
                       {user?.role || "User"}
                     </p>
-                    {(user as any)?.departmentId && (
+                    {(user as any)?.departmentName && (
                       <Badge variant="outline" className="text-xs">
-                        Dept ID: {(user as any).departmentId}
+                        {(user as any).departmentName}
                       </Badge>
                     )}
                   </div>

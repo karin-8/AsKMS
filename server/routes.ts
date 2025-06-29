@@ -161,11 +161,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const { users, departments } = await import('@shared/schema');
+      
+      // Fetch user with department information
+      const [userWithDept] = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+        departmentId: users.departmentId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        departmentName: departments.name
+      })
+      .from(users)
+      .leftJoin(departments, eq(users.departmentId, departments.id))
+      .where(eq(users.id, userId));
+      
+      if (!userWithDept) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(userWithDept);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user profile
+  app.put('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { firstName, lastName, departmentId } = req.body;
+      const { users } = await import('@shared/schema');
+      
+      const [updatedUser] = await db.update(users)
+        .set({ 
+          firstName, 
+          lastName, 
+          departmentId: departmentId || null,
+          updatedAt: new Date() 
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 
