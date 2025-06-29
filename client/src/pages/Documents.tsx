@@ -112,6 +112,12 @@ export default function Documents() {
   const aiCategories = documents ? Array.from(new Set(documents.map((doc: any) => doc.aiCategory).filter(Boolean))) : [];
   const allTags = documents ? Array.from(new Set(documents.flatMap((doc: any) => doc.tags || []))) : [];
 
+  // Debug log for first few documents
+  if (documents && documents.length > 0) {
+    console.log("First document data:", documents[0]);
+    console.log("Document isFavorite values:", documents.map((d: any) => ({ id: d.id, name: d.name, isFavorite: d.isFavorite })).slice(0, 3));
+  }
+
   // Filter and sort documents with multi-select support
   const filteredDocuments = documents ? documents.filter((doc: any) => {
     // Apply category filters
@@ -195,12 +201,12 @@ export default function Documents() {
                 
                 {/* Filters Row */}
                 <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="border-dashed">
-                          Categories ({filterCategories.length})
-                          <ChevronDown className="w-4 h-4 ml-1" />
+                        <Button variant="outline" size="sm" className="border-dashed min-w-[120px] justify-between">
+                          <span>Categories ({filterCategories.length})</span>
+                          <ChevronDown className="w-4 h-4" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-56 p-0">
@@ -233,9 +239,9 @@ export default function Documents() {
                     
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="border-dashed">
-                          Tags ({filterTags.length})
-                          <ChevronDown className="w-4 h-4 ml-1" />
+                        <Button variant="outline" size="sm" className="border-dashed min-w-[100px] justify-between">
+                          <span>Tags ({filterTags.length})</span>
+                          <ChevronDown className="w-4 h-4" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-56 p-0">

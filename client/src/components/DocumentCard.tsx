@@ -365,7 +365,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   // Grid view layout
   return (
     <>
-      <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group">
+      <Card className="border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer group relative">
+        {/* Favorite Star Badge */}
+        {isFavorite && (
+          <div className="absolute top-2 right-2 z-10">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
+          </div>
+        )}
+        
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconColorClass)}>
