@@ -25,7 +25,8 @@ import {
   Calendar,
   Upload,
   Tag,
-  ChevronDown
+  ChevronDown,
+  Star
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -39,6 +40,7 @@ export default function Documents() {
   const [sortBy, setSortBy] = useState("newest");
   const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -255,8 +257,18 @@ export default function Documents() {
                       </Command>
                     </PopoverContent>
                   </Popover>
+
+                  <Button
+                    variant={showFavoritesOnly ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={showFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}
+                  >
+                    <Star className="w-4 h-4 mr-1" />
+                    Favorites
+                  </Button>
                   
-                  {(filterCategories.length > 0 || filterTags.length > 0) && (
+                  {(filterCategories.length > 0 || filterTags.length > 0 || showFavoritesOnly) && (
                     <Button 
                       variant="ghost" 
                       size="sm"

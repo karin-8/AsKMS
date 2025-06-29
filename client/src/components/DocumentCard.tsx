@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
@@ -44,6 +44,7 @@ interface DocumentCardProps {
     aiCategory?: string;
     aiCategoryColor?: string;
     isInVectorDb?: boolean;
+    isFavorite?: boolean;
     tags?: string[];
     summary?: string;
   };
@@ -56,8 +57,13 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const { toast } = useToast();
   const [showSummary, setShowSummary] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(doc.isFavorite || false);
   const [showChatWithDocument, setShowChatWithDocument] = useState(false);
+
+  // Update favorite state when document prop changes
+  useEffect(() => {
+    setIsFavorite(doc.isFavorite || false);
+  }, [doc.isFavorite]);
 
   // Fetch document details when needed
   const { data: documentDetails, isLoading: detailsLoading } = useQuery({
