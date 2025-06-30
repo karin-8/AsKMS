@@ -103,13 +103,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/audit/logs', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { limit, offset, action, resourceType, dateFrom, dateTo } = req.query;
+      
+      // Check if user is admin - only admins can view audit logs
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { limit, offset, action, resourceType, filterUserId, dateFrom, dateTo } = req.query;
       
       const options: any = {};
       if (limit) options.limit = parseInt(limit);
       if (offset) options.offset = parseInt(offset);
-      if (action) options.action = action;
-      if (resourceType) options.resourceType = resourceType;
+      if (action && action !== 'all') options.action = action;
+      if (resourceType && resourceType !== 'all') options.resourceType = resourceType;
+      if (filterUserId && filterUserId !== 'all') options.userId = filterUserId;
       if (dateFrom) options.dateFrom = new Date(dateFrom);
       if (dateTo) options.dateTo = new Date(dateTo);
       
@@ -124,11 +132,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/audit/stats', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Check if user is admin - only admins can view audit stats
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
       const stats = await storage.getAuditStats(userId);
       res.json(stats);
     } catch (error) {
       console.error('Error fetching audit stats:', error);
       res.status(500).json({ message: 'Failed to fetch audit stats' });
+    }
+  });
+
+  // Export audit logs as CSV
+  app.get('/api/audit/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin - only admins can export audit logs
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { action, resourceType, filterUserId, dateFrom, dateTo } = req.query;
+      
+      const options: any = {
+        limit: 10000, // Export up to 10,000 records
+        offset: 0
+      };
+      if (action && action !== 'all') options.action = action;
+      if (resourceType && resourceType !== 'all') options.resourceType = resourceType;
+      if (filterUserId && filterUserId !== 'all') options.userId = filterUserId;
+      if (dateFrom) options.dateFrom = new Date(dateFrom);
+      if (dateTo) options.dateTo = new Date(dateTo);
+
+      const auditLogs = await storage.getAuditLogs(userId, options);
+      
+      // Create CSV content
+      const csvHeader = 'ID,User Email,Action,Resource Type,Resource ID,Success,IP Address,User Agent,Created At,Details\n';
+      const csvRows = auditLogs.map((log: any) => {
+        const userEmail = log.userEmail || 'Unknown';
+        const details = log.details ? JSON.stringify(log.details).replace(/"/g, '""') : '';
+        const createdAt = new Date(log.createdAt).toISOString();
+        
+        return `${log.id},"${userEmail}","${log.action}","${log.resourceType}","${log.resourceId || ''}",${log.success},"${log.ipAddress}","${log.userAgent}","${createdAt}","${details}"`;
+      }).join('\n');
+      
+      const csvContent = csvHeader + csvRows;
+      
+      // Set headers for file download
+      const filename = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+      
+    } catch (error) {
+      console.error("Error exporting audit logs:", error);
+      res.status(500).json({ message: "Failed to export audit logs" });
+    }
+  });
+
+  // Get filter options for audit logs
+  app.get('/api/audit/filters', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin - only admins can access audit filters
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get distinct values from audit logs
+      const { auditLogs, users } = await import('@shared/schema');
+      
+      const actions = await db.selectDistinct({ action: auditLogs.action })
+        .from(auditLogs)
+        .orderBy(auditLogs.action);
+        
+      const resourceTypes = await db.selectDistinct({ resourceType: auditLogs.resourceType })
+        .from(auditLogs)
+        .orderBy(auditLogs.resourceType);
+        
+      const usersList = await db.select({
+        id: users.id,
+        email: users.email
+      })
+      .from(users)
+      .orderBy(users.email);
+
+      res.json({
+        actions: actions.map(a => a.action),
+        resourceTypes: resourceTypes.map(r => r.resourceType),
+        users: usersList
+      });
+    } catch (error) {
+      console.error("Error fetching audit filters:", error);
+      res.status(500).json({ message: "Failed to fetch audit filters" });
     }
   });
 

@@ -785,17 +785,21 @@ export class DatabaseStorage implements IStorage {
     offset?: number; 
     action?: string; 
     resourceType?: string;
+    userId?: string;
     dateFrom?: Date;
     dateTo?: Date;
   } = {}): Promise<AuditLog[]> {
-    const { limit = 100, offset = 0, action, resourceType, dateFrom, dateTo } = options;
+    const { limit = 100, offset = 0, action, resourceType, userId: filterUserId, dateFrom, dateTo } = options;
     
     let conditions: any[] = [];
     
-    // For admin users, show all audit logs, otherwise show only user's logs
+    // For admin users, show all audit logs unless filtering by specific user
     const currentUser = await this.getUser(userId);
     if (!currentUser?.email?.includes('admin')) {
       conditions.push(eq(auditLogs.userId, userId));
+    } else if (filterUserId) {
+      // Admin can filter by specific user
+      conditions.push(eq(auditLogs.userId, filterUserId));
     }
     
     if (action) {
