@@ -50,6 +50,9 @@ export default function UserFeedback() {
   const [filterPeriod, setFilterPeriod] = useState("30");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [documentNameFilter, setDocumentNameFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
 
   // Redirect to login if not authenticated
   useEffect(() => {

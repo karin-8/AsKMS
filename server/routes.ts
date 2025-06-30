@@ -2233,6 +2233,18 @@ ${document.summary}`;
     }
   });
 
+  app.get("/api/documents/:id/feedback", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documentId = parseInt(req.params.id);
+      const feedbackData = await storage.getDocumentFeedback(documentId, userId);
+      res.json(feedbackData);
+    } catch (error) {
+      console.error("Error fetching document feedback:", error);
+      res.status(500).json({ message: "Failed to fetch document feedback" });
+    }
+  });
+
   // Agent Chatbot API routes
   app.get("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
     try {

@@ -98,6 +98,7 @@ export interface IStorage {
     recentFeedback: AiAssistantFeedback[];
   }>;
   exportAiFeedbackData(userId: string): Promise<AiAssistantFeedback[]>;
+  getDocumentFeedback(documentId: number, userId: string): Promise<AiAssistantFeedback[]>;
   
   // Data connection operations
   getDataConnections(userId: string): Promise<DataConnection[]>;
@@ -698,11 +699,75 @@ export class DatabaseStorage implements IStorage {
   }
 
   async exportAiFeedbackData(userId: string): Promise<AiAssistantFeedback[]> {
-    return await db
-      .select()
+    const result = await db
+      .select({
+        id: aiAssistantFeedback.id,
+        chatMessageId: aiAssistantFeedback.chatMessageId,
+        userId: aiAssistantFeedback.userId,
+        feedbackType: aiAssistantFeedback.feedbackType,
+        userNote: aiAssistantFeedback.userNote,
+        userQuery: aiAssistantFeedback.userQuery,
+        assistantResponse: aiAssistantFeedback.assistantResponse,
+        createdAt: aiAssistantFeedback.createdAt,
+        documentContext: aiAssistantFeedback.documentContext,
+      })
       .from(aiAssistantFeedback)
       .where(eq(aiAssistantFeedback.userId, userId))
       .orderBy(desc(aiAssistantFeedback.createdAt));
+    
+    // Get document info from documentContext if available
+    const enrichedResults = await Promise.all(result.map(async (feedback: any) => {
+      if (feedback.documentContext && Array.isArray(feedback.documentContext)) {
+        try {
+          const documentIds = feedback.documentContext;
+          if (documentIds.length > 0) {
+            const docs = await db
+              .select({
+                id: documents.id,
+                name: documents.name,
+                aiCategory: documents.aiCategory,
+                tags: documents.tags,
+              })
+              .from(documents)
+              .where(sql`${documents.id} = ANY(${documentIds})`);
+            
+            return {
+              ...feedback,
+              documentName: docs[0]?.name || 'Unknown Document',
+              documentId: docs[0]?.id || null,
+              aiCategory: docs[0]?.aiCategory || null,
+              tags: docs[0]?.tags || null,
+            };
+          }
+        } catch (e) {
+          console.error('Error enriching feedback with document data:', e);
+        }
+      }
+      
+      return {
+        ...feedback,
+        documentName: null,
+        documentId: null,
+        aiCategory: null,
+        tags: null,
+      };
+    }));
+    
+    return enrichedResults as any[];
+  }
+
+  // Get feedback for specific document
+  async getDocumentFeedback(documentId: number, userId: string): Promise<AiAssistantFeedback[]> {
+    const result = await db
+      .select()
+      .from(aiAssistantFeedback)
+      .where(and(
+        eq(aiAssistantFeedback.userId, userId),
+        sql`${aiAssistantFeedback.documentContext} ? ${documentId.toString()}`
+      ))
+      .orderBy(desc(aiAssistantFeedback.createdAt));
+    
+    return result as any[];
   }
 
   // Data connection operations
