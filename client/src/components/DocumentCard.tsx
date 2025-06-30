@@ -333,6 +333,10 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Chat with Document
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = `/user-feedback?documentId=${doc.id}`}>
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                View Feedback
+              </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => toggleFavoriteMutation.mutate()}
                 disabled={toggleFavoriteMutation.isPending}

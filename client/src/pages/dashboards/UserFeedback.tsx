@@ -135,9 +135,10 @@ export default function UserFeedback() {
   const filteredFeedback = (Array.isArray(allFeedback) ? allFeedback : []).filter((feedback: any) => {
     const matchesType = filterType === "all" || feedback.feedbackType === filterType;
     const matchesSearch = searchQuery === "" || 
-      feedback.userQuery.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      feedback.assistantResponse.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (feedback.userNote && feedback.userNote.toLowerCase().includes(searchQuery.toLowerCase()));
+      feedback.userQuery?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      feedback.assistantResponse?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (feedback.userNote && feedback.userNote.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (feedback.documentName && feedback.documentName.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const feedbackDate = new Date(feedback.createdAt);
     const daysAgo = parseInt(filterPeriod);
@@ -145,7 +146,20 @@ export default function UserFeedback() {
     cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
     const matchesPeriod = feedbackDate >= cutoffDate;
     
-    return matchesType && matchesSearch && matchesPeriod;
+    // Filter by document name
+    const matchesDocumentName = documentNameFilter === "" || 
+      (feedback.documentName && feedback.documentName.toLowerCase().includes(documentNameFilter.toLowerCase()));
+    
+    // Filter by AI category
+    const matchesCategory = categoryFilter === "" || 
+      (feedback.aiCategory && feedback.aiCategory.toLowerCase().includes(categoryFilter.toLowerCase()));
+    
+    // Filter by tags
+    const matchesTags = tagFilter === "" || 
+      (feedback.tags && Array.isArray(feedback.tags) && 
+       feedback.tags.some((tag: string) => tag.toLowerCase().includes(tagFilter.toLowerCase())));
+    
+    return matchesType && matchesSearch && matchesPeriod && matchesDocumentName && matchesCategory && matchesTags;
   });
 
   // Generate trend data for the last 7 days
@@ -375,7 +389,7 @@ export default function UserFeedback() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <Input
               placeholder="Search feedback..."
               value={searchQuery}
@@ -410,6 +424,30 @@ export default function UserFeedback() {
               <Search className="w-4 h-4 mr-2" />
               Search
             </Button>
+          </div>
+          
+          {/* Additional Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              placeholder="Filter by document name..."
+              value={documentNameFilter}
+              onChange={(e) => setDocumentNameFilter(e.target.value)}
+              className="w-full"
+            />
+            
+            <Input
+              placeholder="Filter by AI category..."
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full"
+            />
+            
+            <Input
+              placeholder="Filter by tags..."
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              className="w-full"
+            />
           </div>
         </CardContent>
       </Card>
@@ -460,6 +498,12 @@ export default function UserFeedback() {
                         <span className="text-xs text-slate-500">
                           {format(new Date(feedback.createdAt), 'MMM dd, yyyy HH:mm')}
                         </span>
+                        {feedback.documentName && (
+                          <Badge variant="outline" className="text-xs">
+                            <FileText className="w-3 h-3 mr-1" />
+                            {feedback.documentName}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="space-y-2">
