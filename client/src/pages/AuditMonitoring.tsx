@@ -25,7 +25,9 @@ import {
   Database,
   FileText,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -40,6 +42,7 @@ export default function AuditMonitoring() {
   const [dateTo, setDateTo] = useState<Date>();
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -81,6 +84,27 @@ export default function AuditMonitoring() {
       title: "Export Started",
       description: "Audit logs export will be downloaded shortly...",
     });
+  };
+
+  const toggleRowExpansion = (logId: number) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(logId)) {
+      newExpandedRows.delete(logId);
+    } else {
+      newExpandedRows.add(logId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const formatDetailsForDisplay = (log: any) => {
+    const details = {
+      ...(log.details || {}),
+      ...(log.errorMessage && { errorMessage: log.errorMessage }),
+      ...(log.userAgent && { userAgent: log.userAgent }),
+      ...(log.sessionId && { sessionId: log.sessionId }),
+    };
+    
+    return Object.keys(details).length > 0 ? JSON.stringify(details, null, 2) : 'N/A';
   };
 
   const getActionIcon = (action: string) => {
@@ -348,53 +372,82 @@ export default function AuditMonitoring() {
                     </thead>
                     <tbody>
                       {auditLogs.map((log: any) => (
-                        <tr key={log.id} className="border-b hover:bg-slate-50">
-                          <td className="p-2">
-                            {log.timestamp ? format(new Date(log.timestamp), "PPp") : 'N/A'}
-                          </td>
-                          <td className="p-2">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-slate-900">
-                                {log.userFirstName && log.userLastName 
-                                  ? `${log.userFirstName} ${log.userLastName}`
-                                  : log.userEmail || 'Unknown User'
-                                }
-                              </span>
-                              {log.userEmail && (log.userFirstName || log.userLastName) && (
-                                <span className="text-xs text-slate-500">{log.userEmail}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            <div className="flex items-center">
-                              {getActionIcon(log.action)}
-                              <span className="ml-2 capitalize">
-                                {log.action?.replace('_', ' ') || 'Unknown'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            <Badge variant="outline">
-                              {log.resourceType || 'N/A'}
-                            </Badge>
-                          </td>
-                          <td className="p-2">
-                            {getStatusBadge(log.success)}
-                          </td>
-                          <td className="p-2">
-                            {log.duration ? `${log.duration}ms` : 'N/A'}
-                          </td>
-                          <td className="p-2 text-xs text-slate-500">
-                            {log.ipAddress || 'N/A'}
-                          </td>
-                          <td className="p-2 text-xs text-slate-500 max-w-xs truncate">
-                            {log.errorMessage || 
-                             (log.details && typeof log.details === 'object' 
-                               ? JSON.stringify(log.details).substring(0, 50) + '...'
-                               : 'N/A'
-                             )}
-                          </td>
-                        </tr>
+                        <>
+                          <tr key={log.id} className="border-b hover:bg-slate-50">
+                            <td className="p-2">
+                              {log.timestamp ? format(new Date(log.timestamp), "PPp") : 'N/A'}
+                            </td>
+                            <td className="p-2">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-slate-900">
+                                  {log.userFirstName && log.userLastName 
+                                    ? `${log.userFirstName} ${log.userLastName}`
+                                    : log.userEmail || 'Unknown User'
+                                  }
+                                </span>
+                                {log.userEmail && (log.userFirstName || log.userLastName) && (
+                                  <span className="text-xs text-slate-500">{log.userEmail}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex items-center">
+                                {getActionIcon(log.action)}
+                                <span className="ml-2 capitalize">
+                                  {log.action?.replace('_', ' ') || 'Unknown'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              <Badge variant="outline">
+                                {log.resourceType || 'N/A'}
+                              </Badge>
+                            </td>
+                            <td className="p-2">
+                              {getStatusBadge(log.success)}
+                            </td>
+                            <td className="p-2">
+                              {log.duration ? `${log.duration}ms` : 'N/A'}
+                            </td>
+                            <td className="p-2 text-xs text-slate-500">
+                              {log.ipAddress || 'N/A'}
+                            </td>
+                            <td className="p-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-500 max-w-xs truncate">
+                                  {log.errorMessage || 
+                                   (log.details && typeof log.details === 'object' 
+                                     ? JSON.stringify(log.details).substring(0, 50) + '...'
+                                     : 'N/A'
+                                   )}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleRowExpansion(log.id)}
+                                  className="ml-2 p-1 h-6 w-6"
+                                >
+                                  {expandedRows.has(log.id) ? 
+                                    <ChevronDown className="w-4 h-4" /> : 
+                                    <ChevronRight className="w-4 h-4" />
+                                  }
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expandedRows.has(log.id) && (
+                            <tr key={`${log.id}-details`} className="bg-slate-50">
+                              <td colSpan={8} className="p-4">
+                                <div className="bg-white rounded border p-3">
+                                  <h4 className="text-sm font-medium text-slate-800 mb-2">Full Details</h4>
+                                  <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-slate-100 p-2 rounded overflow-x-auto">
+                                    {formatDetailsForDisplay(log)}
+                                  </pre>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>

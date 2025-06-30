@@ -1,22 +1,24 @@
-(function() {
-  'use strict';
+(function () {
+  "use strict";
 
   // Extract widget key from script URL
-  const scriptTag = document.currentScript || (function() {
-    const scripts = document.getElementsByTagName('script');
-    return scripts[scripts.length - 1];
-  })();
-  
+  const scriptTag =
+    document.currentScript ||
+    (function () {
+      const scripts = document.getElementsByTagName("script");
+      return scripts[scripts.length - 1];
+    })();
+
   const scriptSrc = scriptTag.src;
   const widgetKeyMatch = scriptSrc.match(/\/widget\/([^\/]+)\/embed\.js/);
-  
+
   if (!widgetKeyMatch) {
-    console.error('AI-KMS Widget: Invalid embed script URL');
+    console.error("AI-KMS Widget: Invalid embed script URL");
     return;
   }
-  
+
   const widgetKey = widgetKeyMatch[1];
-  const baseUrl = scriptSrc.replace(/\/widget\/.*$/, '');
+  const baseUrl = scriptSrc.replace(/\/widget\/.*$/, "");
 
   let isWidgetOpen = false;
   let sessionId = null;
@@ -24,13 +26,17 @@
 
   // Generate unique visitor ID
   function generateVisitorId() {
-    return 'visitor_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    return (
+      "visitor_" +
+      Math.random().toString(36).substr(2, 9) +
+      Date.now().toString(36)
+    );
   }
 
   // Create widget HTML
   function createWidget() {
-    const widgetContainer = document.createElement('div');
-    widgetContainer.id = 'ai-kms-widget-container';
+    const widgetContainer = document.createElement("div");
+    widgetContainer.id = "ai-kms-widget-container";
     widgetContainer.style.cssText = `
       position: fixed;
       bottom: 20px;
@@ -40,8 +46,8 @@
     `;
 
     // Chat button
-    const chatButton = document.createElement('div');
-    chatButton.id = 'ai-kms-chat-button';
+    const chatButton = document.createElement("div");
+    chatButton.id = "ai-kms-chat-button";
     chatButton.style.cssText = `
       width: 60px;
       height: 60px;
@@ -54,7 +60,7 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       transition: all 0.3s ease;
     `;
-    
+
     chatButton.innerHTML = `
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -62,8 +68,8 @@
     `;
 
     // Chat window
-    const chatWindow = document.createElement('div');
-    chatWindow.id = 'ai-kms-chat-window';
+    const chatWindow = document.createElement("div");
+    chatWindow.id = "ai-kms-chat-window";
     chatWindow.style.cssText = `
       position: absolute;
       bottom: 70px;
@@ -79,7 +85,7 @@
     `;
 
     // Chat header
-    const chatHeader = document.createElement('div');
+    const chatHeader = document.createElement("div");
     chatHeader.style.cssText = `
       background: #2563eb;
       color: white;
@@ -98,8 +104,8 @@
     `;
 
     // Chat messages
-    const chatMessages = document.createElement('div');
-    chatMessages.id = 'ai-kms-chat-messages';
+    const chatMessages = document.createElement("div");
+    chatMessages.id = "ai-kms-chat-messages";
     chatMessages.style.cssText = `
       flex: 1;
       padding: 16px;
@@ -108,13 +114,13 @@
     `;
 
     // Chat input
-    const chatInput = document.createElement('div');
+    const chatInput = document.createElement("div");
     chatInput.style.cssText = `
       padding: 16px;
       border-top: 1px solid #e5e7eb;
       background: white;
     `;
-    
+
     chatInput.innerHTML = `
       <div style="display: flex; gap: 8px;">
         <input 
@@ -136,54 +142,62 @@
     chatWindow.appendChild(chatHeader);
     chatWindow.appendChild(chatMessages);
     chatWindow.appendChild(chatInput);
-    
+
     widgetContainer.appendChild(chatButton);
     widgetContainer.appendChild(chatWindow);
-    
+
     document.body.appendChild(widgetContainer);
 
     // Event listeners
-    chatButton.addEventListener('click', toggleChat);
-    document.getElementById('ai-kms-close-btn').addEventListener('click', toggleChat);
-    document.getElementById('ai-kms-send-btn').addEventListener('click', sendMessage);
-    
-    const messageInput = document.getElementById('ai-kms-message-input');
-    messageInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
+    chatButton.addEventListener("click", toggleChat);
+    document
+      .getElementById("ai-kms-close-btn")
+      .addEventListener("click", toggleChat);
+    document
+      .getElementById("ai-kms-send-btn")
+      .addEventListener("click", sendMessage);
+
+    const messageInput = document.getElementById("ai-kms-message-input");
+    messageInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
         sendMessage();
       }
     });
 
     // Add welcome message
-    addMessage('assistant', 'Hi! How can I help you today? You can also check employee status by providing a Thai Citizen ID (13 digits).');
+    addMessage(
+      "assistant",
+      "Hi! How can I help you today? You can also check employee status by providing a Thai Citizen ID (13 digits).",
+    );
   }
 
   function toggleChat() {
-    const chatWindow = document.getElementById('ai-kms-chat-window');
+    const chatWindow = document.getElementById("ai-kms-chat-window");
     isWidgetOpen = !isWidgetOpen;
-    chatWindow.style.display = isWidgetOpen ? 'flex' : 'none';
+    chatWindow.style.display = isWidgetOpen ? "flex" : "none";
   }
 
   function addMessage(role, content, isTyping = false) {
-    const messagesContainer = document.getElementById('ai-kms-chat-messages');
-    const messageDiv = document.createElement('div');
-    
+    const messagesContainer = document.getElementById("ai-kms-chat-messages");
+    const messageDiv = document.createElement("div");
+
     messageDiv.style.cssText = `
       margin-bottom: 12px;
       display: flex;
-      ${role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
+      ${role === "user" ? "justify-content: flex-end;" : "justify-content: flex-start;"}
     `;
 
-    const messageBubble = document.createElement('div');
+    const messageBubble = document.createElement("div");
     messageBubble.style.cssText = `
       max-width: 80%;
       padding: 8px 12px;
       border-radius: 12px;
       font-size: 14px;
       line-height: 1.4;
-      ${role === 'user' 
-        ? 'background: #2563eb; color: white; margin-left: auto;' 
-        : 'background: white; color: #374151; border: 1px solid #e5e7eb;'
+      ${
+        role === "user"
+          ? "background: #2563eb; color: white; margin-left: auto;"
+          : "background: white; color: #374151; border: 1px solid #e5e7eb;"
       }
     `;
 
@@ -207,23 +221,23 @@
   }
 
   async function sendMessage() {
-    const messageInput = document.getElementById('ai-kms-message-input');
+    const messageInput = document.getElementById("ai-kms-message-input");
     const message = messageInput.value.trim();
-    
+
     if (!message) return;
 
     // Add user message
-    addMessage('user', message);
-    messageInput.value = '';
+    addMessage("user", message);
+    messageInput.value = "";
 
     // Show typing indicator
-    const typingDiv = addMessage('assistant', '', true);
+    const typingDiv = addMessage("assistant", "", true);
 
     try {
       const response = await fetch(`${baseUrl}/api/widget/${widgetKey}/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           sessionId: sessionId,
@@ -231,39 +245,66 @@
           visitorInfo: {
             name: null,
             email: null,
-            phone: null
-          }
-        })
+            phone: null,
+          },
+        }),
       });
 
       const data = await response.json();
-      
+
       // Remove typing indicator
       typingDiv.remove();
-      
+
       if (response.ok) {
         sessionId = data.sessionId;
-        addMessage('assistant', data.response);
-      } else {
-        addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
-      }
+        const messageType = data.messageType;
+        const reply = data.response?.trim();
 
+        if (messageType && data.metadata?.found === true) {
+          addMessage("assistant", reply);
+        } else if (messageType && data.metadata?.found === false) {
+          addMessage(
+            "assistant",
+            "Sorry, we couldn’t find any employee with that Citizen ID. Please double-check and try again.",
+          );
+        } else if (
+          messageType === "text" &&
+          reply ===
+            "Hi! How can I help you today? You can also check employee status by providing a Thai Citizen ID (13 digits)."
+        ) {
+          addMessage(
+            "assistant",
+            "Sorry, we couldn’t find any employee with that Citizen ID. Please double-check and try again.",
+          );
+        } else {
+          addMessage("assistant", reply || "Not Found");
+        }
+        // addMessage("assistant", data.response);
+      } else {
+        addMessage(
+          "assistant",
+          "Sorry, I encountered an error. Please try again.",
+        );
+      }
     } catch (error) {
       // Remove typing indicator
       typingDiv.remove();
-      addMessage('assistant', 'Sorry, I\'m having trouble connecting. Please try again later.');
+      addMessage(
+        "assistant",
+        "Sorry, I'm having trouble connecting. Please try again later.",
+      );
     }
   }
 
   // Initialize widget when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createWidget);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", createWidget);
   } else {
     createWidget();
   }
 
   // Add CSS animation keyframes
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     @keyframes pulse {
       0%, 80%, 100% { opacity: 0.4; }
@@ -271,5 +312,4 @@
     }
   `;
   document.head.appendChild(style);
-
 })();
