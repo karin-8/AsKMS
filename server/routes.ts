@@ -1397,10 +1397,14 @@ ${document.summary}`;
           userAgent: req.headers['user-agent'] || 'unknown',
           success: true,
           details: {
+            conversationId: conversationId,
+            userMessage: content,
+            assistantResponse: aiResponse,
             messageLength: content.length,
+            responseLength: aiResponse.length,
             hasDocumentContext: !!documentId,
             documentId: documentId || null,
-            responseLength: aiResponse.length
+            timestamp: new Date().toISOString()
           }
         });
       } catch (auditError) {

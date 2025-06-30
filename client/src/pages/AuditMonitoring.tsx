@@ -288,6 +288,7 @@ export default function AuditMonitoring() {
                     <SelectItem value="upload">Upload</SelectItem>
                     <SelectItem value="download">Download</SelectItem>
                     <SelectItem value="search">Search</SelectItem>
+                    <SelectItem value="chat">Chat</SelectItem>
                     <SelectItem value="translate">Translate</SelectItem>
                     <SelectItem value="delete">Delete</SelectItem>
                     <SelectItem value="api_call">API Call</SelectItem>
@@ -303,6 +304,7 @@ export default function AuditMonitoring() {
                     <SelectItem value="document">Document</SelectItem>
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="category">Category</SelectItem>
+                    <SelectItem value="ai_assistant">AI Assistant</SelectItem>
                     <SelectItem value="api">API</SelectItem>
                     <SelectItem value="system">System</SelectItem>
                   </SelectContent>
