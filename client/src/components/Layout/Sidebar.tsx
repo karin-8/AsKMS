@@ -271,6 +271,24 @@ export default function Sidebar({
                         Customer Survey
                       </Button>
                     </Link>
+
+                    <Link
+                      href="/dashboards/user-feedback"
+                      onClick={onMobileClose}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-sm",
+                          isActiveRoute("/dashboards/user-feedback")
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
+                        )}
+                      >
+                        User Feedback
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </div>
