@@ -38,11 +38,13 @@ export default function AuditMonitoring() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAction, setFilterAction] = useState<string>("all");
   const [filterResourceType, setFilterResourceType] = useState<string>("all");
+  const [filterUserId, setFilterUserId] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -66,9 +68,24 @@ export default function AuditMonitoring() {
     retry: false,
   });
 
+  // Fetch filter options
+  const { data: filterOptions } = useQuery({
+    queryKey: ['/api/audit/filters'],
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
   // Fetch audit logs
   const { data: auditLogs = [], isLoading: logsLoading, refetch } = useQuery({
-    queryKey: ['/api/audit/logs', { limit, offset, action: filterAction, resourceType: filterResourceType, dateFrom, dateTo }],
+    queryKey: ['/api/audit/logs', { 
+      limit, 
+      offset, 
+      action: filterAction !== 'all' ? filterAction : undefined, 
+      resourceType: filterResourceType !== 'all' ? filterResourceType : undefined,
+      filterUserId: filterUserId !== 'all' ? filterUserId : undefined,
+      dateFrom, 
+      dateTo 
+    }],
     enabled: isAuthenticated,
     retry: false,
   });
@@ -78,12 +95,48 @@ export default function AuditMonitoring() {
     refetch();
   };
 
-  const handleExport = () => {
-    // Export functionality - for now just show a toast
-    toast({
-      title: "Export Started",
-      description: "Audit logs export will be downloaded shortly...",
-    });
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (filterAction !== 'all') params.append('action', filterAction);
+      if (filterResourceType !== 'all') params.append('resourceType', filterResourceType);
+      if (filterUserId !== 'all') params.append('filterUserId', filterUserId);
+      if (dateFrom) params.append('dateFrom', dateFrom.toISOString());
+      if (dateTo) params.append('dateTo', dateTo.toISOString());
+
+      const response = await fetch(`/api/audit/export?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Export Complete",
+          description: "Audit logs have been downloaded successfully",
+        });
+      } else {
+        throw new Error('Export failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export audit logs. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const toggleRowExpansion = (logId: number) => {
@@ -283,15 +336,13 @@ export default function AuditMonitoring() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Actions</SelectItem>
-                    <SelectItem value="login">Login</SelectItem>
-                    <SelectItem value="logout">Logout</SelectItem>
-                    <SelectItem value="upload">Upload</SelectItem>
-                    <SelectItem value="download">Download</SelectItem>
-                    <SelectItem value="search">Search</SelectItem>
-                    <SelectItem value="chat">Chat</SelectItem>
-                    <SelectItem value="translate">Translate</SelectItem>
-                    <SelectItem value="delete">Delete</SelectItem>
-                    <SelectItem value="api_call">API Call</SelectItem>
+                    {filterOptions?.actions?.map((action: string) => (
+                      <SelectItem key={action} value={action}>
+                        {action.replace('_', ' ').split(' ').map((word: string) => 
+                          word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ')}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -301,12 +352,27 @@ export default function AuditMonitoring() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Resources</SelectItem>
-                    <SelectItem value="document">Document</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="category">Category</SelectItem>
-                    <SelectItem value="ai_assistant">AI Assistant</SelectItem>
-                    <SelectItem value="api">API</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
+                    {filterOptions?.resourceTypes?.map((resourceType: string) => (
+                      <SelectItem key={resourceType} value={resourceType}>
+                        {resourceType.replace('_', ' ').split(' ').map((word: string) => 
+                          word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(' ')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterUserId} onValueChange={setFilterUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    {filterOptions?.users?.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.email}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -332,9 +398,9 @@ export default function AuditMonitoring() {
                     <Search className="w-4 h-4 mr-2" />
                     Search
                   </Button>
-                  <Button variant="outline" onClick={handleExport}>
+                  <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                     <Download className="w-4 h-4 mr-2" />
-                    Export
+                    {isExporting ? "Exporting..." : "Export"}
                   </Button>
                 </div>
               </div>
