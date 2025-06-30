@@ -53,6 +53,10 @@ export default function UserFeedback() {
   const [documentNameFilter, setDocumentNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  
+  // Check for documentId query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const documentId = urlParams.get('documentId');
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -76,9 +80,9 @@ export default function UserFeedback() {
     retry: false,
   });
 
-  // Fetch all feedback data
+  // Fetch all feedback data or document-specific feedback
   const { data: allFeedback = [], isLoading: feedbackLoading } = useQuery({
-    queryKey: ['/api/ai-feedback/export'],
+    queryKey: documentId ? [`/api/documents/${documentId}/feedback`] : ['/api/ai-feedback/export'],
     enabled: isAuthenticated,
     retry: false,
   });
@@ -200,15 +204,31 @@ export default function UserFeedback() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">User Feedback Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {documentId ? `Document Feedback Analysis` : 'User Feedback Dashboard'}
+          </h1>
           <p className="text-slate-600 mt-1">
-            Analyze user feedback from Chat with Document interactions
+            {documentId 
+              ? `Analyze feedback for Document ID: ${documentId}` 
+              : 'Analyze user feedback from Chat with Document interactions'
+            }
           </p>
         </div>
-        <Button onClick={handleExport} variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Export Data
-        </Button>
+        <div className="flex items-center space-x-2">
+          {documentId && (
+            <Button 
+              onClick={() => window.location.href = '/user-feedback'} 
+              variant="outline"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View All Feedback
+            </Button>
+          )}
+          <Button onClick={handleExport} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export Data
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}

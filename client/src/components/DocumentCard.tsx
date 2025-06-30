@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
   Eye, Trash2, MoreHorizontal, Calendar, HardDrive, Hash, Star, StarOff,
-  BookOpen, Database, Plus, MessageSquare
+  BookOpen, Database, Plus, MessageSquare, ThumbsUp
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
