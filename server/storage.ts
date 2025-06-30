@@ -41,7 +41,7 @@ import {
   type InsertAgentChatbotDocument,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -717,10 +717,26 @@ export class DatabaseStorage implements IStorage {
     
     // Get document info from documentContext if available
     const enrichedResults = await Promise.all(result.map(async (feedback: any) => {
-      if (feedback.documentContext && Array.isArray(feedback.documentContext)) {
+      if (feedback.documentContext) {
         try {
-          const documentIds = feedback.documentContext;
+          let documentIds: number[] = [];
+          
+          // Handle different formats of documentContext
+          if (Array.isArray(feedback.documentContext)) {
+            documentIds = feedback.documentContext;
+          } else if (typeof feedback.documentContext === 'string') {
+            try {
+              const parsed = JSON.parse(feedback.documentContext);
+              documentIds = Array.isArray(parsed) ? parsed : [];
+            } catch {
+              // Handle comma-separated string or single ID
+              const parts = feedback.documentContext.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+              documentIds = parts;
+            }
+          }
+          
           if (documentIds.length > 0) {
+            const firstDocId = documentIds[0];
             const docs = await db
               .select({
                 id: documents.id,
@@ -729,18 +745,21 @@ export class DatabaseStorage implements IStorage {
                 tags: documents.tags,
               })
               .from(documents)
-              .where(sql`${documents.id} = ANY(${documentIds})`);
+              .where(eq(documents.id, firstDocId))
+              .limit(1);
             
-            return {
-              ...feedback,
-              documentName: docs[0]?.name || 'Unknown Document',
-              documentId: docs[0]?.id || null,
-              aiCategory: docs[0]?.aiCategory || null,
-              tags: docs[0]?.tags || null,
-            };
+            if (docs.length > 0) {
+              return {
+                ...feedback,
+                documentName: docs[0].name,
+                documentId: docs[0].id,
+                aiCategory: docs[0].aiCategory,
+                tags: docs[0].tags,
+              };
+            }
           }
         } catch (e) {
-          console.error('Error enriching feedback with document data:', e);
+          console.error('Error enriching feedback with document data:', e, 'documentContext:', feedback.documentContext);
         }
       }
       
