@@ -25,6 +25,7 @@ import {
   Eye
 } from "lucide-react";
 import { format } from "date-fns";
+import DashboardLayout from "@/components/Layout/DashboardLayout";
 import { 
   BarChart, 
   Bar, 
@@ -177,7 +178,8 @@ export default function UserFeedback() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -579,6 +581,7 @@ export default function UserFeedback() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
