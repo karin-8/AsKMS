@@ -164,8 +164,8 @@ export default function UserFeedback() {
 
   // Category breakdown
   const categoryData = [
-    { name: 'Helpful', value: feedbackStats?.helpfulCount || 0, color: '#10b981' },
-    { name: 'Not Helpful', value: feedbackStats?.notHelpfulCount || 0, color: '#ef4444' }
+    { name: 'Helpful', value: (feedbackStats as any)?.helpfulCount || 0, color: '#10b981' },
+    { name: 'Not Helpful', value: (feedbackStats as any)?.notHelpfulCount || 0, color: '#ef4444' }
   ];
 
   if (isLoading || !isAuthenticated) {
@@ -217,7 +217,7 @@ export default function UserFeedback() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Total Feedback</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {feedbackStats?.totalFeedback || 0}
+                    {(feedbackStats as any)?.totalFeedback || 0}
                   </p>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function UserFeedback() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Helpful</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {feedbackStats?.helpfulCount || 0}
+                    {(feedbackStats as any)?.helpfulCount || 0}
                   </p>
                 </div>
               </div>
@@ -249,7 +249,7 @@ export default function UserFeedback() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Not Helpful</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {feedbackStats?.notHelpfulCount || 0}
+                    {(feedbackStats as any)?.notHelpfulCount || 0}
                   </p>
                 </div>
               </div>
@@ -265,8 +265,8 @@ export default function UserFeedback() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Satisfaction Rate</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    {feedbackStats?.totalFeedback > 0 
-                      ? Math.round((feedbackStats.helpfulCount / feedbackStats.totalFeedback) * 100)
+                    {(feedbackStats as any)?.totalFeedback > 0 
+                      ? Math.round(((feedbackStats as any).helpfulCount / (feedbackStats as any).totalFeedback) * 100)
                       : 0
                     }%
                   </p>

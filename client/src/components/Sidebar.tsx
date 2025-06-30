@@ -15,6 +15,7 @@ import {
   Building,
   Video,
   Bot,
+  BarChart3,
 } from "lucide-react";
 
 const allNavigation = [
@@ -63,6 +64,12 @@ const allNavigation = [
     name: "Live Chat Widget",
     href: "/live-chat-widget",
     icon: MessageSquare,
+    roles: ["admin"],
+  },
+  {
+    name: "User Feedback",
+    href: "/user-feedback",
+    icon: BarChart3,
     roles: ["admin"],
   },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
