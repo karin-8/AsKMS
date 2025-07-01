@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Brain, TrendingUp, MessageSquare, Clock, Filter, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import DashboardLayout from "@/components/Layout/DashboardLayout";
 
 export default function AiResponseAnalysis() {
