@@ -58,7 +58,8 @@ export default function AiResponseAnalysis() {
   // Prepare chart data
   const chartData = [
     { name: "Positive", value: stats?.positiveCount || 0, color: "#22c55e" },
-    { name: "Fallback", value: stats?.fallbackCount || 0, color: "#ef4444" }
+    { name: "Irrelevant", value: stats?.irrelevantCount || 0, color: "#f59e0b" },
+    { name: "Unable to Answer", value: stats?.unableToAnswerCount || 0, color: "#ef4444" }
   ];
 
   // Group analysis data by date and count positive/fallback per day
@@ -69,15 +70,17 @@ export default function AiResponseAnalysis() {
     const dateGroups = stats.recentAnalysis.reduce((groups, analysis) => {
       const date = new Date(analysis.createdAt).toDateString();
       if (!groups[date]) {
-        groups[date] = { positive: 0, fallback: 0, date };
+        groups[date] = { positive: 0, irrelevant: 0, unable_to_answer: 0, date };
       }
       if (analysis.analysisResult === 'positive') {
         groups[date].positive++;
-      } else {
-        groups[date].fallback++;
+      } else if (analysis.analysisResult === 'irrelevant') {
+        groups[date].irrelevant++;
+      } else if (analysis.analysisResult === 'unable_to_answer') {
+        groups[date].unable_to_answer++;
       }
       return groups;
-    }, {} as Record<string, { positive: number; fallback: number; date: string }>);
+    }, {} as Record<string, { positive: number; irrelevant: number; unable_to_answer: number; date: string }>);
     
     // Convert to array and sort by date (most recent first), then take last 7 days
     const sortedData = Object.values(dateGroups)
@@ -92,7 +95,8 @@ export default function AiResponseAnalysis() {
         day: 'numeric' 
       }),
       positive: item.positive,
-      fallback: item.fallback,
+      irrelevant: item.irrelevant,
+      unable_to_answer: item.unable_to_answer,
     }));
   })();
 
@@ -264,7 +268,8 @@ export default function AiResponseAnalysis() {
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="positive" stackId="a" fill="#22c55e" name="Positive" />
-                    <Bar dataKey="fallback" stackId="a" fill="#ef4444" name="Fallback" />
+                    <Bar dataKey="irrelevant" stackId="a" fill="#f59e0b" name="Irrelevant" />
+                    <Bar dataKey="unable_to_answer" stackId="a" fill="#ef4444" name="Unable to Answer" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -294,7 +299,8 @@ export default function AiResponseAnalysis() {
                   <SelectContent>
                     <SelectItem value="all">All Results</SelectItem>
                     <SelectItem value="positive">Positive Only</SelectItem>
-                    <SelectItem value="fallback">Fallback Only</SelectItem>
+                    <SelectItem value="irrelevant">Irrelevant Only</SelectItem>
+                  <SelectItem value="unable_to_answer">Unable to Answer Only</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" onClick={resetFilters}>
