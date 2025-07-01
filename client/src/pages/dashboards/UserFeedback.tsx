@@ -655,6 +655,17 @@ export default function UserFeedback() {
                             </p>
                           </div>
 
+                          <div>
+                            <p className="text-sm font-medium text-slate-700">
+                              Assistant Response:
+                            </p>
+                            <p className="text-sm text-slate-600 bg-green-50 p-2 rounded">
+                              {feedback.assistantResponse && feedback.assistantResponse.length > 200
+                                ? `${feedback.assistantResponse.substring(0, 200)}...`
+                                : feedback.assistantResponse || "No response recorded"}
+                            </p>
+                          </div>
+
                           {feedback.userNote && (
                             <div>
                               <p className="text-sm font-medium text-slate-700">
