@@ -505,6 +505,8 @@ export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermis
 
 export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
 export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
+export type AiResponseAnalysis = typeof aiResponseAnalysis.$inferSelect;
+export type InsertAiResponseAnalysis = typeof aiResponseAnalysis.$inferInsert;
 
 // Audit logs for compliance tracking
 export const auditLogs = pgTable("audit_logs", {

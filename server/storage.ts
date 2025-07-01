@@ -7,6 +7,7 @@ import {
   documentAccess,
   dataConnections,
   aiAssistantFeedback,
+  aiResponseAnalysis,
   departments,
   auditLogs,
   documentUserPermissions,
@@ -31,6 +32,8 @@ import {
   type UpdateDataConnection,
   type AiAssistantFeedback,
   type InsertAiAssistantFeedback,
+  type AiResponseAnalysis,
+  type InsertAiResponseAnalysis,
   type AuditLog,
   type InsertAuditLog,
   type UserFavorite,
@@ -135,6 +138,17 @@ export interface IStorage {
   getAgentChatbotDocuments(agentId: number, userId: string): Promise<AgentChatbotDocument[]>;
   addDocumentToAgent(agentId: number, documentId: number, userId: string): Promise<AgentChatbotDocument>;
   removeDocumentFromAgent(agentId: number, documentId: number, userId: string): Promise<void>;
+
+  // AI Response Analysis operations
+  createAiResponseAnalysis(analysis: InsertAiResponseAnalysis): Promise<AiResponseAnalysis>;
+  getAiResponseAnalysis(userId: string, options?: { limit?: number; offset?: number; analysisResult?: string }): Promise<AiResponseAnalysis[]>;
+  getAiResponseAnalysisStats(userId: string): Promise<{
+    totalResponses: number;
+    positiveCount: number;
+    fallbackCount: number;
+    averageResponseTime: number;
+    recentAnalysis: AiResponseAnalysis[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1117,6 +1131,90 @@ export class DatabaseStorage implements IStorage {
         eq(agentChatbotDocuments.agentId, agentId),
         eq(agentChatbotDocuments.documentId, documentId)
       ));
+  }
+
+  // AI Response Analysis operations
+  async createAiResponseAnalysis(analysis: InsertAiResponseAnalysis): Promise<AiResponseAnalysis> {
+    const [newAnalysis] = await db
+      .insert(aiResponseAnalysis)
+      .values(analysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getAiResponseAnalysis(userId: string, options: { limit?: number; offset?: number; analysisResult?: string } = {}): Promise<AiResponseAnalysis[]> {
+    const { limit = 50, offset = 0, analysisResult } = options;
+
+    let query = db
+      .select()
+      .from(aiResponseAnalysis)
+      .where(eq(aiResponseAnalysis.userId, userId));
+
+    if (analysisResult) {
+      query = query.where(and(
+        eq(aiResponseAnalysis.userId, userId),
+        eq(aiResponseAnalysis.analysisResult, analysisResult)
+      ));
+    }
+
+    return await query
+      .orderBy(desc(aiResponseAnalysis.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getAiResponseAnalysisStats(userId: string): Promise<{
+    totalResponses: number;
+    positiveCount: number;
+    fallbackCount: number;
+    averageResponseTime: number;
+    recentAnalysis: AiResponseAnalysis[];
+  }> {
+    // Get total counts
+    const totalResult = await db
+      .select({ count: count() })
+      .from(aiResponseAnalysis)
+      .where(eq(aiResponseAnalysis.userId, userId));
+
+    const positiveResult = await db
+      .select({ count: count() })
+      .from(aiResponseAnalysis)
+      .where(and(
+        eq(aiResponseAnalysis.userId, userId),
+        eq(aiResponseAnalysis.analysisResult, 'positive')
+      ));
+
+    const fallbackResult = await db
+      .select({ count: count() })
+      .from(aiResponseAnalysis)
+      .where(and(
+        eq(aiResponseAnalysis.userId, userId),
+        eq(aiResponseAnalysis.analysisResult, 'fallback')
+      ));
+
+    // Get average response time
+    const avgResponseTime = await db
+      .select({
+        avg: sql<number>`COALESCE(AVG(${aiResponseAnalysis.responseTime}), 0)`
+      })
+      .from(aiResponseAnalysis)
+      .where(eq(aiResponseAnalysis.userId, userId));
+
+    // Get recent analysis
+    const recentAnalysis = await db
+      .select()
+      .from(aiResponseAnalysis)
+      .where(eq(aiResponseAnalysis.userId, userId))
+      .orderBy(desc(aiResponseAnalysis.createdAt))
+      .limit(10);
+
+    return {
+      totalResponses: totalResult[0]?.count || 0,
+      positiveCount: positiveResult[0]?.count || 0,
+      fallbackCount: fallbackResult[0]?.count || 0,
+      averageResponseTime: Math.round(avgResponseTime[0]?.avg || 0),
+      recentAnalysis
+    };
   }
 }
 
