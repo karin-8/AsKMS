@@ -343,6 +343,28 @@ export const aiAssistantFeedbackRelations = relations(aiAssistantFeedback, ({ on
   }),
 }));
 
+// AI Response Analysis System for analyzing bot responses
+export const aiResponseAnalysis = pgTable("ai_response_analysis", {
+  id: serial("id").primaryKey(),
+  chatMessageId: integer("chat_message_id").references(() => chatMessages.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  userQuery: text("user_query").notNull(),
+  assistantResponse: text("assistant_response").notNull(),
+  analysisResult: varchar("analysis_result").notNull(), // 'positive', 'fallback'
+  analysisConfidence: real("analysis_confidence"), // 0.0 to 1.0
+  analysisReason: text("analysis_reason"), // Why the AI classified it this way
+  documentContext: jsonb("document_context"), // Which documents were referenced
+  responseTime: integer("response_time"), // Response time in milliseconds
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const aiResponseAnalysisRelations = relations(aiResponseAnalysis, ({ one }) => ({
+  chatMessage: one(chatMessages, {
+    fields: [aiResponseAnalysis.chatMessageId],
+    references: [chatMessages.id],
+  }),
+}));
+
 // Insert schemas
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
