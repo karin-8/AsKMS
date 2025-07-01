@@ -5,15 +5,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ThumbsUp, 
-  ThumbsDown, 
-  MessageSquare, 
+import {
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
   Calendar,
   TrendingUp,
   Users,
@@ -22,17 +34,17 @@ import {
   Download,
   Filter,
   Search,
-  Eye
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 import DashboardLayout from "@/components/Layout/DashboardLayout";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -40,7 +52,7 @@ import {
   LineChart,
   Line,
   Area,
-  AreaChart
+  AreaChart,
 } from "recharts";
 
 export default function UserFeedback() {
@@ -53,10 +65,10 @@ export default function UserFeedback() {
   const [documentNameFilter, setDocumentNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
-  
+
   // Check for documentId query parameter
   const urlParams = new URLSearchParams(window.location.search);
-  const documentId = urlParams.get('documentId');
+  const documentId = urlParams.get("documentId");
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -75,38 +87,40 @@ export default function UserFeedback() {
 
   // Fetch feedback statistics
   const { data: feedbackStats, isLoading: statsLoading } = useQuery({
-    queryKey: ['/api/ai-feedback/stats'],
+    queryKey: ["/api/ai-feedback/stats"],
     enabled: isAuthenticated,
     retry: false,
   });
 
   // Fetch all feedback data or document-specific feedback
   const { data: allFeedback = [], isLoading: feedbackLoading } = useQuery({
-    queryKey: documentId ? [`/api/documents/${documentId}/feedback`] : ['/api/ai-feedback/export'],
+    queryKey: documentId
+      ? [`/api/documents/${documentId}/feedback`]
+      : ["/api/ai-feedback/export"],
     enabled: isAuthenticated,
     retry: false,
   });
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/ai-feedback/export', {
-        method: 'GET',
-        credentials: 'include',
+      const response = await fetch("/api/ai-feedback/export", {
+        method: "GET",
+        credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
         const csv = convertToCSV(data);
-        const blob = new Blob([csv], { type: 'text/csv' });
+        const blob = new Blob([csv], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `user_feedback_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `user_feedback_${new Date().toISOString().split("T")[0]}.csv`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         toast({
           title: "Export Complete",
           description: "User feedback data has been downloaded successfully",
@@ -122,72 +136,121 @@ export default function UserFeedback() {
   };
 
   const convertToCSV = (data: any[]) => {
-    const headers = ['Date', 'Feedback Type', 'User Query', 'Assistant Response', 'User Note', 'Document Context'];
-    const rows = data.map(item => [
-      format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+    const headers = [
+      "Date",
+      "Feedback Type",
+      "User Query",
+      "Assistant Response",
+      "User Note",
+      "Document Context",
+    ];
+    const rows = data.map((item) => [
+      format(new Date(item.createdAt), "yyyy-MM-dd HH:mm:ss"),
       item.feedbackType,
       `"${item.userQuery.replace(/"/g, '""')}"`,
       `"${item.assistantResponse.replace(/"/g, '""')}"`,
-      item.userNote ? `"${item.userNote.replace(/"/g, '""')}"` : '',
-      item.documentContext ? `"${JSON.stringify(item.documentContext).replace(/"/g, '""')}"` : ''
+      item.userNote ? `"${item.userNote.replace(/"/g, '""')}"` : "",
+      item.documentContext
+        ? `"${JSON.stringify(item.documentContext).replace(/"/g, '""')}"`
+        : "",
     ]);
-    
-    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+
+    return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
   };
 
   // Filter feedback based on search and filter criteria
-  const filteredFeedback = (Array.isArray(allFeedback) ? allFeedback : []).filter((feedback: any) => {
-    const matchesType = filterType === "all" || feedback.feedbackType === filterType;
-    const matchesSearch = searchQuery === "" || 
+  const filteredFeedback = (
+    Array.isArray(allFeedback) ? allFeedback : []
+  ).filter((feedback: any) => {
+    const matchesType =
+      filterType === "all" || feedback.feedbackType === filterType;
+    const matchesSearch =
+      searchQuery === "" ||
       feedback.userQuery?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      feedback.assistantResponse?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (feedback.userNote && feedback.userNote.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (feedback.documentName && feedback.documentName.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+      feedback.assistantResponse
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (feedback.userNote &&
+        feedback.userNote.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (feedback.documentName &&
+        feedback.documentName
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
+
     const feedbackDate = new Date(feedback.createdAt);
     const daysAgo = parseInt(filterPeriod);
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
     const matchesPeriod = feedbackDate >= cutoffDate;
-    
+
     // Filter by document name
-    const matchesDocumentName = documentNameFilter === "" || 
-      (feedback.documentName && feedback.documentName.toLowerCase().includes(documentNameFilter.toLowerCase()));
-    
+    const matchesDocumentName =
+      documentNameFilter === "" ||
+      (feedback.documentName &&
+        feedback.documentName
+          .toLowerCase()
+          .includes(documentNameFilter.toLowerCase()));
+
     // Filter by AI category
-    const matchesCategory = categoryFilter === "" || 
-      (feedback.aiCategory && feedback.aiCategory.toLowerCase().includes(categoryFilter.toLowerCase()));
-    
+    const matchesCategory =
+      categoryFilter === "" ||
+      (feedback.aiCategory &&
+        feedback.aiCategory
+          .toLowerCase()
+          .includes(categoryFilter.toLowerCase()));
+
     // Filter by tags
-    const matchesTags = tagFilter === "" || 
-      (feedback.tags && Array.isArray(feedback.tags) && 
-       feedback.tags.some((tag: string) => tag.toLowerCase().includes(tagFilter.toLowerCase())));
-    
-    return matchesType && matchesSearch && matchesPeriod && matchesDocumentName && matchesCategory && matchesTags;
+    const matchesTags =
+      tagFilter === "" ||
+      (feedback.tags &&
+        Array.isArray(feedback.tags) &&
+        feedback.tags.some((tag: string) =>
+          tag.toLowerCase().includes(tagFilter.toLowerCase()),
+        ));
+
+    return (
+      matchesType &&
+      matchesSearch &&
+      matchesPeriod &&
+      matchesDocumentName &&
+      matchesCategory &&
+      matchesTags
+    );
   });
 
   // Generate trend data for the last 7 days
   const trendData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const dayFeedback = (Array.isArray(allFeedback) ? allFeedback : []).filter((f: any) => 
-      f.createdAt.startsWith(dateStr)
+    const dateStr = date.toISOString().split("T")[0];
+
+    const dayFeedback = (Array.isArray(allFeedback) ? allFeedback : []).filter(
+      (f: any) => f.createdAt.startsWith(dateStr),
     );
-    
+
     return {
-      date: format(date, 'MM/dd'),
-      helpful: dayFeedback.filter((f: any) => f.feedbackType === 'helpful').length,
-      not_helpful: dayFeedback.filter((f: any) => f.feedbackType === 'not_helpful').length,
-      total: dayFeedback.length
+      date: format(date, "MM/dd"),
+      helpful: dayFeedback.filter((f: any) => f.feedbackType === "helpful")
+        .length,
+      not_helpful: dayFeedback.filter(
+        (f: any) => f.feedbackType === "not_helpful",
+      ).length,
+      total: dayFeedback.length,
     };
   });
 
   // Category breakdown
   const categoryData = [
-    { name: 'Helpful', value: (feedbackStats as any)?.helpfulCount || 0, color: '#10b981' },
-    { name: 'Not Helpful', value: (feedbackStats as any)?.notHelpfulCount || 0, color: '#ef4444' }
+    {
+      name: "Helpful",
+      value: (feedbackStats as any)?.helpfulCount || 0,
+      color: "#10b981",
+    },
+    {
+      name: "Not Helpful",
+      value: (feedbackStats as any)?.notHelpfulCount || 0,
+      color: "#ef4444",
+    },
   ];
 
   if (isLoading || !isAuthenticated) {
@@ -201,453 +264,502 @@ export default function UserFeedback() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {documentId ? `Document Feedback Analysis` : 'User Feedback Dashboard'}
-          </h1>
-          <p className="text-slate-600 mt-1">
-            {documentId 
-              ? `Analyze feedback for Document ID: ${documentId}` 
-              : 'Analyze user feedback from Chat with Document interactions'
-            }
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          {documentId && (
-            <Button 
-              onClick={() => window.location.href = '/user-feedback'} 
-              variant="outline"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              View All Feedback
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {documentId
+                ? `Document Feedback Analysis`
+                : "User Feedback Dashboard"}
+            </h1>
+            <p className="text-slate-600 mt-1">
+              {documentId
+                ? `Analyze feedback for Document ID: ${documentId}`
+                : "Analyze user feedback from Chat with Document interactions"}
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            {documentId && (
+              <Button
+                onClick={() => (window.location.href = "/user-feedback")}
+                variant="outline"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View All Feedback
+              </Button>
+            )}
+            <Button onClick={handleExport} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Export Data
             </Button>
-          )}
-          <Button onClick={handleExport} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export Data
-          </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      {statsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="border border-slate-200">
+        {/* Statistics Cards */}
+        {statsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="border border-slate-200">
+                <CardContent className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-slate-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-8 bg-slate-200 rounded w-3/4"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="border border-slate-200">
               <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-slate-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-slate-200 rounded w-3/4"></div>
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MessageSquare className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Total Feedback
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {(feedbackStats as any)?.totalFeedback || 0}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+
+            <Card className="border border-slate-200">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <ThumbsUp className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Helpful
+                    </p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {(feedbackStats as any)?.helpfulCount || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-slate-200">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <ThumbsDown className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Not Helpful
+                    </p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {(feedbackStats as any)?.notHelpfulCount || 0}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-slate-200">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <TrendingUp className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Satisfaction Rate
+                    </p>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {(feedbackStats as any)?.totalFeedback > 0
+                        ? Math.round(
+                            ((feedbackStats as any).helpfulCount /
+                              (feedbackStats as any).totalFeedback) *
+                              100,
+                          )
+                        : 0}
+                      %
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Feedback Trend Chart */}
+          <Card className="border border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                Feedback Trend (Last 7 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="helpful"
+                    stackId="1"
+                    stroke="#10b981"
+                    fill="#10b981"
+                    fillOpacity={0.6}
+                    name="Helpful"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="not_helpful"
+                    stackId="1"
+                    stroke="#ef4444"
+                    fill="#ef4444"
+                    fillOpacity={0.6}
+                    name="Not Helpful"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Feedback Distribution */}
+          <Card className="border border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                Feedback Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center space-x-6 mt-4">
+                {categoryData.map((entry, index) => (
+                  <div key={index} className="flex items-center">
+                    <div
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: entry.color }}
+                    ></div>
+                    <span className="text-sm text-slate-600">
+                      {entry.name}: {entry.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="border border-slate-200">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <MessageSquare className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Feedback</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {(feedbackStats as any)?.totalFeedback || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="border border-slate-200">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <ThumbsUp className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Helpful</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {(feedbackStats as any)?.helpfulCount || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-slate-200">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <ThumbsDown className="w-6 h-6 text-red-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Not Helpful</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {(feedbackStats as any)?.notHelpfulCount || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-slate-200">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Satisfaction Rate</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {(feedbackStats as any)?.totalFeedback > 0 
-                      ? Math.round(((feedbackStats as any).helpfulCount / (feedbackStats as any).totalFeedback) * 100)
-                      : 0
-                    }%
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Feedback Trend Chart */}
+        {/* Filters */}
         <Card className="border border-slate-200">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              Feedback Trend (Last 7 Days)
+              <Filter className="w-5 h-5 mr-2" />
+              Filters & Search
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="helpful" 
-                  stackId="1"
-                  stroke="#10b981" 
-                  fill="#10b981" 
-                  fillOpacity={0.6}
-                  name="Helpful"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="not_helpful" 
-                  stackId="1"
-                  stroke="#ef4444" 
-                  fill="#ef4444" 
-                  fillOpacity={0.6}
-                  name="Not Helpful"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <Input
+                placeholder="Search feedback..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="helpful">Helpful</SelectItem>
+                  <SelectItem value="not_helpful">Not Helpful</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Time Period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                  <SelectItem value="90">Last 90 days</SelectItem>
+                  <SelectItem value="365">Last year</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button variant="outline">
+                <Search className="w-4 h-4 mr-2" />
+                Search
+              </Button>
+            </div>
+
+            {/* Additional Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                placeholder="Filter by document name..."
+                value={documentNameFilter}
+                onChange={(e) => setDocumentNameFilter(e.target.value)}
+                className="w-full"
+              />
+
+              <Input
+                placeholder="Filter by AI category..."
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full"
+              />
+
+              <Input
+                placeholder="Filter by tags..."
+                value={tagFilter}
+                onChange={(e) => setTagFilter(e.target.value)}
+                className="w-full"
+              />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Feedback Distribution */}
+        {/* Feedback List */}
         <Card className="border border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-              <Users className="w-5 h-5 mr-2" />
-              Feedback Distribution
+            <CardTitle className="text-lg font-semibold text-slate-800">
+              Recent Feedback ({filteredFeedback.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex justify-center space-x-6 mt-4">
-              {categoryData.map((entry, index) => (
-                <div key={index} className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
-                    style={{ backgroundColor: entry.color }}
-                  ></div>
-                  <span className="text-sm text-slate-600">
-                    {entry.name}: {entry.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card className="border border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-            <Filter className="w-5 h-5 mr-2" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <Input
-              placeholder="Search feedback..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
-            
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="helpful">Helpful</SelectItem>
-                <SelectItem value="not_helpful">Not Helpful</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Time Period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline">
-              <Search className="w-4 h-4 mr-2" />
-              Search
-            </Button>
-          </div>
-          
-          {/* Additional Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Filter by document name..."
-              value={documentNameFilter}
-              onChange={(e) => setDocumentNameFilter(e.target.value)}
-              className="w-full"
-            />
-            
-            <Input
-              placeholder="Filter by AI category..."
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full"
-            />
-            
-            <Input
-              placeholder="Filter by tags..."
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Feedback List */}
-      <Card className="border border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-800">
-            Recent Feedback ({filteredFeedback.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {feedbackLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-slate-500">Loading feedback...</div>
-            </div>
-          ) : filteredFeedback.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-slate-500">No feedback found</div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredFeedback.slice(0, 10).map((feedback: any) => (
-                <div key={feedback.id} className="border border-slate-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge 
-                          variant={feedback.feedbackType === 'helpful' ? 'default' : 'secondary'}
-                          className={
-                            feedback.feedbackType === 'helpful' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }
-                        >
-                          {feedback.feedbackType === 'helpful' ? (
-                            <>
-                              <ThumbsUp className="w-3 h-3 mr-1" />
-                              Helpful
-                            </>
-                          ) : (
-                            <>
-                              <ThumbsDown className="w-3 h-3 mr-1" />
-                              Not Helpful
-                            </>
-                          )}
-                        </Badge>
-                        <span className="text-xs text-slate-500">
-                          {format(new Date(feedback.createdAt), 'MMM dd, yyyy HH:mm')}
-                        </span>
-                        {feedback.documentName && (
-                          <Badge variant="outline" className="text-xs">
-                            <FileText className="w-3 h-3 mr-1" />
-                            {feedback.documentName}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">User Query:</p>
-                          <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded">
-                            {feedback.userQuery.length > 150 
-                              ? `${feedback.userQuery.substring(0, 150)}...` 
-                              : feedback.userQuery
+            {feedbackLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-slate-500">Loading feedback...</div>
+              </div>
+            ) : filteredFeedback.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-slate-500">No feedback found</div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredFeedback.slice(0, 10).map((feedback: any) => (
+                  <div
+                    key={feedback.id}
+                    className="border border-slate-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge
+                            variant={
+                              feedback.feedbackType === "helpful"
+                                ? "default"
+                                : "secondary"
                             }
-                          </p>
+                            className={
+                              feedback.feedbackType === "helpful"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }
+                          >
+                            {feedback.feedbackType === "helpful" ? (
+                              <>
+                                <ThumbsUp className="w-3 h-3 mr-1" />
+                                Helpful
+                              </>
+                            ) : (
+                              <>
+                                <ThumbsDown className="w-3 h-3 mr-1" />
+                                Not Helpful
+                              </>
+                            )}
+                          </Badge>
+                          <span className="text-xs text-slate-500">
+                            {format(
+                              new Date(feedback.createdAt),
+                              "MMM dd, yyyy HH:mm",
+                            )}
+                          </span>
+                          {feedback.documentName && (
+                            <Badge variant="outline" className="text-xs">
+                              <FileText className="w-3 h-3 mr-1" />
+                              {feedback.documentName}
+                            </Badge>
+                          )}
                         </div>
-                        
-                        {feedback.userNote && (
+
+                        <div className="space-y-2">
                           <div>
-                            <p className="text-sm font-medium text-slate-700">User Note:</p>
-                            <p className="text-sm text-slate-600 bg-blue-50 p-2 rounded">
-                              {feedback.userNote}
+                            <p className="text-sm font-medium text-slate-700">
+                              User Query:
+                            </p>
+                            <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded">
+                              {feedback.userQuery.length > 150
+                                ? `${feedback.userQuery.substring(0, 150)}...`
+                                : feedback.userQuery}
                             </p>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Feedback Details</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="font-medium text-slate-700">Feedback Type:</p>
-                            <Badge 
-                              variant={feedback.feedbackType === 'helpful' ? 'default' : 'secondary'}
-                              className={
-                                feedback.feedbackType === 'helpful' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }
-                            >
-                              {feedback.feedbackType === 'helpful' ? (
-                                <>
-                                  <ThumbsUp className="w-3 h-3 mr-1" />
-                                  Helpful
-                                </>
-                              ) : (
-                                <>
-                                  <ThumbsDown className="w-3 h-3 mr-1" />
-                                  Not Helpful
-                                </>
-                              )}
-                            </Badge>
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium text-slate-700">User Query:</p>
-                            <Textarea 
-                              value={feedback.userQuery} 
-                              readOnly 
-                              className="mt-1"
-                              rows={3}
-                            />
-                          </div>
-                          
-                          <div>
-                            <p className="font-medium text-slate-700">Assistant Response:</p>
-                            <Textarea 
-                              value={feedback.assistantResponse} 
-                              readOnly 
-                              className="mt-1"
-                              rows={5}
-                            />
-                          </div>
-                          
+
                           {feedback.userNote && (
                             <div>
-                              <p className="font-medium text-slate-700">User Note:</p>
-                              <Textarea 
-                                value={feedback.userNote} 
-                                readOnly 
+                              <p className="text-sm font-medium text-slate-700">
+                                User Note:
+                              </p>
+                              <p className="text-sm text-slate-600 bg-blue-50 p-2 rounded">
+                                {feedback.userNote}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Feedback Details</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <p className="font-medium text-slate-700">
+                                Feedback Type:
+                              </p>
+                              <Badge
+                                variant={
+                                  feedback.feedbackType === "helpful"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className={
+                                  feedback.feedbackType === "helpful"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }
+                              >
+                                {feedback.feedbackType === "helpful" ? (
+                                  <>
+                                    <ThumbsUp className="w-3 h-3 mr-1" />
+                                    Helpful
+                                  </>
+                                ) : (
+                                  <>
+                                    <ThumbsDown className="w-3 h-3 mr-1" />
+                                    Not Helpful
+                                  </>
+                                )}
+                              </Badge>
+                            </div>
+
+                            <div>
+                              <p className="font-medium text-slate-700">
+                                User Query:
+                              </p>
+                              <Textarea
+                                value={feedback.userQuery}
+                                readOnly
                                 className="mt-1"
                                 rows={3}
                               />
                             </div>
-                          )}
-                          
-                          {feedback.documentContext && (
+
                             <div>
-                              <p className="font-medium text-slate-700">Document Context:</p>
-                              <pre className="text-xs bg-slate-100 p-2 rounded overflow-x-auto">
-                                {JSON.stringify(feedback.documentContext, null, 2)}
-                              </pre>
+                              <p className="font-medium text-slate-700">
+                                Assistant Response:
+                              </p>
+                              <Textarea
+                                value={feedback.assistantResponse}
+                                readOnly
+                                className="mt-1"
+                                rows={5}
+                              />
                             </div>
-                          )}
-                          
-                          <div>
-                            <p className="font-medium text-slate-700">Date:</p>
-                            <p className="text-sm text-slate-600">
-                              {format(new Date(feedback.createdAt), 'MMMM dd, yyyy HH:mm:ss')}
-                            </p>
+
+                            {feedback.userNote && (
+                              <div>
+                                <p className="font-medium text-slate-700">
+                                  User Note:
+                                </p>
+                                <Textarea
+                                  value={feedback.userNote}
+                                  readOnly
+                                  className="mt-1"
+                                  rows={3}
+                                />
+                              </div>
+                            )}
+
+                            {feedback.documentContext && (
+                              <div>
+                                <p className="font-medium text-slate-700">
+                                  Document Context:
+                                </p>
+                                <pre className="text-xs bg-slate-100 p-2 rounded overflow-x-auto">
+                                  {JSON.stringify(
+                                    feedback.documentContext,
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
+                            )}
+
+                            <div>
+                              <p className="font-medium text-slate-700">
+                                Date:
+                              </p>
+                              <p className="text-sm text-slate-600">
+                                {format(
+                                  new Date(feedback.createdAt),
+                                  "MMMM dd, yyyy HH:mm:ss",
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
-                </div>
-              ))}
-              
-              {filteredFeedback.length > 10 && (
-                <div className="text-center py-4">
-                  <p className="text-sm text-slate-500">
-                    Showing 10 of {filteredFeedback.length} feedback entries
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+
+                {filteredFeedback.length > 10 && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-slate-500">
+                      Showing 10 of {filteredFeedback.length} feedback entries
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
