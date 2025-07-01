@@ -3,7 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
+import OpenAI from "openai";
 import { db } from "./db";
+
+// Initialize OpenAI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 import { eq, sql, and, gte, getTableColumns } from "drizzle-orm";
 import { 
   insertCategorySchema, 

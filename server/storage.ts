@@ -1145,19 +1145,16 @@ export class DatabaseStorage implements IStorage {
   async getAiResponseAnalysis(userId: string, options: { limit?: number; offset?: number; analysisResult?: string } = {}): Promise<AiResponseAnalysis[]> {
     const { limit = 50, offset = 0, analysisResult } = options;
 
-    let query = db
-      .select()
-      .from(aiResponseAnalysis)
-      .where(eq(aiResponseAnalysis.userId, userId));
-
+    const conditions = [eq(aiResponseAnalysis.userId, userId)];
+    
     if (analysisResult) {
-      query = query.where(and(
-        eq(aiResponseAnalysis.userId, userId),
-        eq(aiResponseAnalysis.analysisResult, analysisResult)
-      ));
+      conditions.push(eq(aiResponseAnalysis.analysisResult, analysisResult));
     }
 
-    return await query
+    return await db
+      .select()
+      .from(aiResponseAnalysis)
+      .where(and(...conditions))
       .orderBy(desc(aiResponseAnalysis.createdAt))
       .limit(limit)
       .offset(offset);
