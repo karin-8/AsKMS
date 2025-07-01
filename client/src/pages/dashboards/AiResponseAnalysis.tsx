@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ export default function AiResponseAnalysis() {
   const [filterResult, setFilterResult] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 10;
+  const queryClient = useQueryClient();
+
+  // Force refresh data when component mounts
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/ai-response-analysis"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/ai-response-analysis/stats"] });
+  }, [queryClient]);
 
   // Fetch AI response analysis stats
   const { data: stats, isLoading: statsLoading } = useQuery({

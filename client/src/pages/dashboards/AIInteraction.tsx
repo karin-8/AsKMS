@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bot, MessageSquare, Clock, Target, Zap, TrendingUp } from "lucide-react";
@@ -8,6 +9,14 @@ import DashboardLayout from "@/components/Layout/DashboardLayout";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function AIInteraction() {
+  const queryClient = useQueryClient();
+
+  // Force refresh data when component mounts
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+  }, [queryClient]);
+
   const { data: conversations = [] } = useQuery({
     queryKey: ["/api/chat/conversations"],
   });

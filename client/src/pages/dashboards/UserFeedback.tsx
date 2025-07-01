@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +73,7 @@ import {
 export default function UserFeedback() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [filterType, setFilterType] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("30");
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,6 +81,12 @@ export default function UserFeedback() {
   const [documentNameFilter, setDocumentNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]);
+
+  // Force refresh data when component mounts
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/ai-feedback/stats"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/ai-feedback"] });
+  }, [queryClient]);
 
   // Check for documentId query parameter
   const urlParams = new URLSearchParams(window.location.search);
