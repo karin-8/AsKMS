@@ -30,7 +30,6 @@ import MeetingNotes from "@/pages/MeetingNotes";
 import CreateAgentChatbot from "@/pages/CreateAgentChatbot";
 import AgentChatbots from "@/pages/AgentChatbots";
 import RoleManagement from "@/pages/RoleManagement";
-import AIResponseAnalysis from "./pages/dashboards/AIResponseAnalysis";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -68,7 +67,7 @@ function Router() {
           <Route path="/audit-monitoring" component={AuditMonitoring} />
           <Route path="/role-management" component={RoleManagement} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />
-
+          
           {/* Dashboard Routes */}
           <Route path="/dashboards/document-usage" component={DocumentUsage} />
           <Route path="/dashboards/ai-interaction" component={AIInteraction} />
@@ -77,10 +76,9 @@ function Router() {
           <Route path="/dashboards/security-governance" component={SecurityGovernance} />
           <Route path="/dashboards/customer-survey" component={CustomerSurvey} />
           <Route path="/dashboards/user-feedback" component={UserFeedback} />
-          <Route path="/dashboards/ai-response-analysis" component={AIResponseAnalysis} />
 
           <Route path="/survey" component={Survey} />
-
+          
           <Route component={NotFound} />
         </Switch>
       )}

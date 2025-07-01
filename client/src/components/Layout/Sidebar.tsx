@@ -289,24 +289,6 @@ export default function Sidebar({
                         User Feedback
                       </Button>
                     </Link>
-
-                    <Link
-                      href="/dashboards/ai-response-analysis"
-                      onClick={onMobileClose}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "w-full justify-start text-sm",
-                          isActiveRoute("/dashboards/ai-response-analysis")
-                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-50",
-                        )}
-                      >
-                        AI Response Analysis
-                      </Button>
-                    </Link>
                   </div>
                 )}
               </div>

@@ -351,67 +351,6 @@ Respond with JSON in this exact format:
   }
 }
 
-export async function analyzeResponseType(
-  userQuery: string,
-  assistantResponse: string,
-  documentContext?: any,
-): Promise<{ type: 'positive' | 'fallback'; confidence: number; reason: string }> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const prompt = `You are an AI response analyzer. Analyze whether the assistant's response is a POSITIVE response (successfully answered the user's question) or a FALLBACK response (unable to provide a proper answer).
-
-User Query: "${userQuery}"
-Assistant Response: "${assistantResponse}"
-Document Context: ${documentContext ? JSON.stringify(documentContext) : 'No document context'}
-
-Please analyze the response and classify it as:
-- POSITIVE: The assistant provided a relevant, helpful answer based on the available information
-- FALLBACK: The assistant couldn't answer properly (gave generic responses, said it doesn't know, couldn't find information, etc.)
-
-Respond with JSON in this exact format:
-{
-  "type": "positive" or "fallback",
-  "confidence": 0.0-1.0,
-  "reason": "brief explanation of why this classification was chosen"
-}`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at analyzing AI responses to determine if they successfully answered user queries or failed to provide useful information.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 200,
-      temperature: 0.1,
-    });
-
-    const analysis = JSON.parse(response.choices[0].message.content || "{}");
-    
-    return {
-      type: analysis.type === 'positive' ? 'positive' : 'fallback',
-      confidence: Math.max(0, Math.min(1, parseFloat(analysis.confidence) || 0.5)),
-      reason: analysis.reason || 'No reason provided'
-    };
-  } catch (error) {
-    console.error("Error analyzing response type:", error);
-    return {
-      type: 'fallback',
-      confidence: 0.5,
-      reason: 'Analysis failed - classified as fallback by default'
-    };
-  }
-}
-
 export async function generateDatabaseResponse(
   userMessage: string,
   schema: any,
