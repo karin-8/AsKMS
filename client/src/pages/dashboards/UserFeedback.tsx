@@ -611,6 +611,25 @@ export default function UserFeedback() {
                                 : String(feedback.documentContext)}
                             </Badge>
                           )}
+                          {feedback.aiCategory && (
+                            <Badge variant="outline" className="text-xs text-blue-600">
+                              {feedback.aiCategory}
+                            </Badge>
+                          )}
+                          {feedback.tags && Array.isArray(feedback.tags) && feedback.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {feedback.tags.slice(0, 3).map((tag: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="text-xs text-gray-600">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {feedback.tags.length > 3 && (
+                                <Badge variant="secondary" className="text-xs text-gray-500">
+                                  +{feedback.tags.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                           <Badge
                             variant={
                               feedback.feedbackType === "helpful"
