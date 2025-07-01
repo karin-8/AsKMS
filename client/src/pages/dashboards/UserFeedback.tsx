@@ -574,6 +574,12 @@ export default function UserFeedback() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
+                          {feedback.documentName && (
+                            <Badge variant="outline" className="text-xs">
+                              <FileText className="w-3 h-3 mr-1" />
+                              {feedback.documentName}
+                            </Badge>
+                          )}
                           <Badge
                             variant={
                               feedback.feedbackType === "helpful"
@@ -604,12 +610,6 @@ export default function UserFeedback() {
                               "MMM dd, yyyy HH:mm",
                             )}
                           </span>
-                          {feedback.documentName && (
-                            <Badge variant="outline" className="text-xs">
-                              <FileText className="w-3 h-3 mr-1" />
-                              {feedback.documentName}
-                            </Badge>
-                          )}
                         </div>
 
                         <div className="space-y-2">
