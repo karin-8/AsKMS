@@ -109,6 +109,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat routes
+  app.post("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const result = insertChatConversationSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).message });
+      }
+
+      const conversation = await storage.createChatConversation({
+        ...result.data,
+        userId,
+      });
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+
+  app.get("/api/chat/conversations/:id/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const conversationId = parseInt(req.params.id);
+      const messages = await storage.getChatMessages(conversationId, userId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/chat/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const result = insertChatMessageSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).message });
+      }
+
+      const message = await storage.createChatMessage({
+        ...result.data,
+        role: "user",
+      });
+
+      // Generate AI response
+      if (req.body.documentId) {
+        const document = await storage.getDocument(req.body.documentId, userId);
+        if (document) {
+          try {
+            const prompt = `Based on the following document content, please answer the user's question.
+
+Document: "${document.name}"
+Content: ${document.content}
+
+User Question: ${req.body.content}
+
+Please provide a helpful and accurate response based only on the document content.`;
+
+            const completion = await openai.chat.completions.create({
+              model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 1000,
+            });
+
+            const assistantResponse = completion.choices[0].message.content || "I couldn't generate a response.";
+
+            // Save assistant response
+            await storage.createChatMessage({
+              conversationId: result.data.conversationId,
+              content: assistantResponse,
+              role: "assistant",
+            });
+          } catch (aiError) {
+            console.error("Error generating AI response:", aiError);
+            await storage.createChatMessage({
+              conversationId: result.data.conversationId,
+              content: "Sorry, I encountered an error while processing your request.",
+              role: "assistant",
+            });
+          }
+        }
+      }
+
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating message:", error);
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+
   // Register HR API routes
   registerHrApiRoutes(app);
 

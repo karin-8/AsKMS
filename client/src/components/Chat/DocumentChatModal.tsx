@@ -48,7 +48,16 @@ export default function DocumentChatModal({
       return response.json();
     },
     onSuccess: (conversation) => {
+      console.log("Conversation created successfully:", conversation);
       setCurrentConversationId(conversation.id);
+    },
+    onError: (error) => {
+      console.error("Failed to create conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create chat conversation",
+        variant: "destructive",
+      });
     },
   });
 
@@ -147,12 +156,21 @@ export default function DocumentChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Create conversation when modal opens
+  // Reset conversation when modal closes
   useEffect(() => {
-    if (isOpen && !currentConversationId) {
-      createConversationMutation.mutate();
+    if (!isOpen) {
+      setCurrentConversationId(null);
+      setMessage("");
     }
   }, [isOpen]);
+
+  // Create conversation when modal opens
+  useEffect(() => {
+    if (isOpen && !currentConversationId && !createConversationMutation.isPending) {
+      console.log("Creating conversation for document:", documentId);
+      createConversationMutation.mutate();
+    }
+  }, [isOpen, currentConversationId]); // Include currentConversationId to prevent re-creation
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
