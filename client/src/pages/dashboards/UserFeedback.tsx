@@ -108,6 +108,19 @@ export default function UserFeedback() {
       console.log("Total feedback items:", allFeedback.length);
       const withDocumentName = allFeedback.filter((f: any) => f.documentName);
       console.log("Items with document name:", withDocumentName.length);
+      
+      // Check for problematic data types
+      allFeedback.forEach((feedback: any, index: number) => {
+        if (typeof feedback.documentName === 'object' && feedback.documentName !== null) {
+          console.warn(`Feedback ${index} has object documentName:`, feedback.documentName);
+        }
+        if (typeof feedback.documentId === 'object' && feedback.documentId !== null) {
+          console.warn(`Feedback ${index} has object documentId:`, feedback.documentId);
+        }
+        if (typeof feedback.documentContext === 'object' && feedback.documentContext !== null) {
+          console.log(`Feedback ${index} documentContext type:`, typeof feedback.documentContext, feedback.documentContext);
+        }
+      });
     }
   }, [allFeedback]);
 
@@ -593,7 +606,9 @@ export default function UserFeedback() {
                           {!feedback.documentName && feedback.documentContext && (
                             <Badge variant="outline" className="text-xs text-orange-600">
                               <FileText className="w-3 h-3 mr-1" />
-                              Document ID: {feedback.documentContext}
+                              Document ID: {typeof feedback.documentContext === 'object' 
+                                ? JSON.stringify(feedback.documentContext) 
+                                : String(feedback.documentContext)}
                             </Badge>
                           )}
                           <Badge
@@ -740,22 +755,22 @@ export default function UserFeedback() {
                                 <div className="bg-slate-100 p-3 rounded">
                                   {feedback.documentName && (
                                     <p className="text-sm text-slate-700">
-                                      <span className="font-medium">Name:</span> {feedback.documentName}
+                                      <span className="font-medium">Name:</span> {String(feedback.documentName)}
                                     </p>
                                   )}
                                   {feedback.documentId && (
                                     <p className="text-sm text-slate-700">
-                                      <span className="font-medium">ID:</span> {feedback.documentId}
+                                      <span className="font-medium">ID:</span> {String(feedback.documentId)}
                                     </p>
                                   )}
                                   {feedback.aiCategory && (
                                     <p className="text-sm text-slate-700">
-                                      <span className="font-medium">Category:</span> {feedback.aiCategory}
+                                      <span className="font-medium">Category:</span> {String(feedback.aiCategory)}
                                     </p>
                                   )}
-                                  {feedback.tags && feedback.tags.length > 0 && (
+                                  {feedback.tags && Array.isArray(feedback.tags) && feedback.tags.length > 0 && (
                                     <p className="text-sm text-slate-700">
-                                      <span className="font-medium">Tags:</span> {feedback.tags.join(", ")}
+                                      <span className="font-medium">Tags:</span> {feedback.tags.map(tag => String(tag)).join(", ")}
                                     </p>
                                   )}
                                   {feedback.documentContext && (
