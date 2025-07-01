@@ -13,6 +13,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -64,7 +78,7 @@ export default function UserFeedback() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [documentNameFilter, setDocumentNameFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [tagFilter, setTagFilter] = useState("");
 
   // Check for documentId query parameter
@@ -182,6 +196,11 @@ export default function UserFeedback() {
     }
   };
 
+  // Get unique AI categories for filtering
+  const aiCategories = Array.isArray(allFeedback) 
+    ? Array.from(new Set(allFeedback.map((feedback: any) => feedback.aiCategory).filter(Boolean)))
+    : [];
+
   const convertToCSV = (data: any[]) => {
     const headers = [
       "Date",
@@ -240,11 +259,9 @@ export default function UserFeedback() {
 
     // Filter by AI category
     const matchesCategory =
-      categoryFilter === "" ||
+      categoryFilter.length === 0 ||
       (feedback.aiCategory &&
-        feedback.aiCategory
-          .toLowerCase()
-          .includes(categoryFilter.toLowerCase()));
+        categoryFilter.includes(feedback.aiCategory));
 
     // Filter by tags
     const matchesTags =
@@ -578,12 +595,40 @@ export default function UserFeedback() {
                 className="w-full"
               />
 
-              <Input
-                placeholder="Filter by AI category..."
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="border-dashed min-w-[180px] justify-between">
+                    <span>AI Categories ({categoryFilter.length})</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <Command>
+                    <CommandInput placeholder="Search categories..." />
+                    <CommandEmpty>No categories found.</CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-auto">
+                      {aiCategories.map((category: string) => (
+                        <CommandItem
+                          key={category}
+                          onSelect={() => {
+                            setCategoryFilter(prev =>
+                              prev.includes(category)
+                                ? prev.filter(c => c !== category)
+                                : [...prev, category]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={categoryFilter.includes(category)}
+                            className="mr-2"
+                          />
+                          {category}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
               <Input
                 placeholder="Filter by tags..."
