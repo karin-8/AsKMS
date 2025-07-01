@@ -43,7 +43,6 @@ export default function DocumentChatModal({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chat/conversations", {
         title: `Chat with ${documentName}`,
-        documentId: documentId,
       });
       return response.json();
     },
