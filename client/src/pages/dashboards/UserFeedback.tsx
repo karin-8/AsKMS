@@ -101,6 +101,16 @@ export default function UserFeedback() {
     retry: false,
   });
 
+  // Debug: Log feedback data to see what we're getting
+  useEffect(() => {
+    if (allFeedback && allFeedback.length > 0) {
+      console.log("Feedback data sample:", allFeedback[0]);
+      console.log("Total feedback items:", allFeedback.length);
+      const withDocumentName = allFeedback.filter((f: any) => f.documentName);
+      console.log("Items with document name:", withDocumentName.length);
+    }
+  }, [allFeedback]);
+
   const handleExport = async () => {
     try {
       const response = await fetch("/api/ai-feedback/export", {
@@ -580,6 +590,12 @@ export default function UserFeedback() {
                               {feedback.documentName}
                             </Badge>
                           )}
+                          {!feedback.documentName && feedback.documentContext && (
+                            <Badge variant="outline" className="text-xs text-orange-600">
+                              <FileText className="w-3 h-3 mr-1" />
+                              Document ID: {feedback.documentContext}
+                            </Badge>
+                          )}
                           <Badge
                             variant={
                               feedback.feedbackType === "helpful"
@@ -716,18 +732,41 @@ export default function UserFeedback() {
                               </div>
                             )}
 
-                            {feedback.documentContext && (
+                            {(feedback.documentName || feedback.documentContext) && (
                               <div>
                                 <p className="font-medium text-slate-700">
-                                  Document Context:
+                                  Document Information:
                                 </p>
-                                <pre className="text-xs bg-slate-100 p-2 rounded overflow-x-auto">
-                                  {JSON.stringify(
-                                    feedback.documentContext,
-                                    null,
-                                    2,
+                                <div className="bg-slate-100 p-3 rounded">
+                                  {feedback.documentName && (
+                                    <p className="text-sm text-slate-700">
+                                      <span className="font-medium">Name:</span> {feedback.documentName}
+                                    </p>
                                   )}
-                                </pre>
+                                  {feedback.documentId && (
+                                    <p className="text-sm text-slate-700">
+                                      <span className="font-medium">ID:</span> {feedback.documentId}
+                                    </p>
+                                  )}
+                                  {feedback.aiCategory && (
+                                    <p className="text-sm text-slate-700">
+                                      <span className="font-medium">Category:</span> {feedback.aiCategory}
+                                    </p>
+                                  )}
+                                  {feedback.tags && feedback.tags.length > 0 && (
+                                    <p className="text-sm text-slate-700">
+                                      <span className="font-medium">Tags:</span> {feedback.tags.join(", ")}
+                                    </p>
+                                  )}
+                                  {feedback.documentContext && (
+                                    <details className="mt-2">
+                                      <summary className="text-xs text-slate-600 cursor-pointer">Raw Context Data</summary>
+                                      <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
+                                        {JSON.stringify(feedback.documentContext, null, 2)}
+                                      </pre>
+                                    </details>
+                                  )}
+                                </div>
                               </div>
                             )}
 
