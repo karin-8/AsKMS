@@ -406,7 +406,7 @@ export default function AiResponseAnalysis() {
                     {(stats?.averageResponseTime || 0) > 10000 && (
                       <li>• Optimize response processing for better performance</li>
                     )}
-                    {stats?.totalResponses < 10 && (
+                    {(stats?.totalResponses || 0) < 10 && (
                       <li>• Gather more data for better analysis insights</li>
                     )}
                     <li>• Monitor trends to identify improvement patterns</li>
