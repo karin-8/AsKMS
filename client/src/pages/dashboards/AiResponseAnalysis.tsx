@@ -60,11 +60,40 @@ export default function AiResponseAnalysis() {
     { name: "Fallback", value: stats?.fallbackCount || 0, color: "#ef4444" }
   ];
 
-  const timelineData = stats?.recentAnalysis?.slice(0, 7).reverse().map((analysis, index) => ({
-    name: `Day ${index + 1}`,
-    positive: analysis.analysisResult === 'positive' ? 1 : 0,
-    fallback: analysis.analysisResult === 'fallback' ? 1 : 0,
-  })) || [];
+  // Group analysis data by date and count positive/fallback per day
+  const timelineData = (() => {
+    if (!stats?.recentAnalysis?.length) return [];
+    
+    // Group data by date
+    const dateGroups = stats.recentAnalysis.reduce((groups, analysis) => {
+      const date = new Date(analysis.createdAt).toDateString();
+      if (!groups[date]) {
+        groups[date] = { positive: 0, fallback: 0, date };
+      }
+      if (analysis.analysisResult === 'positive') {
+        groups[date].positive++;
+      } else {
+        groups[date].fallback++;
+      }
+      return groups;
+    }, {} as Record<string, { positive: number; fallback: number; date: string }>);
+    
+    // Convert to array and sort by date (most recent first), then take last 7 days
+    const sortedData = Object.values(dateGroups)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 7)
+      .reverse(); // Show oldest to newest for timeline
+    
+    // Format for chart
+    return sortedData.map((item, index) => ({
+      name: new Date(item.date).toLocaleDateString('th-TH', { 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      positive: item.positive,
+      fallback: item.fallback,
+    }));
+  })();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('th-TH', {
