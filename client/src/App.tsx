@@ -25,6 +25,7 @@ import SystemHealth from "@/pages/dashboards/SystemHealth";
 import SecurityGovernance from "@/pages/dashboards/SecurityGovernance";
 import CustomerSurvey from "@/pages/dashboards/CustomerSurvey";
 import UserFeedback from "@/pages/dashboards/UserFeedback";
+import AiResponseAnalysis from "@/pages/dashboards/AiResponseAnalysis";
 import AuditMonitoring from "@/pages/AuditMonitoring";
 import MeetingNotes from "@/pages/MeetingNotes";
 import CreateAgentChatbot from "@/pages/CreateAgentChatbot";
@@ -76,6 +77,7 @@ function Router() {
           <Route path="/dashboards/security-governance" component={SecurityGovernance} />
           <Route path="/dashboards/customer-survey" component={CustomerSurvey} />
           <Route path="/dashboards/user-feedback" component={UserFeedback} />
+          <Route path="/dashboards/ai-response-analysis" component={AiResponseAnalysis} />
 
           <Route path="/survey" component={Survey} />
           
