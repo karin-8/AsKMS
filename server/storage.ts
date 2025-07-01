@@ -145,8 +145,7 @@ export interface IStorage {
   getAiResponseAnalysisStats(userId: string): Promise<{
     totalResponses: number;
     positiveCount: number;
-    irrelevantCount: number;
-    unableToAnswerCount: number;
+    fallbackCount: number;
     averageResponseTime: number;
     recentAnalysis: AiResponseAnalysis[];
   }>;
@@ -1164,8 +1163,7 @@ export class DatabaseStorage implements IStorage {
   async getAiResponseAnalysisStats(userId: string): Promise<{
     totalResponses: number;
     positiveCount: number;
-    irrelevantCount: number;
-    unableToAnswerCount: number;
+    fallbackCount: number;
     averageResponseTime: number;
     recentAnalysis: AiResponseAnalysis[];
   }> {
@@ -1183,20 +1181,12 @@ export class DatabaseStorage implements IStorage {
         eq(aiResponseAnalysis.analysisResult, 'positive')
       ));
 
-    const irrelevantResult = await db
+    const fallbackResult = await db
       .select({ count: count() })
       .from(aiResponseAnalysis)
       .where(and(
         eq(aiResponseAnalysis.userId, userId),
-        eq(aiResponseAnalysis.analysisResult, 'irrelevant')
-      ));
-
-    const unableToAnswerResult = await db
-      .select({ count: count() })
-      .from(aiResponseAnalysis)
-      .where(and(
-        eq(aiResponseAnalysis.userId, userId),
-        eq(aiResponseAnalysis.analysisResult, 'unable_to_answer')
+        eq(aiResponseAnalysis.analysisResult, 'fallback')
       ));
 
     // Get average response time
@@ -1218,8 +1208,7 @@ export class DatabaseStorage implements IStorage {
     return {
       totalResponses: totalResult[0]?.count || 0,
       positiveCount: positiveResult[0]?.count || 0,
-      irrelevantCount: irrelevantResult[0]?.count || 0,
-      unableToAnswerCount: unableToAnswerResult[0]?.count || 0,
+      fallbackCount: fallbackResult[0]?.count || 0,
       averageResponseTime: Math.round(avgResponseTime[0]?.avg || 0),
       recentAnalysis
     };
