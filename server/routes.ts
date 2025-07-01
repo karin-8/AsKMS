@@ -116,16 +116,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating conversation with data:", req.body);
       console.log("User ID:", userId);
       
-      const result = insertChatConversationSchema.safeParse(req.body);
+      // Add userId to the request body before validation
+      const dataWithUserId = {
+        ...req.body,
+        userId,
+      };
+      
+      const result = insertChatConversationSchema.safeParse(dataWithUserId);
       if (!result.success) {
         console.error("Validation error:", result.error);
         return res.status(400).json({ message: fromZodError(result.error).message });
       }
 
-      const conversation = await storage.createChatConversation({
-        ...result.data,
-        userId,
-      });
+      const conversation = await storage.createChatConversation(result.data);
       res.status(201).json(conversation);
     } catch (error) {
       console.error("Error creating conversation:", error);
