@@ -1519,6 +1519,54 @@ ${document.summary}`;
         console.error("Failed to create audit log for chat:", auditError);
       }
 
+      // Automatically analyze AI response quality
+      try {
+        const startTime = Date.now();
+        const responseTime = Date.now() - startTime;
+        
+        const analysisPrompt = `
+Analyze this AI assistant response to determine if it's a "positive" (helpful, informative response) or "fallback" (unable to answer, generic response).
+
+User Query: "${content}"
+Assistant Response: "${aiResponse}"
+
+Please classify this response as either:
+- "positive": The assistant provided a helpful, specific, informative answer
+- "fallback": The assistant gave a generic response, said they don't know, or couldn't provide specific information
+
+Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "reason": "explanation"}
+`;
+
+        const openai = new (await import("openai")).default({ 
+          apiKey: process.env.OPENAI_API_KEY 
+        });
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+          messages: [{ role: "user", content: analysisPrompt }],
+          response_format: { type: "json_object" },
+        });
+
+        const analysisResult = JSON.parse(response.choices[0].message.content || "{}");
+
+        // Store the analysis result
+        await storage.createAiResponseAnalysis({
+          chatMessageId: assistantMessage.id,
+          userId,
+          userQuery: content,
+          assistantResponse: aiResponse,
+          analysisResult: analysisResult.result,
+          analysisConfidence: analysisResult.confidence,
+          analysisReason: analysisResult.reason,
+          documentContext: documentId ? `Document ID: ${documentId}` : 'General chat',
+          responseTime
+        });
+
+        console.log(`AI Response Analysis completed: ${analysisResult.result} (confidence: ${analysisResult.confidence})`);
+      } catch (analysisError) {
+        console.error("Failed to analyze AI response:", analysisError);
+      }
+
       res.json([userMessage, assistantMessage]);
     } catch (error) {
       console.error("Error processing chat message:", error);
