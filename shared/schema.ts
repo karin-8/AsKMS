@@ -132,7 +132,7 @@ export const dataConnections = pgTable("data_connections", {
   name: varchar("name").notNull(),
   description: text("description"),
   type: varchar("type").notNull(), // 'database', 'api', or 'enterprise'
-  
+
   // Database connection fields
   dbType: varchar("db_type"), // 'postgresql', 'mysql', 'sqlserver', 'oracle', 'redshift', 'snowflake', 'tidb'
   host: varchar("host"),
@@ -141,7 +141,7 @@ export const dataConnections = pgTable("data_connections", {
   username: varchar("username"),
   password: varchar("password"), // encrypted
   connectionString: text("connection_string"), // encrypted
-  
+
   // API connection fields
   apiUrl: text("api_url"),
   method: varchar("method"), // 'GET', 'POST', 'PUT', 'DELETE'
@@ -149,13 +149,13 @@ export const dataConnections = pgTable("data_connections", {
   body: text("body"),
   authType: varchar("auth_type"), // 'none', 'basic', 'bearer', 'api_key'
   authConfig: jsonb("auth_config"), // stores auth credentials
-  
+
   // Enterprise system fields
   enterpriseType: varchar("enterprise_type"), // 'salesforce', 'sap', 'oracle_erp', 'microsoft_dynamics'
   instanceUrl: varchar("instance_url"), // For Salesforce, SAP, etc.
   clientId: varchar("client_id"),
   clientSecret: varchar("client_secret"),
-  
+
   isActive: boolean("is_active").default(true),
   lastTested: timestamp("last_tested"),
   testStatus: varchar("test_status"), // 'success', 'failed', 'pending'
@@ -256,20 +256,20 @@ export const chatWidgets = pgTable("chat_widgets", {
   name: varchar("name").notNull(),
   widgetKey: varchar("widget_key").notNull().unique(),
   isActive: boolean("is_active").default(true),
-  
+
   // Widget styling
   primaryColor: varchar("primary_color").default("#2563eb"),
   textColor: varchar("text_color").default("#ffffff"),
   position: varchar("position").default("bottom-right"), // 'bottom-right', 'bottom-left'
-  
+
   // Widget settings
   welcomeMessage: text("welcome_message").default("Hi! How can I help you today?"),
   offlineMessage: text("offline_message").default("We're currently offline. Please leave a message."),
-  
+
   // HR API integration
   enableHrLookup: boolean("enable_hr_lookup").default(false),
   hrApiEndpoint: varchar("hr_api_endpoint"),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -333,6 +333,21 @@ export const aiAssistantFeedback = pgTable("ai_assistant_feedback", {
   userNote: text("user_note"), // Optional explanation for negative feedback
   documentContext: jsonb("document_context"), // Which documents were referenced
   conversationId: integer("conversation_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const aiResponseAnalysis = pgTable("ai_response_analysis", {
+  id: serial("id").primaryKey(),
+  chatMessageId: integer("chat_message_id").references(() => chatMessages.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  userQuery: text("user_query").notNull(),
+  assistantResponse: text("assistant_response").notNull(),
+  analysisType: varchar("analysis_type").notNull(), // 'positive' or 'fallback'
+  confidence: real("confidence"), // 0.0 to 1.0
+  analysisReason: text("analysis_reason"),
+  conversationId: integer("conversation_id"),
+  documentId: integer("document_id").references(() => documents.id),
+  documentName: text("document_name"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -483,6 +498,8 @@ export type InsertDocumentDepartmentPermission = typeof documentDepartmentPermis
 
 export type AiAssistantFeedback = typeof aiAssistantFeedback.$inferSelect;
 export type InsertAiAssistantFeedback = typeof aiAssistantFeedback.$inferInsert;
+export type AiResponseAnalysis = typeof aiResponseAnalysis.$inferSelect;
+export type InsertAiResponseAnalysis = typeof aiResponseAnalysis.$inferInsert;
 
 // Audit logs for compliance tracking
 export const auditLogs = pgTable("audit_logs", {

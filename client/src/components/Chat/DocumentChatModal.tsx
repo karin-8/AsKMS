@@ -67,6 +67,35 @@ export default function DocumentChatModal({
     staleTime: 0
   });
 
+  // Analyze response mutation
+  const analyzeResponseMutation = useMutation({
+    mutationFn: async ({ 
+      chatMessageId, 
+      userQuery, 
+      assistantResponse 
+    }: { 
+      chatMessageId: number; 
+      userQuery: string; 
+      assistantResponse: string; 
+    }) => {
+      const response = await apiRequest("POST", "/api/ai-analysis", {
+        chatMessageId,
+        userQuery,
+        assistantResponse,
+        conversationId: currentConversationId,
+        documentId: documentId,
+        documentName: documentName,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log("Response analysis completed:", data.analysis);
+    },
+    onError: (error) => {
+      console.error("Failed to analyze response:", error);
+    },
+  });
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -77,7 +106,7 @@ export default function DocumentChatModal({
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, userQuery) => {
       setMessage("");
       queryClient.invalidateQueries({
         queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
@@ -85,6 +114,23 @@ export default function DocumentChatModal({
       // Refetch messages immediately
       queryClient.refetchQueries({
         queryKey: ["/api/chat/conversations", currentConversationId, "messages"],
+      }).then(() => {
+        // หลังจากได้ข้อความใหม่แล้ว ให้หาข้อความตอบกลับล่าสุดของ AI
+        queryClient.getQueryData(["/api/chat/conversations", currentConversationId, "messages"])
+          ?.then?.((messages: any[]) => {
+            const latestAssistantMessage = messages
+              ?.filter((msg: any) => msg.role === 'assistant')
+              ?.pop();
+            
+            if (latestAssistantMessage) {
+              // ส่งข้อมูลไปวิเคราะห์
+              analyzeResponseMutation.mutate({
+                chatMessageId: latestAssistantMessage.id,
+                userQuery: userQuery,
+                assistantResponse: latestAssistantMessage.content,
+              });
+            }
+          });
       });
     },
     onError: (error: Error) => {
