@@ -109,8 +109,9 @@ export default function DocumentChatModal({
     mutationFn: async (content: string) => {
       const response = await apiRequest("POST", "/api/chat/messages", {
         conversationId: currentConversationId,
+        role: "user",
         content,
-        documentId: documentId, // Pass the specific document ID
+        documentIds: [documentId], // Pass as array according to schema
       });
       return response.json();
     },
