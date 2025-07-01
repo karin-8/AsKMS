@@ -151,8 +151,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log("Creating message with data:", req.body);
+      console.log("User ID:", userId);
+      
       const result = insertChatMessageSchema.safeParse(req.body);
       if (!result.success) {
+        console.error("Message validation error:", result.error);
         return res.status(400).json({ message: fromZodError(result.error).message });
       }
 
