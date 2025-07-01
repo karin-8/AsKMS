@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Brain, TrendingUp, MessageSquare, Clock, Filter, CheckCircle, XCircle } from "lucide-react";
+import DashboardLayout from "@/components/Layout/DashboardLayout";
 
 export default function AiResponseAnalysis() {
   const [filterResult, setFilterResult] = useState<string>("all");
@@ -90,19 +91,20 @@ export default function AiResponseAnalysis() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading AI response analysis...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -451,6 +453,7 @@ export default function AiResponseAnalysis() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
