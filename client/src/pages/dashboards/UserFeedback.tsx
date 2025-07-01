@@ -606,8 +606,8 @@ export default function UserFeedback() {
                           {!feedback.documentName && feedback.documentContext && (
                             <Badge variant="outline" className="text-xs text-orange-600">
                               <FileText className="w-3 h-3 mr-1" />
-                              Document ID: {typeof feedback.documentContext === 'object' 
-                                ? JSON.stringify(feedback.documentContext) 
+                              {typeof feedback.documentContext === 'object' && feedback.documentContext.documentName
+                                ? feedback.documentContext.documentName
                                 : String(feedback.documentContext)}
                             </Badge>
                           )}
