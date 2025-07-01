@@ -43,20 +43,12 @@ export default function DocumentChatModal({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chat/conversations", {
         title: `Chat with ${documentName}`,
+        documentId: documentId,
       });
       return response.json();
     },
     onSuccess: (conversation) => {
-      console.log("Conversation created successfully:", conversation);
       setCurrentConversationId(conversation.id);
-    },
-    onError: (error) => {
-      console.error("Failed to create conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create chat conversation",
-        variant: "destructive",
-      });
     },
   });
 
@@ -109,9 +101,8 @@ export default function DocumentChatModal({
     mutationFn: async (content: string) => {
       const response = await apiRequest("POST", "/api/chat/messages", {
         conversationId: currentConversationId,
-        role: "user",
         content,
-        documentIds: [documentId], // Pass as array according to schema
+        documentId: documentId, // Pass the specific document ID
       });
       return response.json();
     },
@@ -156,21 +147,12 @@ export default function DocumentChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Reset conversation when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setCurrentConversationId(null);
-      setMessage("");
-    }
-  }, [isOpen]);
-
   // Create conversation when modal opens
   useEffect(() => {
-    if (isOpen && !currentConversationId && !createConversationMutation.isPending) {
-      console.log("Creating conversation for document:", documentId);
+    if (isOpen && !currentConversationId) {
       createConversationMutation.mutate();
     }
-  }, [isOpen, currentConversationId]); // Include currentConversationId to prevent re-creation
+  }, [isOpen]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
