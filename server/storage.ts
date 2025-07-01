@@ -49,13 +49,13 @@ export interface IStorage {
   // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Category operations
   getCategories(userId: string): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
   deleteCategory(id: number, userId: string): Promise<void>;
-  
+
   // Document operations
   getDocuments(userId: string, options?: { categoryId?: number; limit?: number; offset?: number }): Promise<Document[]>;
   getDocument(id: number, userId: string): Promise<Document | undefined>;
@@ -64,7 +64,7 @@ export interface IStorage {
   deleteDocument(id: number, userId: string): Promise<void>;
   searchDocuments(userId: string, query: string): Promise<Document[]>;
   toggleDocumentFavorite(id: number, userId: string): Promise<Document>;
-  
+
   // Stats operations
   getUserStats(userId: string): Promise<{
     totalDocuments: number;
@@ -72,23 +72,23 @@ export interface IStorage {
     storageUsed: number;
     aiQueries: number;
   }>;
-  
+
   // Chat operations
   getChatConversations(userId: string): Promise<ChatConversation[]>;
   createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
   getChatMessages(conversationId: number, userId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
-  
+
   // Access logging
   logDocumentAccess(documentId: number, userId: string, accessType: string, metadata?: any): Promise<void>;
-  
+
   // Document demand insights
   getDocumentAccessStats(userId: string, dateRange?: { from: Date; to: Date }): Promise<{
     mostAccessedDocuments: Array<{ documentId: number; documentName: string; accessCount: number; category: string }>;
     categoryStats: Array<{ category: string; count: number }>;
     timelineData: Array<{ date: string; accessCount: number }>;
   }>;
-  
+
   // AI feedback system
   createAiFeedback(feedback: InsertAiAssistantFeedback): Promise<AiAssistantFeedback>;
   getAiFeedbackStats(userId: string): Promise<{
@@ -99,7 +99,7 @@ export interface IStorage {
   }>;
   exportAiFeedbackData(userId: string): Promise<AiAssistantFeedback[]>;
   getDocumentFeedback(documentId: number, userId: string): Promise<AiAssistantFeedback[]>;
-  
+
   // Data connection operations
   getDataConnections(userId: string): Promise<DataConnection[]>;
   getDataConnection(id: number, userId: string): Promise<DataConnection | undefined>;
@@ -107,7 +107,7 @@ export interface IStorage {
   updateDataConnection(id: number, connection: UpdateDataConnection, userId: string): Promise<DataConnection>;
   deleteDataConnection(id: number, userId: string): Promise<void>;
   testDataConnection(id: number, userId: string): Promise<{ success: boolean; message: string }>;
-  
+
   // Audit logging operations
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(userId: string, options?: { 
@@ -125,7 +125,7 @@ export interface IStorage {
     topActions: Array<{ action: string; count: number }>;
     recentActivity: AuditLog[];
   }>;
-  
+
   // Agent Chatbot operations
   getAgentChatbots(userId: string): Promise<AgentChatbot[]>;
   getAgentChatbot(id: number, userId: string): Promise<AgentChatbot | undefined>;
@@ -206,7 +206,7 @@ export class DatabaseStorage implements IStorage {
   // Document operations
   async getDocuments(userId: string, options: { categoryId?: number; limit?: number; offset?: number } = {}): Promise<Document[]> {
     const { categoryId, limit = 1000, offset = 0 } = options;
-    
+
     // Get user's own documents with favorite status
     let ownDocumentsQuery = db
       .select({
@@ -235,7 +235,7 @@ export class DatabaseStorage implements IStorage {
         eq(userFavorites.documentId, documents.id),
         eq(userFavorites.userId, userId)
       ));
-    
+
     if (categoryId) {
       ownDocumentsQuery = ownDocumentsQuery.where(
         and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)!)
@@ -243,9 +243,9 @@ export class DatabaseStorage implements IStorage {
     } else {
       ownDocumentsQuery = ownDocumentsQuery.where(eq(documents.userId, userId));
     }
-    
+
     const ownDocuments = await ownDocumentsQuery.orderBy(desc(documents.updatedAt));
-    
+
     // Get documents shared directly with the user
     const userSharedDocuments = await db
       .select({
@@ -276,14 +276,14 @@ export class DatabaseStorage implements IStorage {
         eq(userFavorites.userId, userId)
       ))
       .where(eq(documentUserPermissions.userId, userId));
-    
+
     // Get user's department
     const [currentUser] = await db.select({ departmentId: users.departmentId })
       .from(users)
       .where(eq(users.id, userId));
-    
+
     let departmentSharedDocuments: any[] = [];
-    
+
     // Get documents shared with user's department
     if (currentUser?.departmentId) {
       departmentSharedDocuments = await db
@@ -316,18 +316,18 @@ export class DatabaseStorage implements IStorage {
         ))
         .where(eq(documentDepartmentPermissions.departmentId, currentUser.departmentId));
     }
-    
+
     // Combine all documents and remove duplicates
     const allDocuments = [...ownDocuments, ...userSharedDocuments, ...departmentSharedDocuments];
     const uniqueDocuments = allDocuments.filter((doc, index, self) => 
       index === self.findIndex(d => d.id === doc.id)
     );
-    
+
     // Sort by updated date and apply pagination
     const sortedDocuments = uniqueDocuments
       .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
       .slice(offset, offset + limit);
-    
+
     return sortedDocuments;
   }
 
@@ -337,11 +337,11 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(documents)
       .where(and(eq(documents.id, id), eq(documents.userId, userId)));
-    
+
     if (ownedDocument) {
       return ownedDocument;
     }
-    
+
     // Check if document is shared directly with user
     const [userSharedDocument] = await db
       .select()
@@ -351,16 +351,16 @@ export class DatabaseStorage implements IStorage {
         eq(documents.id, id),
         eq(documentUserPermissions.userId, userId)
       ));
-    
+
     if (userSharedDocument) {
       return userSharedDocument.documents;
     }
-    
+
     // Check if document is shared with user's department
     const [currentUser] = await db.select({ departmentId: users.departmentId })
       .from(users)
       .where(eq(users.id, userId));
-    
+
     if (currentUser?.departmentId) {
       const [deptSharedDocument] = await db
         .select()
@@ -370,12 +370,12 @@ export class DatabaseStorage implements IStorage {
           eq(documents.id, id),
           eq(documentDepartmentPermissions.departmentId, currentUser.departmentId)
         ));
-      
+
       if (deptSharedDocument) {
         return deptSharedDocument.documents;
       }
     }
-    
+
     return undefined;
   }
 
@@ -399,12 +399,12 @@ export class DatabaseStorage implements IStorage {
 
   async searchDocuments(userId: string, query: string): Promise<Document[]> {
     console.log(`Storage searchDocuments called - userId: ${userId}, query: "${query}"`);
-    
+
     const lowerQuery = query.toLowerCase();
     const searchTerms = lowerQuery.split(/\s+/).filter(term => term.length > 0);
-    
+
     console.log(`Search terms: ${searchTerms.join(', ')}`);
-    
+
     // Build search conditions for each term using ILIKE for case-insensitive search
     const searchConditions = searchTerms.map(term => 
       or(
@@ -418,9 +418,9 @@ export class DatabaseStorage implements IStorage {
         )`
       )
     );
-    
+
     let whereClause;
-    
+
     if (searchConditions.length > 0) {
       whereClause = and(
         eq(documents.userId, userId),
@@ -429,14 +429,14 @@ export class DatabaseStorage implements IStorage {
     } else {
       whereClause = eq(documents.userId, userId);
     }
-    
+
     const results = await db
       .select()
       .from(documents)
       .where(whereClause)
       .orderBy(desc(documents.updatedAt))
       .limit(50);
-      
+
     console.log(`Found ${results.length} documents matching search criteria`);
     return results;
   }
@@ -444,13 +444,13 @@ export class DatabaseStorage implements IStorage {
   async toggleDocumentFavorite(id: number, userId: string): Promise<Document> {
     const document = await this.getDocument(id, userId);
     if (!document) throw new Error("Document not found");
-    
+
     // Check if user has already favorited this document
     const [existingFavorite] = await db
       .select()
       .from(userFavorites)
       .where(and(eq(userFavorites.documentId, id), eq(userFavorites.userId, userId)));
-    
+
     if (existingFavorite) {
       // Remove from favorites
       await db
@@ -465,7 +465,7 @@ export class DatabaseStorage implements IStorage {
           userId: userId,
         });
     }
-    
+
     return document;
   }
 
@@ -505,7 +505,7 @@ export class DatabaseStorage implements IStorage {
 
     // Combine all accessible documents using UNION for unique results
     let allDocsQuery = ownedDocsQuery.union(userSharedDocsQuery);
-    
+
     if (userInfo?.departmentId) {
       const deptSharedDocsQuery = db
         .select({
@@ -515,12 +515,12 @@ export class DatabaseStorage implements IStorage {
         .from(documents)
         .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
         .where(eq(documentDepartmentPermissions.departmentId, userInfo.departmentId));
-      
+
       allDocsQuery = allDocsQuery.union(deptSharedDocsQuery);
     }
 
     const allAccessibleDocs = await allDocsQuery;
-    
+
     const totalDocuments = allAccessibleDocs.length;
     const storageUsed = allAccessibleDocs.reduce((sum, doc) => sum + (Number(doc.fileSize) || 0), 0);
 
@@ -639,7 +639,7 @@ export class DatabaseStorage implements IStorage {
     const timelineData = [];
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     for (let i = 0; i < 30; i++) {
       const date = new Date(thirtyDaysAgo);
       date.setDate(date.getDate() + i);
@@ -714,13 +714,19 @@ export class DatabaseStorage implements IStorage {
       .from(aiAssistantFeedback)
       .where(eq(aiAssistantFeedback.userId, userId))
       .orderBy(desc(aiAssistantFeedback.createdAt));
-    
+
     // Get document info from documentContext if available
     const enrichedResults = await Promise.all(result.map(async (feedback: any) => {
+      let documentName: string | null = null;
+      let documentId: number | null = null;
+      let aiCategory: string | null = null;
+      let aiCategoryColor: string | null = null;
+      let tags: string[] | null = null;
+
       if (feedback.documentContext) {
         try {
           let documentIds: number[] = [];
-          
+
           // Handle different formats of documentContext
           if (Array.isArray(feedback.documentContext)) {
             documentIds = feedback.documentContext;
@@ -733,60 +739,92 @@ export class DatabaseStorage implements IStorage {
               const parts = feedback.documentContext.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
               documentIds = parts;
             }
+          } else {
+            const numberMatch = feedback.documentContext.match(/\d+/);
+              if (numberMatch) {
+                documentIds = [parseInt(numberMatch[0])];
+              }
+            }
+          } else if (typeof feedback.documentContext === 'number') {
+            documentIds = [feedback.documentContext];
+          } else if (feedback.documentContext && typeof feedback.documentContext === 'object') {
+            // Handle object with documentId property
+            if (feedback.documentContext.documentId) {
+              documentIds = [feedback.documentContext.documentId];
+            }
           }
-          
+
+          // Get document info for the first document ID including AI category and tags
           if (documentIds.length > 0) {
-            const firstDocId = documentIds[0];
-            const docs = await db
+            const docId = documentIds[0];
+            const [document] = await db
               .select({
                 id: documents.id,
                 name: documents.name,
                 aiCategory: documents.aiCategory,
+                aiCategoryColor: documents.aiCategoryColor,
                 tags: documents.tags,
               })
               .from(documents)
-              .where(eq(documents.id, firstDocId))
+              .where(eq(documents.id, docId))
               .limit(1);
-            
-            if (docs.length > 0) {
-              return {
-                ...feedback,
-                documentName: docs[0].name,
-                documentId: docs[0].id,
-                aiCategory: docs[0].aiCategory,
-                tags: docs[0].tags,
-              };
+
+            if (document) {
+              documentName = document.name;
+              documentId = document.id;
+              aiCategory = document.aiCategory;
+              aiCategoryColor = document.aiCategoryColor;
+              tags = document.tags;
             }
           }
-        } catch (e) {
-          console.error('Error enriching feedback with document data:', e, 'documentContext:', feedback.documentContext);
+        } catch (error) {
+          console.error('Error processing documentContext:', error);
         }
       }
-      
+
       return {
         ...feedback,
-        documentName: null,
-        documentId: null,
-        aiCategory: null,
-        tags: null,
+        documentName,
+        documentId,
+        aiCategory,
+        aiCategoryColor,
+        tags,
       };
     }));
-    
-    return enrichedResults as any[];
+
+    return enrichedResults;
   }
 
   // Get feedback for specific document
-  async getDocumentFeedback(documentId: number, userId: string): Promise<AiAssistantFeedback[]> {
-    const result = await db
-      .select()
+  async getDocumentFeedback(documentId: number, userId: string): Promise<any[]> {
+    const feedbackData = await db
+      .select({
+        id: aiAssistantFeedback.id,
+        chatMessageId: aiAssistantFeedback.chatMessageId,
+        userId: aiAssistantFeedback.userId,
+        feedbackType: aiAssistantFeedback.feedbackType,
+        userNote: aiAssistantFeedback.userNote,
+        userQuery: aiAssistantFeedback.userQuery,
+        assistantResponse: aiAssistantFeedback.assistantResponse,
+        createdAt: aiAssistantFeedback.createdAt,
+        documentContext: aiAssistantFeedback.documentContext,
+        documentName: documents.name,
+        documentId: documents.id,
+        aiCategory: documents.aiCategory,
+        aiCategoryColor: documents.aiCategoryColor,
+        tags: documents.tags,
+      })
       .from(aiAssistantFeedback)
-      .where(and(
-        eq(aiAssistantFeedback.userId, userId),
-        sql`${aiAssistantFeedback.documentContext} ? ${documentId.toString()}`
-      ))
+      .leftJoin(documents, eq(documents.id, documentId))
+      .where(
+        and(
+          eq(aiAssistantFeedback.userId, userId),
+          sql`${aiAssistantFeedback.documentContext}::text LIKE ${`%${documentId}%`}`
+        )
+      )
       .orderBy(desc(aiAssistantFeedback.createdAt));
-    
-    return result as any[];
+
+    return feedbackData;
   }
 
   // Data connection operations
@@ -841,14 +879,14 @@ export class DatabaseStorage implements IStorage {
           headers: connection.headers as Record<string, string> || {},
           body: connection.method !== 'GET' ? connection.body : undefined,
         });
-        
+
         if (response.ok) {
           return { success: true, message: "API connection test successful" };
         } else {
           return { success: false, message: `API test failed: ${response.status} ${response.statusText}` };
         }
       }
-      
+
       return { success: false, message: "Unknown connection type" };
     } catch (error) {
       return { success: false, message: `Connection test failed: ${error.message}` };
@@ -874,9 +912,9 @@ export class DatabaseStorage implements IStorage {
     dateTo?: Date;
   } = {}): Promise<AuditLog[]> {
     const { limit = 100, offset = 0, action, resourceType, userId: filterUserId, dateFrom, dateTo } = options;
-    
+
     let conditions: any[] = [];
-    
+
     // For admin users, show all audit logs unless filtering by specific user
     const currentUser = await this.getUser(userId);
     if (!currentUser?.email?.includes('admin')) {
@@ -885,19 +923,19 @@ export class DatabaseStorage implements IStorage {
       // Admin can filter by specific user
       conditions.push(eq(auditLogs.userId, filterUserId));
     }
-    
+
     if (action) {
       conditions.push(eq(auditLogs.action, action));
     }
-    
+
     if (resourceType) {
       conditions.push(eq(auditLogs.resourceType, resourceType));
     }
-    
+
     if (dateFrom) {
       conditions.push(gte(auditLogs.timestamp, dateFrom));
     }
-    
+
     if (dateTo) {
       conditions.push(lte(auditLogs.timestamp, dateTo));
     }
@@ -1025,7 +1063,7 @@ export class DatabaseStorage implements IStorage {
       .set({ ...agent, updatedAt: new Date() })
       .where(and(eq(agentChatbots.id, id), eq(agentChatbots.userId, userId)))
       .returning();
-    
+
     if (!updated) {
       throw new Error("Agent not found");
     }

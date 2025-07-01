@@ -117,13 +117,19 @@ export default function UserFeedback() {
       console.log("Items with tags:", withTags.length);
       
       // Log detailed data for first few items
-      allFeedback.slice(0, 3).forEach((feedback: any, index: number) => {
-        console.log(`Feedback ${index}:`, {
+      allFeedback.slice(0, 5).forEach((feedback: any, index: number) => {
+        console.log(`Feedback ${index} full object:`, feedback);
+        console.log(`Feedback ${index} specific fields:`, {
           documentName: feedback.documentName,
           documentId: feedback.documentId,
           aiCategory: feedback.aiCategory,
+          aiCategoryColor: feedback.aiCategoryColor,
           tags: feedback.tags,
-          documentContext: feedback.documentContext
+          documentContext: feedback.documentContext,
+          hasAiCategory: !!feedback.aiCategory,
+          hasTags: !!(feedback.tags && feedback.tags.length > 0),
+          tagsType: typeof feedback.tags,
+          tagsValue: feedback.tags
         });
       });
       
