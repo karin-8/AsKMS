@@ -111,11 +111,29 @@ export default function AiResponseAnalysis() {
   };
 
   const getAnalysisColor = (result: string) => {
-    return result === 'positive' ? 'text-green-600' : 'text-red-600';
+    switch (result) {
+      case 'positive':
+        return 'text-green-600';
+      case 'irrelevant':
+        return 'text-yellow-600';
+      case 'unable_to_answer':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
   };
 
   const getAnalysisIcon = (result: string) => {
-    return result === 'positive' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />;
+    switch (result) {
+      case 'positive':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'irrelevant':
+        return <AlertCircle className="h-4 w-4" />;
+      case 'unable_to_answer':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
+    }
   };
 
   const resetFilters = () => {
@@ -327,8 +345,15 @@ export default function AiResponseAnalysis() {
                         <span className={getAnalysisColor(analysis.analysisResult)}>
                           {getAnalysisIcon(analysis.analysisResult)}
                         </span>
-                        <Badge variant={analysis.analysisResult === 'positive' ? 'default' : 'destructive'}>
-                          {analysis.analysisResult}
+                        <Badge variant={
+                          analysis.analysisResult === 'positive' ? 'default' : 
+                          analysis.analysisResult === 'irrelevant' ? 'secondary' : 
+                          'destructive'
+                        }>
+                          {analysis.analysisResult === 'positive' ? 'Positive' :
+                           analysis.analysisResult === 'irrelevant' ? 'Irrelevant' :
+                           analysis.analysisResult === 'unable_to_answer' ? 'Unable to Answer' :
+                           analysis.analysisResult}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           Confidence: {Math.round(analysis.analysisConfidence * 100)}%
