@@ -35,6 +35,7 @@ import {
   Filter,
   Search,
   Eye,
+  Hash,
 } from "lucide-react";
 import { format } from "date-fns";
 import DashboardLayout from "@/components/Layout/DashboardLayout";
@@ -108,6 +109,23 @@ export default function UserFeedback() {
       console.log("Total feedback items:", allFeedback.length);
       const withDocumentName = allFeedback.filter((f: any) => f.documentName);
       console.log("Items with document name:", withDocumentName.length);
+      
+      // Check for AI category and tags data
+      const withAiCategory = allFeedback.filter((f: any) => f.aiCategory);
+      const withTags = allFeedback.filter((f: any) => f.tags && f.tags.length > 0);
+      console.log("Items with AI category:", withAiCategory.length);
+      console.log("Items with tags:", withTags.length);
+      
+      // Log detailed data for first few items
+      allFeedback.slice(0, 3).forEach((feedback: any, index: number) => {
+        console.log(`Feedback ${index}:`, {
+          documentName: feedback.documentName,
+          documentId: feedback.documentId,
+          aiCategory: feedback.aiCategory,
+          tags: feedback.tags,
+          documentContext: feedback.documentContext
+        });
+      });
       
       // Check for problematic data types
       allFeedback.forEach((feedback: any, index: number) => {
@@ -611,21 +629,34 @@ export default function UserFeedback() {
                                 : String(feedback.documentContext)}
                             </Badge>
                           )}
+                          
+                          {/* AI Category Badge */}
                           {feedback.aiCategory && (
-                            <Badge variant="outline" className="text-xs text-blue-600">
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs"
+                              style={{ 
+                                backgroundColor: feedback.aiCategoryColor ? `${feedback.aiCategoryColor}15` : "#dbeafe",
+                                borderColor: feedback.aiCategoryColor || "#3b82f6",
+                                color: feedback.aiCategoryColor || "#1d4ed8"
+                              }}
+                            >
                               {feedback.aiCategory}
                             </Badge>
                           )}
+                          
+                          {/* Tags */}
                           {feedback.tags && Array.isArray(feedback.tags) && feedback.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {feedback.tags.slice(0, 3).map((tag: string, index: number) => (
-                                <Badge key={index} variant="secondary" className="text-xs text-gray-600">
+                              {feedback.tags.slice(0, 2).map((tag: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs text-gray-600">
+                                  <Hash className="w-2 h-2 mr-1" />
                                   {tag}
                                 </Badge>
                               ))}
-                              {feedback.tags.length > 3 && (
-                                <Badge variant="secondary" className="text-xs text-gray-500">
-                                  +{feedback.tags.length - 3} more
+                              {feedback.tags.length > 2 && (
+                                <Badge variant="outline" className="text-xs text-gray-500">
+                                  +{feedback.tags.length - 2} more
                                 </Badge>
                               )}
                             </div>
