@@ -882,8 +882,9 @@ export class DatabaseStorage implements IStorage {
       }
 
       return { success: false, message: "Unknown connection type" };
-    } catch (error: any) {
-      return { success: false, message: `Connection test failed: ${error.message}` };
+    } catch (error) {
+      ```text
+return { success: false, message: `Connection test failed: ${error.message}` };
     }
   }
 
