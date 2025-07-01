@@ -1525,16 +1525,18 @@ ${document.summary}`;
         const responseTime = Date.now() - startTime;
         
         const analysisPrompt = `
-Analyze this AI assistant response to determine if it's a "positive" (helpful, informative response) or "fallback" (unable to answer, generic response).
+Analyze this AI assistant response in the context of a document-based chat system to determine the quality and nature of the response.
 
 User Query: "${content}"
 Assistant Response: "${aiResponse}"
+Document Context: ${documentId ? `Document ID: ${documentId}` : 'General chat'}
 
-Please classify this response as either:
-- "positive": The assistant provided a helpful, specific, informative answer
-- "fallback": The assistant gave a generic response, said they don't know, or couldn't provide specific information
+Please classify this response as one of:
+- "positive": The assistant provided a helpful, specific, informative answer that directly addresses the user's question
+- "irrelevant": The user asked about something completely unrelated to the document content or context (off-topic question)
+- "unable_to_answer": The user's question is relevant to the document context, but the assistant genuinely cannot provide a specific answer due to lack of information in the documents
 
-Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "reason": "explanation"}
+Respond with JSON: {"result": "positive" or "irrelevant" or "unable_to_answer", "confidence": 0.0-1.0, "reason": "explanation"}
 `;
 
         const openai = new (await import("openai")).default({ 

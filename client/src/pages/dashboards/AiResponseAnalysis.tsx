@@ -21,7 +21,8 @@ export default function AiResponseAnalysis() {
   }) as { data: {
     totalResponses: number;
     positiveCount: number;
-    fallbackCount: number;
+    irrelevantCount: number;
+    unableToAnswerCount: number;
     averageResponseTime: number;
     recentAnalysis: Array<{
       id: number;
