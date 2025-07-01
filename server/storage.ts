@@ -739,12 +739,6 @@ export class DatabaseStorage implements IStorage {
               const parts = feedback.documentContext.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
               documentIds = parts;
             }
-          } else {
-            const numberMatch = feedback.documentContext.match(/\d+/);
-              if (numberMatch) {
-                documentIds = [parseInt(numberMatch[0])];
-              }
-            }
           } else if (typeof feedback.documentContext === 'number') {
             documentIds = [feedback.documentContext];
           } else if (feedback.documentContext && typeof feedback.documentContext === 'object') {
