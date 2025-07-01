@@ -79,7 +79,7 @@ export default function UserFeedback() {
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [documentNameFilter, setDocumentNameFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const [tagFilter, setTagFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
 
   // Check for documentId query parameter
   const urlParams = new URLSearchParams(window.location.search);
@@ -201,6 +201,16 @@ export default function UserFeedback() {
     ? Array.from(new Set(allFeedback.map((feedback: any) => feedback.aiCategory).filter(Boolean)))
     : [];
 
+  // Get unique tags for filtering
+  const allTags = Array.isArray(allFeedback) 
+    ? Array.from(new Set(
+        allFeedback
+          .filter((feedback: any) => feedback.tags && Array.isArray(feedback.tags))
+          .flatMap((feedback: any) => feedback.tags)
+          .filter(Boolean)
+      ))
+    : [];
+
   const convertToCSV = (data: any[]) => {
     const headers = [
       "Date",
@@ -265,12 +275,10 @@ export default function UserFeedback() {
 
     // Filter by tags
     const matchesTags =
-      tagFilter === "" ||
+      tagFilter.length === 0 ||
       (feedback.tags &&
         Array.isArray(feedback.tags) &&
-        feedback.tags.some((tag: string) =>
-          tag.toLowerCase().includes(tagFilter.toLowerCase()),
-        ));
+        feedback.tags.some((tag: string) => tagFilter.includes(tag)));
 
     return (
       matchesType &&
@@ -630,12 +638,40 @@ export default function UserFeedback() {
                 </PopoverContent>
               </Popover>
 
-              <Input
-                placeholder="Filter by tags..."
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-                className="w-full"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="border-dashed min-w-[180px] justify-between">
+                    <span>Tags ({tagFilter.length})</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0">
+                  <Command>
+                    <CommandInput placeholder="Search tags..." />
+                    <CommandEmpty>No tags found.</CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-auto">
+                      {allTags.map((tag: string) => (
+                        <CommandItem
+                          key={tag}
+                          onSelect={() => {
+                            setTagFilter(prev =>
+                              prev.includes(tag)
+                                ? prev.filter(t => t !== tag)
+                                : [...prev, tag]
+                            );
+                          }}
+                        >
+                          <Checkbox
+                            checked={tagFilter.includes(tag)}
+                            className="mr-2"
+                          />
+                          {tag}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardContent>
         </Card>
