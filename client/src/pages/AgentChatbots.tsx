@@ -31,10 +31,21 @@ interface AgentChatbot {
   systemPrompt: string;
   isActive: boolean;
   channels: string[];
+  personality?: string;
+  profession?: string;
+  responseStyle?: string;
+  specialSkills?: string[];
+  contentFiltering?: boolean;
+  toxicityPrevention?: boolean;
+  privacyProtection?: boolean;
+  factualAccuracy?: boolean;
+  responseLength?: string;
+  allowedTopics?: string[];
+  blockedTopics?: string[];
   lineOaConfig?: {
-    channelId: string;
-    channelSecret: string;
-    accessToken: string;
+    lineOaId?: string;
+    lineOaName?: string;
+    accessToken?: string;
   };
   facebookConfig?: {
     pageId: string;
@@ -279,6 +290,30 @@ export default function AgentChatbots() {
                       <p className="text-sm text-slate-600 mb-3 line-clamp-2">
                         {agent.description}
                       </p>
+                    )}
+
+                    {/* Personality & Profession */}
+                    {(agent.personality || agent.profession) && (
+                      <div className="mb-3">
+                        <div className="flex flex-wrap gap-2">
+                          {agent.personality && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              {agent.personality.charAt(0).toUpperCase() + agent.personality.slice(1)}
+                            </Badge>
+                          )}
+                          {agent.profession && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              {agent.profession === 'hr' ? 'HR' : agent.profession === 'it' ? 'IT' : 
+                               agent.profession.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </Badge>
+                          )}
+                          {agent.responseStyle && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                              {agent.responseStyle.charAt(0).toUpperCase() + agent.responseStyle.slice(1)}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     )}
                     
                     {/* Channels */}
