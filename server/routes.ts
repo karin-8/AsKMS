@@ -2403,11 +2403,46 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       console.log("Creating agent chatbot with data:", JSON.stringify(req.body, null, 2));
       console.log("User ID:", userId);
       
-      const agentData = { ...req.body, userId };
-      console.log("Final agent data:", JSON.stringify(agentData, null, 2));
+      // Extract documentIds from request body
+      const { documentIds, lineOaChannelId, ...agentData } = req.body;
       
-      const agent = await storage.createAgentChatbot(agentData);
+      // Handle LINE OA configuration
+      let lineOaConfig = undefined;
+      if (agentData.channels?.includes('lineoa') && lineOaChannelId) {
+        // Find the LINE OA channel configuration
+        const lineOaChannels = [
+          { id: "U1234567890", name: "4urney HR", description: "HR Support Channel" },
+          { id: "U0987654321", name: "Customer Support", description: "General Support" },
+          { id: "U1122334455", name: "Sales Inquiry", description: "Sales Team Channel" },
+        ];
+        const selectedChannel = lineOaChannels.find(ch => ch.id === lineOaChannelId);
+        if (selectedChannel) {
+          lineOaConfig = {
+            lineOaId: selectedChannel.id,
+            lineOaName: selectedChannel.name,
+            accessToken: "mock_access_token" // In real implementation, this would be configured properly
+          };
+        }
+      }
+      
+      const finalAgentData = { 
+        ...agentData, 
+        userId,
+        lineOaConfig
+      };
+      console.log("Final agent data:", JSON.stringify(finalAgentData, null, 2));
+      
+      const agent = await storage.createAgentChatbot(finalAgentData);
       console.log("Agent created successfully:", agent);
+      
+      // Associate documents with the agent if provided
+      if (documentIds && documentIds.length > 0) {
+        console.log("Adding documents to agent:", documentIds);
+        for (const documentId of documentIds) {
+          await storage.addDocumentToAgent(agent.id, documentId, userId);
+        }
+      }
+      
       res.status(201).json(agent);
     } catch (error) {
       console.error("Error creating agent chatbot:", error);

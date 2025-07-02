@@ -560,6 +560,22 @@ export const agentChatbots = pgTable("agent_chatbots", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   channels: jsonb("channels").$type<string[]>().default([]).notNull(), // ['lineoa', 'facebook', 'tiktok']
+  
+  // New personality and capabilities fields
+  personality: varchar("personality"), // 'friendly', 'professional', 'energetic', etc.
+  profession: varchar("profession"), // 'sales', 'hr', 'it', etc.
+  responseStyle: varchar("response_style"), // 'concise', 'detailed', 'conversational', 'educational'
+  specialSkills: jsonb("special_skills").$type<string[]>().default([]),
+  
+  // Guardrails configuration
+  contentFiltering: boolean("content_filtering").default(true),
+  toxicityPrevention: boolean("toxicity_prevention").default(true),
+  privacyProtection: boolean("privacy_protection").default(true),
+  factualAccuracy: boolean("factual_accuracy").default(true),
+  responseLength: varchar("response_length").default("medium"), // 'short', 'medium', 'long'
+  allowedTopics: jsonb("allowed_topics").$type<string[]>().default([]),
+  blockedTopics: jsonb("blocked_topics").$type<string[]>().default([]),
+  
   lineOaConfig: jsonb("lineoa_config").$type<{
     lineOaId?: string;
     lineOaName?: string;
