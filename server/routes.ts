@@ -2430,8 +2430,8 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         ...agentData, 
         userId,
         lineOaConfig,
-        // Ensure all array fields are properly typed as arrays, not strings
-        channels: Array.isArray(agentData.channels) ? agentData.channels : [agentData.channels].filter(Boolean),
+        // Default channels to empty array since we removed channel selection
+        channels: [],
         specialSkills: Array.isArray(agentData.specialSkills) ? agentData.specialSkills : [],
         allowedTopics: Array.isArray(agentData.allowedTopics) ? agentData.allowedTopics : [],
         blockedTopics: Array.isArray(agentData.blockedTopics) ? agentData.blockedTopics : []
