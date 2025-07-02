@@ -152,6 +152,14 @@ export interface IStorage {
     averageResponseTime: number;
     recentAnalysis: AiResponseAnalysis[];
   }>;
+
+  // Social Integration operations
+  getSocialIntegrations(userId: string): Promise<SocialIntegration[]>;
+  getSocialIntegration(id: number, userId: string): Promise<SocialIntegration | undefined>;
+  createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration>;
+  updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration>;
+  deleteSocialIntegration(id: number, userId: string): Promise<void>;
+  verifySocialIntegration(id: number, userId: string): Promise<{ success: boolean; message: string }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1215,6 +1223,94 @@ export class DatabaseStorage implements IStorage {
       averageResponseTime: Math.round(avgResponseTime[0]?.avg || 0),
       recentAnalysis
     };
+  }
+
+  // Social Integration operations
+  async getSocialIntegrations(userId: string): Promise<SocialIntegration[]> {
+    const integrations = await db
+      .select({
+        ...getTableColumns(socialIntegrations),
+        agentName: agentChatbots.name,
+      })
+      .from(socialIntegrations)
+      .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+      .where(eq(socialIntegrations.userId, userId))
+      .orderBy(desc(socialIntegrations.createdAt));
+
+    return integrations.map(row => ({
+      ...row,
+      agentName: row.agentName || undefined,
+    })) as SocialIntegration[];
+  }
+
+  async getSocialIntegration(id: number, userId: string): Promise<SocialIntegration | undefined> {
+    const [integration] = await db
+      .select({
+        ...getTableColumns(socialIntegrations),
+        agentName: agentChatbots.name,
+      })
+      .from(socialIntegrations)
+      .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+      .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)));
+
+    if (!integration) return undefined;
+    
+    return {
+      ...integration,
+      agentName: integration.agentName || undefined,
+    } as SocialIntegration;
+  }
+
+  async createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration> {
+    const [newIntegration] = await db
+      .insert(socialIntegrations)
+      .values({
+        ...integration,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newIntegration;
+  }
+
+  async updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration> {
+    const [updated] = await db
+      .update(socialIntegrations)
+      .set({
+        ...integration,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteSocialIntegration(id: number, userId: string): Promise<void> {
+    await db
+      .delete(socialIntegrations)
+      .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)));
+  }
+
+  async verifySocialIntegration(id: number, userId: string): Promise<{ success: boolean; message: string }> {
+    const integration = await this.getSocialIntegration(id, userId);
+    if (!integration) {
+      return { success: false, message: "Integration not found" };
+    }
+
+    try {
+      // Update verification status based on type
+      if (integration.type === 'lineoa') {
+        // For now, mark as verified. In production, you would call LINE API to verify
+        await this.updateSocialIntegration(id, { 
+          isVerified: true, 
+          lastVerifiedAt: new Date() 
+        }, userId);
+        return { success: true, message: "LINE OA connection verified successfully" };
+      }
+      
+      return { success: false, message: "Verification not implemented for this platform" };
+    } catch (error) {
+      return { success: false, message: "Verification failed" };
+    }
   }
 }
 

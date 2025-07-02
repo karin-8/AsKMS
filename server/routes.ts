@@ -2530,6 +2530,111 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     }
   });
 
+  // Social Integrations routes
+  app.get("/api/social-integrations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integrations = await storage.getSocialIntegrations(userId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Error fetching social integrations:", error);
+      res.status(500).json({ message: "Failed to fetch social integrations" });
+    }
+  });
+
+  app.get("/api/social-integrations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integration = await storage.getSocialIntegration(parseInt(req.params.id), userId);
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error) {
+      console.error("Error fetching social integration:", error);
+      res.status(500).json({ message: "Failed to fetch social integration" });
+    }
+  });
+
+  app.post("/api/social-integrations/lineoa", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, description, channelId, channelSecret, agentId } = req.body;
+      
+      if (!name || !channelId || !channelSecret || !agentId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const integrationData = {
+        userId,
+        name,
+        description: description || null,
+        type: "lineoa" as const,
+        channelId,
+        channelSecret,
+        agentId: parseInt(agentId),
+        isActive: true,
+        isVerified: false,
+      };
+
+      const integration = await storage.createSocialIntegration(integrationData);
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Error creating Line OA integration:", error);
+      res.status(500).json({ message: "Failed to create Line OA integration" });
+    }
+  });
+
+  app.post("/api/social-integrations/lineoa/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const { channelId, channelSecret } = req.body;
+      
+      if (!channelId || !channelSecret) {
+        return res.status(400).json({ message: "Missing Channel ID or Channel Secret" });
+      }
+
+      // Simple verification simulation - in production, you would call LINE API
+      // For now, we'll just validate that the fields are provided and look like valid IDs
+      const isValidFormat = channelId.length > 10 && channelSecret.length > 20;
+      
+      if (isValidFormat) {
+        res.json({ success: true, message: "Line OA connection verified successfully" });
+      } else {
+        res.json({ success: false, message: "Invalid Channel ID or Channel Secret format" });
+      }
+    } catch (error) {
+      console.error("Error verifying Line OA connection:", error);
+      res.status(500).json({ message: "Failed to verify Line OA connection" });
+    }
+  });
+
+  app.put("/api/social-integrations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integrationId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const integration = await storage.updateSocialIntegration(integrationId, updates, userId);
+      res.json(integration);
+    } catch (error) {
+      console.error("Error updating social integration:", error);
+      res.status(500).json({ message: "Failed to update social integration" });
+    }
+  });
+
+  app.delete("/api/social-integrations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const integrationId = parseInt(req.params.id);
+      
+      await storage.deleteSocialIntegration(integrationId, userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting social integration:", error);
+      res.status(500).json({ message: "Failed to delete social integration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

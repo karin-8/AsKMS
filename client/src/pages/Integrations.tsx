@@ -76,7 +76,7 @@ export default function Integrations() {
     queryKey: ['/api/social-integrations'],
     enabled: isAuthenticated,
     retry: false,
-  }) as { data: SocialIntegration[] };
+  }) as { data: SocialIntegration[], isLoading: boolean };
 
   // Fetch agent chatbots for selection
   const { data: agents = [] } = useQuery({
