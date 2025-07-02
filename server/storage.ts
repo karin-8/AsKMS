@@ -15,6 +15,7 @@ import {
   userFavorites,
   agentChatbots,
   agentChatbotDocuments,
+  socialIntegrations,
   type User,
   type UpsertUser,
   type Category,
@@ -42,6 +43,8 @@ import {
   type InsertAgentChatbot,
   type AgentChatbotDocument,
   type InsertAgentChatbotDocument,
+  type SocialIntegration,
+  type InsertSocialIntegration,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte, inArray } from "drizzle-orm";
