@@ -2425,12 +2425,20 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         }
       }
       
+      // Ensure arrays are properly formatted for PostgreSQL JSONB
       const finalAgentData = { 
         ...agentData, 
         userId,
-        lineOaConfig
+        lineOaConfig,
+        // Ensure all array fields are properly typed as arrays, not strings
+        channels: Array.isArray(agentData.channels) ? agentData.channels : [agentData.channels].filter(Boolean),
+        specialSkills: Array.isArray(agentData.specialSkills) ? agentData.specialSkills : [],
+        allowedTopics: Array.isArray(agentData.allowedTopics) ? agentData.allowedTopics : [],
+        blockedTopics: Array.isArray(agentData.blockedTopics) ? agentData.blockedTopics : []
       };
-      console.log("Final agent data:", JSON.stringify(finalAgentData, null, 2));
+      console.log("Final agent data before database insert:", JSON.stringify(finalAgentData, null, 2));
+      console.log("Channels type:", typeof finalAgentData.channels, "Value:", finalAgentData.channels);
+      console.log("Special skills type:", typeof finalAgentData.specialSkills, "Value:", finalAgentData.specialSkills);
       
       const agent = await storage.createAgentChatbot(finalAgentData);
       console.log("Agent created successfully:", agent);
