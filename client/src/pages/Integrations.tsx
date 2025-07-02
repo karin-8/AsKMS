@@ -124,7 +124,7 @@ export default function Integrations() {
     mutationFn: async (data: { channelId: string; channelSecret: string }) => {
       return await apiRequest("POST", "/api/social-integrations/lineoa/verify", data);
     },
-    onSuccess: (result) => {
+    onSuccess: (result: any) => {
       if (result.success) {
         toast({
           title: "Verification Successful",
