@@ -122,26 +122,34 @@ export default function Integrations() {
   // Verify Line OA connection mutation
   const verifyLineOaMutation = useMutation({
     mutationFn: async (data: { channelId: string; channelSecret: string }) => {
-      return await apiRequest("POST", "/api/social-integrations/lineoa/verify", data);
+      console.log("🔍 Frontend: Sending verification request", data);
+      const response = await apiRequest("POST", "/api/social-integrations/lineoa/verify", data);
+      console.log("📨 Frontend: Received response", response);
+      return response;
     },
     onSuccess: (result: any) => {
-      if (result.success) {
+      console.log("✅ Frontend: Verification result", result);
+      
+      // Check if result has success property
+      if (result && result.success === true) {
         toast({
-          title: "Verification Successful",
-          description: "Line OA connection verified successfully!",
+          title: "การตรวจสอบสำเร็จ",
+          description: result.message || "การเชื่อมต่อ Line OA ได้รับการตรวจสอบเรียบร้อยแล้ว",
         });
       } else {
+        console.log("❌ Frontend: Verification failed", result);
         toast({
-          title: "Verification Failed",
-          description: result.message || "Unable to verify Line OA connection",
+          title: "การตรวจสอบล้มเหลว",
+          description: result?.message || "ไม่สามารถตรวจสอบการเชื่อมต่อ Line OA ได้",
           variant: "destructive",
         });
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("💥 Frontend: Verification error", error);
       toast({
-        title: "Verification Error",
-        description: "Failed to verify Line OA connection",
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถตรวจสอบการเชื่อมต่อ Line OA ได้",
         variant: "destructive",
       });
     },
