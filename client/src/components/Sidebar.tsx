@@ -66,12 +66,12 @@ const allNavigation = [
     icon: MessageSquare,
     roles: ["admin"],
   },
-  {
-    name: "User Feedback",
-    href: "/user-feedback",
-    icon: BarChart3,
-    roles: ["admin"],
-  },
+  // {
+  //   name: "User Feedback",
+  //   href: "/user-feedback",
+  //   icon: BarChart3,
+  //   roles: ["admin"],
+  // },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
