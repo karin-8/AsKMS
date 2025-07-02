@@ -53,8 +53,6 @@ const createAgentSchema = z.object({
   profession: z.string().min(1, "Profession is required"),
   responseStyle: z.string().min(1, "Response style is required"),
   specialSkills: z.array(z.string()).default([]),
-  channels: z.array(z.string()).min(1, "At least one channel is required"),
-  lineOaChannelId: z.string().optional(),
   // Guardrails
   contentFiltering: z.boolean().default(true),
   toxicityPrevention: z.boolean().default(true),
@@ -95,8 +93,6 @@ export default function CreateAgentChatbot() {
       profession: "",
       responseStyle: "",
       specialSkills: [],
-      channels: [],
-      lineOaChannelId: "",
       contentFiltering: true,
       toxicityPrevention: true,
       privacyProtection: true,
