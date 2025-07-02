@@ -1227,38 +1227,121 @@ export class DatabaseStorage implements IStorage {
 
   // Social Integration operations
   async getSocialIntegrations(userId: string): Promise<SocialIntegration[]> {
-    const integrations = await db
-      .select({
-        ...getTableColumns(socialIntegrations),
-        agentName: agentChatbots.name,
-      })
-      .from(socialIntegrations)
-      .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
-      .where(eq(socialIntegrations.userId, userId))
-      .orderBy(desc(socialIntegrations.createdAt));
+    console.log("🔍 Debug: Fetching social integrations for user:", userId);
+    
+    try {
+      const integrations = await db
+        .select({
+          id: socialIntegrations.id,
+          userId: socialIntegrations.userId,
+          name: socialIntegrations.name,
+          description: socialIntegrations.description,
+          type: socialIntegrations.type,
+          channelId: socialIntegrations.channelId,
+          channelSecret: socialIntegrations.channelSecret,
+          agentId: socialIntegrations.agentId,
+          isActive: socialIntegrations.isActive,
+          isVerified: socialIntegrations.isVerified,
+          lastVerifiedAt: socialIntegrations.lastVerifiedAt,
+          createdAt: socialIntegrations.createdAt,
+          updatedAt: socialIntegrations.updatedAt,
+          agentName: agentChatbots.name,
+        })
+        .from(socialIntegrations)
+        .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+        .where(eq(socialIntegrations.userId, userId))
+        .orderBy(desc(socialIntegrations.createdAt));
 
-    return integrations.map(row => ({
-      ...row,
-      agentName: row.agentName || undefined,
-    })) as SocialIntegration[];
+      console.log("✅ Found", integrations.length, "social integrations");
+      
+      return integrations.map(row => ({
+        id: row.id,
+        userId: row.userId,
+        name: row.name,
+        description: row.description,
+        type: row.type as 'lineoa' | 'facebook' | 'tiktok',
+        channelId: row.channelId,
+        channelSecret: row.channelSecret,
+        channelAccessToken: null,
+        agentId: row.agentId,
+        isActive: row.isActive,
+        isVerified: row.isVerified,
+        lastVerifiedAt: row.lastVerifiedAt,
+        facebookPageId: null,
+        facebookAccessToken: null,
+        tiktokChannelId: null,
+        tiktokAccessToken: null,
+        webhookUrl: null,
+        config: null,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        agentName: row.agentName || undefined,
+      }));
+    } catch (error) {
+      console.error("💥 Error fetching social integrations:", error);
+      throw error;
+    }
   }
 
   async getSocialIntegration(id: number, userId: string): Promise<SocialIntegration | undefined> {
-    const [integration] = await db
-      .select({
-        ...getTableColumns(socialIntegrations),
-        agentName: agentChatbots.name,
-      })
-      .from(socialIntegrations)
-      .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
-      .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)));
-
-    if (!integration) return undefined;
+    console.log("🔍 Debug: Fetching social integration:", id, "for user:", userId);
     
-    return {
-      ...integration,
-      agentName: integration.agentName || undefined,
-    } as SocialIntegration;
+    try {
+      const [integration] = await db
+        .select({
+          id: socialIntegrations.id,
+          userId: socialIntegrations.userId,
+          name: socialIntegrations.name,
+          description: socialIntegrations.description,
+          type: socialIntegrations.type,
+          channelId: socialIntegrations.channelId,
+          channelSecret: socialIntegrations.channelSecret,
+          agentId: socialIntegrations.agentId,
+          isActive: socialIntegrations.isActive,
+          isVerified: socialIntegrations.isVerified,
+          lastVerifiedAt: socialIntegrations.lastVerifiedAt,
+          createdAt: socialIntegrations.createdAt,
+          updatedAt: socialIntegrations.updatedAt,
+          agentName: agentChatbots.name,
+        })
+        .from(socialIntegrations)
+        .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+        .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)));
+
+      if (!integration) {
+        console.log("❌ Social integration not found");
+        return undefined;
+      }
+      
+      console.log("✅ Found social integration:", integration.name);
+      
+      return {
+        id: integration.id,
+        userId: integration.userId,
+        name: integration.name,
+        description: integration.description,
+        type: integration.type as 'lineoa' | 'facebook' | 'tiktok',
+        channelId: integration.channelId,
+        channelSecret: integration.channelSecret,
+        channelAccessToken: null,
+        agentId: integration.agentId,
+        isActive: integration.isActive,
+        isVerified: integration.isVerified,
+        lastVerifiedAt: integration.lastVerifiedAt,
+        facebookPageId: null,
+        facebookAccessToken: null,
+        tiktokChannelId: null,
+        tiktokAccessToken: null,
+        webhookUrl: null,
+        config: null,
+        createdAt: integration.createdAt,
+        updatedAt: integration.updatedAt,
+        agentName: integration.agentName || undefined,
+      };
+    } catch (error) {
+      console.error("💥 Error fetching social integration:", error);
+      throw error;
+    }
   }
 
   async createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration> {
