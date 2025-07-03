@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { 
   Bot, 
   Settings, 
@@ -61,6 +63,9 @@ const createAgentSchema = z.object({
   responseLength: z.enum(["short", "medium", "long"]).default("medium"),
   allowedTopics: z.array(z.string()).default([]),
   blockedTopics: z.array(z.string()).default([]),
+  // Memory Configuration
+  memoryEnabled: z.boolean().default(false),
+  memoryLimit: z.number().min(1).max(50).default(10),
 });
 
 type CreateAgentForm = z.infer<typeof createAgentSchema>;
@@ -163,6 +168,8 @@ export default function CreateAgentChatbot() {
         responseLength: agent.responseLength || "medium",
         allowedTopics: agent.allowedTopics || [],
         blockedTopics: agent.blockedTopics || [],
+        memoryEnabled: agent.memoryEnabled || false,
+        memoryLimit: agent.memoryLimit || 10,
       });
       
       // Load selected documents
@@ -919,6 +926,80 @@ export default function CreateAgentChatbot() {
                                 />
                               </div>
                             </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Memory Configuration */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Brain className="h-5 w-5" />
+                              Memory Configuration
+                            </CardTitle>
+                            <CardDescription>
+                              Configure how the chatbot remembers previous conversations
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <FormField
+                              control={form.control}
+                              name="memoryEnabled"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      Enable Memory
+                                    </FormLabel>
+                                    <FormDescription>
+                                      Allow the chatbot to remember conversation history and provide context-aware responses
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            {form.watch("memoryEnabled") && (
+                              <FormField
+                                control={form.control}
+                                name="memoryLimit"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Memory Limit</FormLabel>
+                                    <FormDescription>
+                                      Number of previous messages to remember (1-50). Higher values improve context but use more resources.
+                                    </FormDescription>
+                                    <FormControl>
+                                      <div className="space-y-2">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-sm text-slate-500">1</span>
+                                          <Slider
+                                            value={[field.value || 10]}
+                                            onValueChange={(value) => field.onChange(value[0])}
+                                            max={50}
+                                            min={1}
+                                            step={1}
+                                            className="flex-1"
+                                          />
+                                          <span className="text-sm text-slate-500">50</span>
+                                        </div>
+                                        <div className="text-center">
+                                          <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                                            {field.value || 10} messages
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
                           </CardContent>
                         </Card>
 

@@ -69,8 +69,8 @@ async function sendLineReply(replyToken: string, message: string, channelAccessT
   }
 }
 
-// Get AI response using OpenAI
-async function getAiResponse(userMessage: string, agentId: number, userId: string): Promise<string> {
+// Get AI response using OpenAI with chat history
+async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
   try {
     console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
     
@@ -83,6 +83,21 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
 
     console.log(`✅ Found agent: ${agent.name}`);
 
+    // Get chat history if memory is enabled
+    let chatHistory: any[] = [];
+    if (agent.memoryEnabled) {
+      const memoryLimit = agent.memoryLimit || 10;
+      console.log(`📚 Fetching chat history (limit: ${memoryLimit})`);
+      
+      try {
+        chatHistory = await storage.getChatHistory(userId, channelType, channelId, agentId, memoryLimit);
+        console.log(`📝 Found ${chatHistory.length} previous messages`);
+      } catch (error) {
+        console.error('⚠️ Error fetching chat history:', error);
+        // Continue without history if there's an error
+      }
+    }
+
     // Get agent's documents for context
     const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
     let contextPrompt = "";
@@ -91,26 +106,75 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
       contextPrompt = `\n\nคุณมีเอกสารอ้างอิงต่อไปนี้:\n${agentDocs.map(doc => `- Document ID: ${doc.documentId}`).join('\n')}`;
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: `${agent.systemPrompt}${contextPrompt}
+    // Build conversation messages including history
+    const messages: any[] = [
+      {
+        role: "system",
+        content: `${agent.systemPrompt}${contextPrompt}
 
 ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
-ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์`
-        },
-        {
-          role: "user", 
-          content: userMessage
-        }
-      ],
+ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
+
+คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม`
+      }
+    ];
+
+    // Add chat history
+    chatHistory.forEach(msg => {
+      messages.push({
+        role: msg.messageType === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    });
+
+    // Add current user message
+    messages.push({
+      role: "user", 
+      content: userMessage
+    });
+
+    console.log(`🤖 Sending ${messages.length} messages to OpenAI (including ${chatHistory.length} history messages)`);
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: messages,
       max_tokens: 1000,
       temperature: 0.7
     });
 
-    return response.choices[0].message.content || "ขออภัย ไม่สามารถประมวลผลคำถามได้ในขณะนี้";
+    const aiResponse = response.choices[0].message.content || "ขออภัย ไม่สามารถประมวลผลคำถามได้ในขณะนี้";
+
+    // Save chat history
+    try {
+      // Save user message
+      await storage.createChatHistory({
+        userId,
+        channelType,
+        channelId,
+        agentId,
+        messageType: 'user',
+        content: userMessage,
+        metadata: {}
+      });
+
+      // Save assistant response
+      await storage.createChatHistory({
+        userId,
+        channelType,
+        channelId,
+        agentId,
+        messageType: 'assistant',
+        content: aiResponse,
+        metadata: {}
+      });
+
+      console.log(`💾 Saved chat history for user ${userId}`);
+    } catch (error) {
+      console.error('⚠️ Error saving chat history:', error);
+      // Continue even if saving history fails
+    }
+
+    return aiResponse;
   } catch (error) {
     console.error('💥 Error getting AI response:', error);
     return "ขออภัย เกิดข้อผิดพลาดในการประมวลผลคำถาม กรุณาลองใหม่อีกครั้ง";
@@ -189,9 +253,15 @@ export async function handleLineWebhook(req: Request, res: Response) {
         console.log('💬 User message:', userMessage);
         console.log('👤 User ID:', event.source.userId);
         
-        // Get AI response
+        // Get AI response with chat history
         if (lineIntegration.agentId) {
-          const aiResponse = await getAiResponse(userMessage, lineIntegration.agentId, lineIntegration.userId);
+          const aiResponse = await getAiResponse(
+            userMessage, 
+            lineIntegration.agentId, 
+            lineIntegration.userId,
+            'lineoa',
+            event.source.userId // Use Line user ID as channel identifier
+          );
           console.log('🤖 AI response:', aiResponse);
           
           // Send reply to Line using stored access token

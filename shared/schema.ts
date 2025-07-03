@@ -576,6 +576,10 @@ export const agentChatbots = pgTable("agent_chatbots", {
   allowedTopics: jsonb("allowed_topics").$type<string[]>().default([]),
   blockedTopics: jsonb("blocked_topics").$type<string[]>().default([]),
   
+  // Memory configuration for chat history
+  memoryEnabled: boolean("memory_enabled").default(true),
+  memoryLimit: integer("memory_limit").default(10), // Number of previous messages to remember
+  
   lineOaConfig: jsonb("lineoa_config").$type<{
     lineOaId?: string;
     lineOaName?: string;
@@ -696,3 +700,30 @@ export type InsertAgentChatbotDocument = z.infer<typeof insertAgentChatbotDocume
 // Social Integration types
 export type SocialIntegration = typeof socialIntegrations.$inferSelect;
 export type InsertSocialIntegration = z.infer<typeof insertSocialIntegrationSchema>;
+
+// Chat History table - stores conversation history for each user/channel
+export const chatHistory = pgTable("chat_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(), // External user ID (from Line/FB/etc)
+  channelType: varchar("channel_type").notNull(), // 'lineoa', 'facebook', 'tiktok', 'web'
+  channelId: varchar("channel_id").notNull(), // Channel/Bot ID
+  agentId: integer("agent_id").notNull().references(() => agentChatbots.id, { onDelete: "cascade" }),
+  messageType: varchar("message_type").notNull(), // 'user', 'assistant'
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"), // Store additional info like reply tokens, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("chat_history_user_channel_idx").on(table.userId, table.channelType, table.channelId),
+  index("chat_history_agent_idx").on(table.agentId),
+  index("chat_history_created_at_idx").on(table.createdAt),
+]);
+
+// Chat History schemas
+export const insertChatHistorySchema = createInsertSchema(chatHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Chat History types
+export type ChatHistory = typeof chatHistory.$inferSelect;
+export type InsertChatHistory = z.infer<typeof insertChatHistorySchema>;

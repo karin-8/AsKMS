@@ -16,6 +16,7 @@ import {
   agentChatbots,
   agentChatbotDocuments,
   socialIntegrations,
+  chatHistory,
   type User,
   type UpsertUser,
   type Category,
@@ -45,6 +46,8 @@ import {
   type InsertAgentChatbotDocument,
   type SocialIntegration,
   type InsertSocialIntegration,
+  type ChatHistory,
+  type InsertChatHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, ilike, getTableColumns, gte, lte, inArray } from "drizzle-orm";
@@ -161,6 +164,11 @@ export interface IStorage {
   updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration>;
   deleteSocialIntegration(id: number, userId: string): Promise<void>;
   verifySocialIntegration(id: number, userId: string): Promise<{ success: boolean; message: string }>;
+
+  // Chat History operations
+  createChatHistory(history: InsertChatHistory): Promise<ChatHistory>;
+  getChatHistory(userId: string, channelType: string, channelId: string, agentId: number, limit?: number): Promise<ChatHistory[]>;
+  clearChatHistory(userId: string, channelType: string, channelId: string, agentId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1518,6 +1526,50 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       return { success: false, message: "Verification failed" };
     }
+  }
+
+  // Chat History operations
+  async createChatHistory(history: InsertChatHistory): Promise<ChatHistory> {
+    const { chatHistory } = await import('@shared/schema');
+    const [chatHistoryRecord] = await db
+      .insert(chatHistory)
+      .values(history)
+      .returning();
+    return chatHistoryRecord;
+  }
+
+  async getChatHistory(userId: string, channelType: string, channelId: string, agentId: number, limit: number = 10): Promise<ChatHistory[]> {
+    const { chatHistory } = await import('@shared/schema');
+    const { desc, and, eq } = await import('drizzle-orm');
+    
+    const history = await db
+      .select()
+      .from(chatHistory)
+      .where(and(
+        eq(chatHistory.userId, userId),
+        eq(chatHistory.channelType, channelType),
+        eq(chatHistory.channelId, channelId),
+        eq(chatHistory.agentId, agentId)
+      ))
+      .orderBy(desc(chatHistory.createdAt))
+      .limit(limit);
+    
+    // Return in chronological order (oldest first)
+    return history.reverse();
+  }
+
+  async clearChatHistory(userId: string, channelType: string, channelId: string, agentId: number): Promise<void> {
+    const { chatHistory } = await import('@shared/schema');
+    const { and, eq } = await import('drizzle-orm');
+    
+    await db
+      .delete(chatHistory)
+      .where(and(
+        eq(chatHistory.userId, userId),
+        eq(chatHistory.channelType, channelType),
+        eq(chatHistory.channelId, channelId),
+        eq(chatHistory.agentId, agentId)
+      ));
   }
 }
 
