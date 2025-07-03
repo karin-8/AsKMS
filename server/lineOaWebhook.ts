@@ -70,16 +70,21 @@ async function sendLineReply(replyToken: string, message: string, channelAccessT
 }
 
 // Get AI response using OpenAI
-async function getAiResponse(userMessage: string, agentId: number): Promise<string> {
+async function getAiResponse(userMessage: string, agentId: number, userId: string): Promise<string> {
   try {
+    console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
+    
     // Get agent configuration
-    const agent = await storage.getAgentChatbot(agentId, "system"); // Use system access for webhook
+    const agent = await storage.getAgentChatbot(agentId, userId);
     if (!agent) {
+      console.log(`❌ Agent ${agentId} not found for user ${userId}`);
       return "ขออภัย ไม่สามารถเชื่อมต่อกับระบบได้ในขณะนี้";
     }
 
+    console.log(`✅ Found agent: ${agent.name}`);
+
     // Get agent's documents for context
-    const agentDocs = await storage.getAgentChatbotDocuments(agentId, "system");
+    const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
     let contextPrompt = "";
     
     if (agentDocs.length > 0) {
@@ -186,7 +191,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
         
         // Get AI response
         if (lineIntegration.agentId) {
-          const aiResponse = await getAiResponse(userMessage, lineIntegration.agentId);
+          const aiResponse = await getAiResponse(userMessage, lineIntegration.agentId, lineIntegration.userId);
           console.log('🤖 AI response:', aiResponse);
           
           // Send reply to Line using stored access token
