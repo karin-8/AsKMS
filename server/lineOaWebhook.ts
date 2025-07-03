@@ -120,19 +120,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
     const body = JSON.stringify(webhookBody);
     
     console.log('🔔 Line webhook received');
-    console.log('📝 Raw Body:', JSON.stringify(req.body, null, 2));
-    console.log('📊 Events count:', webhookBody.events?.length || 0);
-    
-    // Log each event in detail
-    if (webhookBody.events && webhookBody.events.length > 0) {
-      console.log('📨 Processing events:', webhookBody.events.length);
-      webhookBody.events.forEach((event, index) => {
-        console.log(`📩 Event ${index + 1}:`, JSON.stringify(event, null, 2));
-      });
-    } else {
-      console.log('📭 No events in webhook body');
-      return res.json({ status: "ok" });
-    }
+    console.log('📝 Body:', body);
     
     // Find the Line OA integration by matching the destination (Channel ID)
     const destination = webhookBody.destination;
@@ -143,22 +131,12 @@ export async function handleLineWebhook(req: Request, res: Response) {
     console.log('✅ Found', allIntegrations.length, 'total social integrations');
     
     // In Line webhooks, the destination is the Bot's User ID, not Channel ID
-    // Since botUserId might not exist in schema, use raw SQL to find matching integration
-    let lineIntegration: any;
-    
-    try {
-      const result = await db.execute(sql`
-        SELECT * FROM social_integrations 
-        WHERE type = 'lineoa' 
-        AND is_active = true 
-        AND bot_user_id = ${destination}
-        LIMIT 1
-      `);
-      lineIntegration = result.rows[0];
-      console.log('🔍 Direct Bot User ID match result:', lineIntegration ? 'Found' : 'Not found');
-    } catch (error) {
-      console.log('⚠️ Error querying by Bot User ID:', error);
-    }
+    // First try to match by Bot User ID, then fall back to any active integration
+    let lineIntegration = allIntegrations.find(integration => 
+      integration.type === 'lineoa' && 
+      integration.isActive && 
+      integration.botUserId === destination
+    );
     
     // If no exact match found by Bot User ID, try fallback to any active Line OA integration
     if (!lineIntegration) {
