@@ -39,6 +39,7 @@ interface SocialIntegration {
   channelId?: string;
   channelSecret?: string;
   channelAccessToken?: string;
+  botUserId?: string;
   isActive: boolean;
   isVerified: boolean;
   agentId?: number;

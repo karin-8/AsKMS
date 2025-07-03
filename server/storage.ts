@@ -1288,52 +1288,39 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("🔍 Debug: Fetching all social integrations");
       
-      const integrations = await db
-        .select({
-          id: socialIntegrations.id,
-          userId: socialIntegrations.userId,
-          name: socialIntegrations.name,
-          description: socialIntegrations.description,
-          type: socialIntegrations.type,
-          channelId: socialIntegrations.channelId,
-          channelSecret: socialIntegrations.channelSecret,
-          agentId: socialIntegrations.agentId,
-          isActive: socialIntegrations.isActive,
-          isVerified: socialIntegrations.isVerified,
-          lastVerifiedAt: socialIntegrations.lastVerifiedAt,
-          createdAt: socialIntegrations.createdAt,
-          updatedAt: socialIntegrations.updatedAt,
-          agentName: agentChatbots.name,
-        })
-        .from(socialIntegrations)
-        .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
-        .orderBy(socialIntegrations.createdAt);
+      const results = await db.execute(sql`
+        SELECT si.*, ac.name as agentName
+        FROM social_integrations si
+        LEFT JOIN agent_chatbots ac ON si.agent_id = ac.id
+        ORDER BY si.created_at DESC
+      `);
 
-      console.log(`✅ Found ${integrations.length} total social integrations`);
+      console.log(`✅ Found ${results.rows.length} total social integrations`);
       
-      return integrations.map(integration => ({
-        id: integration.id,
-        userId: integration.userId,
-        name: integration.name,
-        description: integration.description,
-        type: integration.type as 'lineoa' | 'facebook' | 'tiktok',
-        channelId: integration.channelId,
-        channelSecret: integration.channelSecret,
-        channelAccessToken: null,
-        agentId: integration.agentId,
-        isActive: integration.isActive,
-        isVerified: integration.isVerified,
-        lastVerifiedAt: integration.lastVerifiedAt,
+      return results.rows.map(row => ({
+        id: row.id as number,
+        name: row.name as string,
+        type: row.type as string,
+        userId: row.user_id as string,
+        channelId: row.channel_id as string | null,
+        channelSecret: row.channel_secret as string | null,
+        channelAccessToken: row.channel_access_token as string | null,
+        botUserId: row.bot_user_id as string | null,
+        agentId: row.agent_id as number | null,
+        isActive: row.is_active as boolean | null,
+        isVerified: row.is_verified as boolean | null,
+        lastVerifiedAt: row.last_verified_at as Date | null,
         facebookPageId: null,
         facebookAccessToken: null,
         tiktokChannelId: null,
         tiktokAccessToken: null,
-        webhookUrl: null,
+        webhookUrl: row.webhook_url as string | null,
         config: null,
-        createdAt: integration.createdAt,
-        updatedAt: integration.updatedAt,
-        agentName: integration.agentName || undefined,
-      }));
+        description: row.description as string | null,
+        createdAt: row.created_at as Date | null,
+        updatedAt: row.updated_at as Date | null,
+        agentName: row.agentName as string | null,
+      })) as SocialIntegration[];
     } catch (error) {
       console.error("💥 Error fetching all social integrations:", error);
       return [];

@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import crypto from "crypto";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -128,11 +130,35 @@ export async function handleLineWebhook(req: Request, res: Response) {
     const allIntegrations = await storage.getAllSocialIntegrations();
     console.log('✅ Found', allIntegrations.length, 'total social integrations');
     
-    const lineIntegration = allIntegrations.find(integration => 
+    // In Line webhooks, the destination is the Bot's User ID, not Channel ID
+    // First try to match by Bot User ID, then fall back to any active integration
+    let lineIntegration = allIntegrations.find(integration => 
       integration.type === 'lineoa' && 
       integration.isActive && 
-      integration.channelId === destination
+      integration.botUserId === destination
     );
+    
+    // If no exact match found by Bot User ID, try fallback to any active Line OA integration
+    if (!lineIntegration) {
+      lineIntegration = allIntegrations.find(integration => 
+        integration.type === 'lineoa' && 
+        integration.isActive
+      );
+      if (lineIntegration) {
+        console.log('🔧 Using fallback matching - found active Line OA integration');
+        // Update the Bot User ID for future webhook calls using raw SQL
+        try {
+          await db.execute(sql`
+            UPDATE social_integrations 
+            SET bot_user_id = ${destination}, updated_at = NOW() 
+            WHERE id = ${lineIntegration.id}
+          `);
+          console.log('✅ Updated Bot User ID for future webhook calls');
+        } catch (error) {
+          console.log('⚠️ Could not update Bot User ID:', error);
+        }
+      }
+    }
 
     if (!lineIntegration) {
       console.log('❌ No active Line OA integration found for destination:', destination);
