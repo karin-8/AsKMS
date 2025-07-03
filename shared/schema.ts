@@ -613,6 +613,7 @@ export const socialIntegrations = pgTable("social_integrations", {
   channelId: varchar("channel_id"),
   channelSecret: varchar("channel_secret"),
   channelAccessToken: varchar("channel_access_token"),
+  botUserId: varchar("bot_user_id"),
   // Facebook specific fields
   facebookPageId: varchar("facebook_page_id"),
   facebookAccessToken: varchar("facebook_access_token"),
