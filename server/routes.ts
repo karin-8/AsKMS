@@ -2464,40 +2464,11 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.put("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const agentId = parseInt(req.params.id);
-      
-      // Extract documentIds from request body
-      const { documentIds, ...agentData } = req.body;
-      
       const agent = await storage.updateAgentChatbot(
-        agentId,
-        agentData,
+        parseInt(req.params.id),
+        req.body,
         userId
       );
-      
-      // Update document associations if provided
-      if (documentIds !== undefined) {
-        console.log("Updating documents for agent:", agentId, "Documents:", documentIds);
-        
-        // Get current document associations
-        const currentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
-        const currentDocIds = currentDocs.map(doc => doc.documentId);
-        
-        // Remove documents that are no longer selected
-        for (const currentDocId of currentDocIds) {
-          if (!documentIds.includes(currentDocId)) {
-            await storage.removeDocumentFromAgent(agentId, currentDocId, userId);
-          }
-        }
-        
-        // Add new documents
-        for (const documentId of documentIds) {
-          if (!currentDocIds.includes(documentId)) {
-            await storage.addDocumentToAgent(agentId, documentId, userId);
-          }
-        }
-      }
-      
       res.json(agent);
     } catch (error) {
       console.error("Error updating agent chatbot:", error);
