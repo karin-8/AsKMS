@@ -603,6 +603,7 @@ export const agentChatbotDocuments = pgTable("agent_chatbot_documents", {
   id: serial("id").primaryKey(),
   agentId: integer("agent_id").references(() => agentChatbots.id, { onDelete: "cascade" }).notNull(),
   documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -654,6 +655,10 @@ export const agentChatbotDocumentsRelations = relations(agentChatbotDocuments, (
   document: one(documents, {
     fields: [agentChatbotDocuments.documentId],
     references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [agentChatbotDocuments.userId],
+    references: [users.id],
   }),
 }));
 
