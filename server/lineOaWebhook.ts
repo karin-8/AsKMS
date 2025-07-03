@@ -166,6 +166,8 @@ export async function handleLineWebhook(req: Request, res: Response) {
     }
     
     console.log('✅ Found matching Line OA integration for user:', lineIntegration.userId);
+    console.log('🔑 Debug: Channel Access Token available:', !!lineIntegration.channelAccessToken);
+    console.log('🔍 Debug: Integration object keys:', Object.keys(lineIntegration));
 
     // Verify signature
     if (!verifyLineSignature(body, signature, lineIntegration.channelSecret!)) {
