@@ -67,6 +67,7 @@ export interface IStorage {
 
   // Document operations
   getDocuments(userId: string, options?: { categoryId?: number; limit?: number; offset?: number }): Promise<Document[]>;
+  getDocumentsByIds(documentIds: number[]): Promise<Document[]>;
   getDocument(id: number, userId: string): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: number, document: UpdateDocument, userId: string): Promise<Document>;
@@ -167,6 +168,7 @@ export interface IStorage {
 
   // Chat History operations
   createChatHistory(history: InsertChatHistory): Promise<ChatHistory>;
+  saveChatHistory(history: InsertChatHistory): Promise<ChatHistory>;
   getChatHistory(userId: string, channelType: string, channelId: string, agentId: number, limit?: number): Promise<ChatHistory[]>;
   clearChatHistory(userId: string, channelType: string, channelId: string, agentId: number): Promise<void>;
 }
@@ -270,12 +272,13 @@ export class DatabaseStorage implements IStorage {
         eq(userFavorites.userId, userId)
       ));
 
+    // Use type assertion to work around Drizzle type issue
     if (categoryId) {
-      ownDocumentsQuery = ownDocumentsQuery.where(
-        and(eq(documents.userId, userId), eq(documents.categoryId, categoryId)!)
+      (ownDocumentsQuery as any) = ownDocumentsQuery.where(
+        and(eq(documents.userId, userId), eq(documents.categoryId, categoryId))
       );
     } else {
-      ownDocumentsQuery = ownDocumentsQuery.where(eq(documents.userId, userId));
+      (ownDocumentsQuery as any) = ownDocumentsQuery.where(eq(documents.userId, userId));
     }
 
     const ownDocuments = await ownDocumentsQuery.orderBy(desc(documents.updatedAt));
@@ -501,6 +504,17 @@ export class DatabaseStorage implements IStorage {
     }
 
     return document;
+  }
+
+  async getDocumentsByIds(documentIds: number[]): Promise<Document[]> {
+    if (documentIds.length === 0) return [];
+    
+    const docs = await db
+      .select()
+      .from(documents)
+      .where(inArray(documents.id, documentIds));
+    
+    return docs;
   }
 
   // Stats operations
@@ -1556,6 +1570,10 @@ export class DatabaseStorage implements IStorage {
     
     // Return in chronological order (oldest first)
     return history.reverse();
+  }
+
+  async saveChatHistory(history: InsertChatHistory): Promise<ChatHistory> {
+    return this.createChatHistory(history);
   }
 
   async clearChatHistory(userId: string, channelType: string, channelId: string, agentId: number): Promise<void> {

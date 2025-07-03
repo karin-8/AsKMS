@@ -70,7 +70,7 @@ async function sendLineReply(replyToken: string, message: string, channelAccessT
 }
 
 // Get AI response using OpenAI with chat history
-async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
+async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string, replyToken: string, channelAccessToken: string): Promise<string> {
   try {
     console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
     
@@ -100,17 +100,77 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
 
     // Get agent's documents for context
     const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
-    let contextPrompt = "";
+    let documentContext = "";
     
     if (agentDocs.length > 0) {
-      contextPrompt = `\n\nคุณมีเอกสารอ้างอิงต่อไปนี้:\n${agentDocs.map(doc => `- Document ID: ${doc.documentId}`).join('\n')}`;
+      console.log(`📚 Agent has ${agentDocs.length} configured documents`);
+      
+      // Get full document details
+      const documentIds = agentDocs.map(doc => doc.documentId);
+      const fullDocuments = await storage.getDocumentsByIds(documentIds);
+      
+      console.log(`📄 Retrieved ${fullDocuments.length} full documents`);
+      
+      // Use the generateChatResponse function with document context like DocumentChatModal
+      try {
+        const openaiService = await import('./services/openai');
+        console.log(`🔍 Using vector search with ${fullDocuments.length} documents`);
+        
+        const aiResponse = await openaiService.generateChatResponse(
+          userMessage,
+          fullDocuments,
+          undefined // No specific document ID for general RAG
+        );
+        
+        console.log(`🤖 AI response: ${aiResponse}`);
+        
+        // Save chat history
+        try {
+          await storage.createChatHistory({
+            userId,
+            channelType,
+            channelId,
+            agentId,
+            messageType: 'user',
+            content: userMessage,
+            metadata: { replyToken }
+          });
+          
+          await storage.createChatHistory({
+            userId,
+            channelType,
+            channelId,
+            agentId,
+            messageType: 'assistant',
+            content: aiResponse,
+            metadata: { modelUsed: 'gpt-4o' }
+          });
+          
+          console.log('💾 Saved chat history for user', userId);
+        } catch (historyError) {
+          console.error('⚠️ Error saving chat history:', historyError);
+        }
+
+        // Send reply to Line
+        await sendLineReply(replyToken, aiResponse, channelAccessToken);
+        
+        return aiResponse;
+        
+      } catch (vectorError) {
+        console.error('⚠️ Vector search failed, falling back to basic context:', vectorError);
+        
+        // Fallback to basic document context
+        documentContext = `\n\nคุณมีเอกสารอ้างอิงต่อไปนี้:\n${fullDocuments.map(doc => 
+          `- ${doc.name}: ${doc.summary || doc.content?.substring(0, 500) || 'ไม่มีเนื้อหา'}`
+        ).join('\n\n')}`;
+      }
     }
 
     // Build conversation messages including history
     const messages: any[] = [
       {
         role: "system",
-        content: `${agent.systemPrompt}${contextPrompt}
+        content: `${agent.systemPrompt}${documentContext}
 
 ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
 ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
@@ -260,7 +320,9 @@ export async function handleLineWebhook(req: Request, res: Response) {
             lineIntegration.agentId, 
             lineIntegration.userId,
             'lineoa',
-            event.source.userId // Use Line user ID as channel identifier
+            event.source.userId, // Use Line user ID as channel identifier
+            replyToken,
+            lineIntegration.channelAccessToken!
           );
           console.log('🤖 AI response:', aiResponse);
           
