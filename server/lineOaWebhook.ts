@@ -22,6 +22,7 @@ interface LineEvent {
 }
 
 interface LineWebhookBody {
+  destination: string;
   events: LineEvent[];
 }
 
@@ -113,29 +114,38 @@ async function getAiResponse(userMessage: string, agentId: number): Promise<stri
 export async function handleLineWebhook(req: Request, res: Response) {
   try {
     const signature = req.headers['x-line-signature'] as string;
-    const body = JSON.stringify(req.body);
+    const webhookBody: LineWebhookBody = req.body;
+    const body = JSON.stringify(webhookBody);
     
     console.log('🔔 Line webhook received');
     console.log('📝 Body:', body);
     
-    // Find integration by checking signature
-    // For now, we'll get the first Line OA integration
-    // In production, you'd want to match by webhook URL or other identifier
-    const integrations = await storage.getSocialIntegrations("system"); // Use system access
-    const lineIntegration = integrations.find(i => i.type === 'lineoa' && i.isActive);
+    // Find the Line OA integration by matching the destination (Channel ID)
+    const destination = webhookBody.destination;
+    console.log('🔍 Debug: Looking for integration with destination:', destination);
     
+    // Get all Line OA integrations to find the matching one
+    const allIntegrations = await storage.getAllSocialIntegrations();
+    console.log('✅ Found', allIntegrations.length, 'total social integrations');
+    
+    const lineIntegration = allIntegrations.find(integration => 
+      integration.type === 'lineoa' && 
+      integration.isActive && 
+      integration.channelId === destination
+    );
+
     if (!lineIntegration) {
-      console.log('❌ No active Line OA integration found');
-      return res.status(404).json({ error: 'No active Line OA integration' });
+      console.log('❌ No active Line OA integration found for destination:', destination);
+      return res.status(404).json({ error: 'No active Line OA integration found' });
     }
+    
+    console.log('✅ Found matching Line OA integration for user:', lineIntegration.userId);
 
     // Verify signature
     if (!verifyLineSignature(body, signature, lineIntegration.channelSecret!)) {
       console.log('❌ Invalid Line signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
-
-    const webhookBody: LineWebhookBody = req.body;
     
     // Process each event
     for (const event of webhookBody.events) {

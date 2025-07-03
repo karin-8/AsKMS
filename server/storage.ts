@@ -155,6 +155,7 @@ export interface IStorage {
 
   // Social Integration operations
   getSocialIntegrations(userId: string): Promise<SocialIntegration[]>;
+  getAllSocialIntegrations(): Promise<SocialIntegration[]>;
   getSocialIntegration(id: number, userId: string): Promise<SocialIntegration | undefined>;
   createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration>;
   updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration>;
@@ -1280,6 +1281,62 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("💥 Error fetching social integrations:", error);
       throw error;
+    }
+  }
+
+  async getAllSocialIntegrations(): Promise<SocialIntegration[]> {
+    try {
+      console.log("🔍 Debug: Fetching all social integrations");
+      
+      const integrations = await db
+        .select({
+          id: socialIntegrations.id,
+          userId: socialIntegrations.userId,
+          name: socialIntegrations.name,
+          description: socialIntegrations.description,
+          type: socialIntegrations.type,
+          channelId: socialIntegrations.channelId,
+          channelSecret: socialIntegrations.channelSecret,
+          agentId: socialIntegrations.agentId,
+          isActive: socialIntegrations.isActive,
+          isVerified: socialIntegrations.isVerified,
+          lastVerifiedAt: socialIntegrations.lastVerifiedAt,
+          createdAt: socialIntegrations.createdAt,
+          updatedAt: socialIntegrations.updatedAt,
+          agentName: agentChatbots.name,
+        })
+        .from(socialIntegrations)
+        .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+        .orderBy(socialIntegrations.createdAt);
+
+      console.log(`✅ Found ${integrations.length} total social integrations`);
+      
+      return integrations.map(integration => ({
+        id: integration.id,
+        userId: integration.userId,
+        name: integration.name,
+        description: integration.description,
+        type: integration.type as 'lineoa' | 'facebook' | 'tiktok',
+        channelId: integration.channelId,
+        channelSecret: integration.channelSecret,
+        channelAccessToken: null,
+        agentId: integration.agentId,
+        isActive: integration.isActive,
+        isVerified: integration.isVerified,
+        lastVerifiedAt: integration.lastVerifiedAt,
+        facebookPageId: null,
+        facebookAccessToken: null,
+        tiktokChannelId: null,
+        tiktokAccessToken: null,
+        webhookUrl: null,
+        config: null,
+        createdAt: integration.createdAt,
+        updatedAt: integration.updatedAt,
+        agentName: integration.agentName || undefined,
+      }));
+    } catch (error) {
+      console.error("💥 Error fetching all social integrations:", error);
+      return [];
     }
   }
 
