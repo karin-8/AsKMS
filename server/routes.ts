@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
+import { handleLineWebhook } from "./lineOaWebhook";
 import OpenAI from "openai";
 import { db } from "./db";
 
@@ -2672,6 +2673,39 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       res.status(500).json({ message: "Failed to delete social integration" });
     }
   });
+
+  // Update social integration with access token
+  app.patch('/api/social-integrations/:id/access-token', isAuthenticated, async (req: any, res) => {
+    try {
+      const integrationId = parseInt(req.params.id);
+      const { accessToken } = req.body;
+      const userId = req.user.claims.sub;
+
+      if (!accessToken) {
+        return res.status(400).json({ message: "Access token is required" });
+      }
+
+      // Update integration in database with raw SQL
+      const result = await db.execute(sql`
+        UPDATE social_integrations 
+        SET channel_access_token = ${accessToken}, updated_at = NOW()
+        WHERE id = ${integrationId} AND user_id = ${userId}
+        RETURNING *
+      `);
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: "Integration not found or access denied" });
+      }
+
+      res.json({ message: "Access token updated successfully" });
+    } catch (error) {
+      console.error("Error updating access token:", error);
+      res.status(500).json({ message: "Failed to update access token" });
+    }
+  });
+
+  // Line OA Webhook endpoint (no authentication required)
+  app.post('/api/line/webhook', handleLineWebhook);
 
   const httpServer = createServer(app);
   return httpServer;

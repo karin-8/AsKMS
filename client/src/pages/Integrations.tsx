@@ -38,6 +38,7 @@ interface SocialIntegration {
   type: 'lineoa' | 'facebook' | 'tiktok';
   channelId?: string;
   channelSecret?: string;
+  channelAccessToken?: string;
   isActive: boolean;
   isVerified: boolean;
   agentId?: number;
