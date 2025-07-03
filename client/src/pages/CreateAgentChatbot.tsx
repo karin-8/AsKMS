@@ -132,14 +132,14 @@ export default function CreateAgentChatbot() {
 
   // Fetch agent data for editing
   const { data: existingAgent, isLoading: isLoadingAgent } = useQuery({
-    queryKey: ['/api/agent-chatbots', editAgentId],
+    queryKey: [`/api/agent-chatbots/${editAgentId}`],
     enabled: isAuthenticated && isEditing,
     retry: false,
   });
 
   // Fetch agent documents for editing
   const { data: agentDocuments = [] } = useQuery({
-    queryKey: ['/api/agent-chatbots', editAgentId, 'documents'],
+    queryKey: [`/api/agent-chatbots/${editAgentId}/documents`],
     enabled: isAuthenticated && isEditing,
     retry: false,
   });
