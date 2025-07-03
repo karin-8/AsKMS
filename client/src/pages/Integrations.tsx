@@ -69,6 +69,7 @@ export default function Integrations() {
     name: "",
     channelId: "",
     channelSecret: "",
+    channelAccessToken: "",
     agentId: "",
     description: ""
   });
@@ -98,7 +99,7 @@ export default function Integrations() {
         description: "Line OA integration created successfully!",
       });
       setLineOaDialogOpen(false);
-      setLineOaForm({ name: "", channelId: "", channelSecret: "", agentId: "", description: "" });
+      setLineOaForm({ name: "", channelId: "", channelSecret: "", channelAccessToken: "", agentId: "", description: "" });
       queryClient.invalidateQueries({ queryKey: ['/api/social-integrations'] });
     },
     onError: (error) => {
@@ -364,6 +365,20 @@ export default function Integrations() {
                                             onChange={(e) => setLineOaForm(prev => ({ ...prev, channelSecret: e.target.value }))}
                                           />
                                         </div>
+                                        
+                                        <div>
+                                          <Label htmlFor="channelAccessToken">Channel Access Token *</Label>
+                                          <Input
+                                            id="channelAccessToken"
+                                            type="password"
+                                            placeholder="Enter your Line OA Channel Access Token"
+                                            value={lineOaForm.channelAccessToken || ''}
+                                            onChange={(e) => setLineOaForm(prev => ({ ...prev, channelAccessToken: e.target.value }))}
+                                          />
+                                          <p className="text-xs text-slate-500 mt-1">
+                                            Required for sending messages back to Line users
+                                          </p>
+                                        </div>
                                       </div>
 
                                       <div className="flex gap-2">
@@ -435,7 +450,7 @@ export default function Integrations() {
                                         variant="outline"
                                         onClick={() => {
                                           setLineOaDialogOpen(false);
-                                          setLineOaForm({ name: "", channelId: "", channelSecret: "", agentId: "", description: "" });
+                                          setLineOaForm({ name: "", channelId: "", channelSecret: "", channelAccessToken: "", agentId: "", description: "" });
                                         }}
                                       >
                                         Cancel

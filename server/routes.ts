@@ -2560,9 +2560,9 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.post("/api/social-integrations/lineoa", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, description, channelId, channelSecret, agentId } = req.body;
+      const { name, description, channelId, channelSecret, channelAccessToken, agentId } = req.body;
       
-      if (!name || !channelId || !channelSecret || !agentId) {
+      if (!name || !channelId || !channelSecret || !channelAccessToken || !agentId) {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
@@ -2573,6 +2573,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         type: "lineoa" as const,
         channelId,
         channelSecret,
+        channelAccessToken,
         agentId: parseInt(agentId),
         isActive: true,
         isVerified: false,

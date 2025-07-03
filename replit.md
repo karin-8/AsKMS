@@ -126,6 +126,7 @@ Changelog:
 - June 30, 2025. Enhanced Audit & Monitoring system - added expandable Details column with full JSON view, added "Chat" filter option, and enhanced chat audit logging to capture complete conversation details including user messages and AI responses for comprehensive conversation tracking
 - July 1, 2025. Enhanced Create Agent Chatbot page with advanced configuration system - implemented tabbed interface with Overview/Skills/Guardrails sections, added personality customization (Friendly, Professional, Energetic, etc.), profession selection (Sales, HR, IT, etc.), response style options, special skills selection, comprehensive guardrails system inspired by Guardrails AI including content filtering, toxicity prevention, privacy protection, topic control with allowed/blocked topics
 - July 3, 2025. Successfully implemented Line OA webhook system with OpenAI integration - Agent Chatbots can now respond to real Line OA messages using GPT-4, fixed database schema issues with social integrations, added webhook endpoints for Line messaging, integrated AI responses with agent configuration and document context
+- July 3, 2025. Fixed Line OA webhook user identification system - resolved critical issue where webhook couldn't identify correct user by implementing Bot User ID matching instead of Channel ID, added bot_user_id field to database schema, implemented fallback logic for automatic Bot User ID detection, and added Channel Access Token support for sending replies to Line users
 ```
 
 ## User Preferences
