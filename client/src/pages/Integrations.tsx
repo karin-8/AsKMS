@@ -124,8 +124,9 @@ export default function Integrations() {
     mutationFn: async (data: { channelId: string; channelSecret: string }) => {
       console.log("🔍 Frontend: Sending verification request", data);
       const response = await apiRequest("POST", "/api/social-integrations/lineoa/verify", data);
-      console.log("📨 Frontend: Received response", response);
-      return response;
+      const result = await response.json();
+      console.log("📨 Frontend: Received response", result);
+      return result;
     },
     onSuccess: (result: any) => {
       console.log("✅ Frontend: Verification result", result);
