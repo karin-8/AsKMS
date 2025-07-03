@@ -121,42 +121,42 @@ export async function handleLineWebhook(req: Request, res: Response) {
     
     console.log('🔔 Line webhook received');
     console.log('📝 Body:', body);
+    console.log('📊 Events count:', webhookBody.events.length);
     
     // Find the Line OA integration by matching the destination (Channel ID)
     const destination = webhookBody.destination;
     console.log('🔍 Debug: Looking for integration with destination:', destination);
     
-    // Get all Line OA integrations to find the matching one
-    const allIntegrations = await storage.getAllSocialIntegrations();
+    // Get all Line OA integrations to find the matching one using raw SQL to include bot_user_id
+    const result = await db.execute(sql`
+      SELECT *, bot_user_id 
+      FROM social_integrations 
+      WHERE type = 'lineoa' AND is_active = true
+    `);
+    const allIntegrations = Array.from(result.rows);
     console.log('✅ Found', allIntegrations.length, 'total social integrations');
     
     // In Line webhooks, the destination is the Bot's User ID, not Channel ID
     // First try to match by Bot User ID, then fall back to any active integration
-    let lineIntegration = allIntegrations.find(integration => 
-      integration.type === 'lineoa' && 
-      integration.isActive && 
-      integration.botUserId === destination
+    let lineIntegration = allIntegrations.find((integration: any) => 
+      integration.bot_user_id === destination
     );
     
     // If no exact match found by Bot User ID, try fallback to any active Line OA integration
-    if (!lineIntegration) {
-      lineIntegration = allIntegrations.find(integration => 
-        integration.type === 'lineoa' && 
-        integration.isActive
-      );
-      if (lineIntegration) {
-        console.log('🔧 Using fallback matching - found active Line OA integration');
-        // Update the Bot User ID for future webhook calls using raw SQL
-        try {
-          await db.execute(sql`
-            UPDATE social_integrations 
-            SET bot_user_id = ${destination}, updated_at = NOW() 
-            WHERE id = ${lineIntegration.id}
-          `);
-          console.log('✅ Updated Bot User ID for future webhook calls');
-        } catch (error) {
-          console.log('⚠️ Could not update Bot User ID:', error);
-        }
+    if (!lineIntegration && allIntegrations.length > 0) {
+      lineIntegration = allIntegrations[0] as any; // Use the first active integration
+      console.log('🔧 Using fallback matching - found active Line OA integration');
+      // Update the Bot User ID for future webhook calls using raw SQL
+      try {
+        const integration = lineIntegration as any;
+        await db.execute(sql`
+          UPDATE social_integrations 
+          SET bot_user_id = ${destination}, updated_at = NOW() 
+          WHERE id = ${integration.id}
+        `);
+        console.log('✅ Updated Bot User ID for future webhook calls');
+      } catch (error) {
+        console.log('⚠️ Could not update Bot User ID:', error);
       }
     }
 
@@ -165,10 +165,12 @@ export async function handleLineWebhook(req: Request, res: Response) {
       return res.status(404).json({ error: 'No active Line OA integration found' });
     }
     
-    console.log('✅ Found matching Line OA integration for user:', lineIntegration.userId);
+    const integration = lineIntegration as any;
+    console.log('✅ Found matching Line OA integration for user:', integration.user_id);
+    console.log('🔧 Integration details - Agent ID:', integration.agent_id, 'Channel Access Token:', integration.channel_access_token ? 'Available' : 'Missing');
 
     // Verify signature
-    if (!verifyLineSignature(body, signature, lineIntegration.channelSecret!)) {
+    if (!verifyLineSignature(body, signature, integration.channel_secret)) {
       console.log('❌ Invalid Line signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
@@ -183,20 +185,20 @@ export async function handleLineWebhook(req: Request, res: Response) {
         console.log('👤 User ID:', event.source.userId);
         
         // Get AI response
-        if (lineIntegration.agentId) {
-          const aiResponse = await getAiResponse(userMessage, lineIntegration.agentId);
+        if (integration.agent_id) {
+          const aiResponse = await getAiResponse(userMessage, integration.agent_id);
           console.log('🤖 AI response:', aiResponse);
           
           // Send reply to Line using stored access token
-          if (lineIntegration.channelAccessToken) {
-            await sendLineReply(replyToken, aiResponse, lineIntegration.channelAccessToken);
+          if (integration.channel_access_token) {
+            await sendLineReply(replyToken, aiResponse, integration.channel_access_token);
           } else {
             console.log('❌ No channel access token available for Line integration');
             // Send a basic reply using channel secret as fallback (this won't work in production)
-            await sendLineReply(replyToken, "ขออภัย ระบบยังไม่ได้ตั้งค่า access token กรุณาติดต่อผู้ดูแลระบบ", lineIntegration.channelSecret!);
+            await sendLineReply(replyToken, "ขออภัย ระบบยังไม่ได้ตั้งค่า access token กรุณาติดต่อผู้ดูแลระบบ", integration.channel_secret);
           }
         } else {
-          await sendLineReply(replyToken, "ขออภัย ระบบยังไม่ได้เชื่อมต่อกับ AI Agent กรุณาติดต่อผู้ดูแลระบบ", lineIntegration.channelSecret!);
+          await sendLineReply(replyToken, "ขออภัย ระบบยังไม่ได้เชื่อมต่อกับ AI Agent กรุณาติดต่อผู้ดูแลระบบ", integration.channel_secret);
         }
       }
     }
