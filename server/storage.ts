@@ -1345,49 +1345,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration> {
-    // Only insert columns that exist in the actual database table
-    const insertData = {
-      name: integration.name,
-      description: integration.description,
-      userId: integration.userId,
-      type: integration.type,
-      channel_id: integration.channelId,
-      channel_secret: integration.channelSecret,
-      agent_id: integration.agentId,
-      is_active: integration.isActive ?? true,
-      is_verified: integration.isVerified ?? false,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-    
-    const [newIntegration] = await db
-      .insert(socialIntegrations)
-      .values(insertData)
-      .returning();
-    
-    // Return with proper interface structure
-    return {
-      id: newIntegration.id,
-      name: newIntegration.name,
-      description: newIntegration.description,
-      userId: newIntegration.userId,
-      type: newIntegration.type as 'lineoa' | 'facebook' | 'tiktok',
-      channelId: newIntegration.channelId,
-      channelSecret: newIntegration.channelSecret,
-      channelAccessToken: null,
-      agentId: newIntegration.agentId,
-      isActive: newIntegration.isActive,
-      isVerified: newIntegration.isVerified,
-      lastVerifiedAt: newIntegration.lastVerifiedAt,
-      facebookPageId: null,
-      facebookAccessToken: null,
-      tiktokChannelId: null,
-      tiktokAccessToken: null,
-      webhookUrl: null,
-      config: null,
-      createdAt: newIntegration.createdAt,
-      updatedAt: newIntegration.updatedAt,
-    };
+    try {
+      // Use raw SQL to avoid Drizzle schema issues
+      const result = await db.execute(sql`
+        INSERT INTO social_integrations (
+          name, description, user_id, type, channel_id, channel_secret, 
+          agent_id, is_active, is_verified, created_at, updated_at
+        ) VALUES (
+          ${integration.name}, 
+          ${integration.description || null}, 
+          ${integration.userId}, 
+          ${integration.type}, 
+          ${integration.channelId || null}, 
+          ${integration.channelSecret || null}, 
+          ${integration.agentId || null}, 
+          ${integration.isActive ?? true}, 
+          ${integration.isVerified ?? false}, 
+          NOW(), 
+          NOW()
+        ) RETURNING *
+      `);
+      
+      const newIntegration = result.rows[0] as any;
+      
+      // Return with proper interface structure
+      return {
+        id: newIntegration.id,
+        name: newIntegration.name,
+        description: newIntegration.description,
+        userId: newIntegration.user_id,
+        type: newIntegration.type as 'lineoa' | 'facebook' | 'tiktok',
+        channelId: newIntegration.channel_id,
+        channelSecret: newIntegration.channel_secret,
+        channelAccessToken: null,
+        agentId: newIntegration.agent_id,
+        isActive: newIntegration.is_active,
+        isVerified: newIntegration.is_verified,
+        lastVerifiedAt: newIntegration.last_verified_at,
+        facebookPageId: null,
+        facebookAccessToken: null,
+        tiktokChannelId: null,
+        tiktokAccessToken: null,
+        webhookUrl: null,
+        config: null,
+        createdAt: newIntegration.created_at,
+        updatedAt: newIntegration.updated_at,
+      };
+    } catch (error) {
+      console.error("💥 Error creating social integration:", error);
+      throw error;
+    }
   }
 
   async updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration> {
