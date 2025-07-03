@@ -1345,26 +1345,99 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration> {
+    // Only insert columns that exist in the actual database table
+    const insertData = {
+      name: integration.name,
+      description: integration.description,
+      userId: integration.userId,
+      type: integration.type,
+      channel_id: integration.channelId,
+      channel_secret: integration.channelSecret,
+      agent_id: integration.agentId,
+      is_active: integration.isActive ?? true,
+      is_verified: integration.isVerified ?? false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+    
     const [newIntegration] = await db
       .insert(socialIntegrations)
-      .values({
-        ...integration,
-        updatedAt: new Date(),
-      })
+      .values(insertData)
       .returning();
-    return newIntegration;
+    
+    // Return with proper interface structure
+    return {
+      id: newIntegration.id,
+      name: newIntegration.name,
+      description: newIntegration.description,
+      userId: newIntegration.userId,
+      type: newIntegration.type as 'lineoa' | 'facebook' | 'tiktok',
+      channelId: newIntegration.channelId,
+      channelSecret: newIntegration.channelSecret,
+      channelAccessToken: null,
+      agentId: newIntegration.agentId,
+      isActive: newIntegration.isActive,
+      isVerified: newIntegration.isVerified,
+      lastVerifiedAt: newIntegration.lastVerifiedAt,
+      facebookPageId: null,
+      facebookAccessToken: null,
+      tiktokChannelId: null,
+      tiktokAccessToken: null,
+      webhookUrl: null,
+      config: null,
+      createdAt: newIntegration.createdAt,
+      updatedAt: newIntegration.updatedAt,
+    };
   }
 
   async updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration> {
+    // Only update columns that exist in the actual database table
+    const updateData: any = {
+      updated_at: new Date(),
+    };
+    
+    if (integration.name !== undefined) updateData.name = integration.name;
+    if (integration.description !== undefined) updateData.description = integration.description;
+    if (integration.type !== undefined) updateData.type = integration.type;
+    if (integration.channelId !== undefined) updateData.channel_id = integration.channelId;
+    if (integration.channelSecret !== undefined) updateData.channel_secret = integration.channelSecret;
+    if (integration.agentId !== undefined) updateData.agent_id = integration.agentId;
+    if (integration.isActive !== undefined) updateData.is_active = integration.isActive;
+    if (integration.isVerified !== undefined) updateData.is_verified = integration.isVerified;
+    
     const [updated] = await db
       .update(socialIntegrations)
-      .set({
-        ...integration,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(and(eq(socialIntegrations.id, id), eq(socialIntegrations.userId, userId)))
       .returning();
-    return updated;
+    
+    if (!updated) {
+      throw new Error("Social integration not found or access denied");
+    }
+    
+    // Return with proper interface structure
+    return {
+      id: updated.id,
+      name: updated.name,
+      description: updated.description,
+      userId: updated.userId,
+      type: updated.type as 'lineoa' | 'facebook' | 'tiktok',
+      channelId: updated.channelId,
+      channelSecret: updated.channelSecret,
+      channelAccessToken: null,
+      agentId: updated.agentId,
+      isActive: updated.isActive,
+      isVerified: updated.isVerified,
+      lastVerifiedAt: updated.lastVerifiedAt,
+      facebookPageId: null,
+      facebookAccessToken: null,
+      tiktokChannelId: null,
+      tiktokAccessToken: null,
+      webhookUrl: null,
+      config: null,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
   }
 
   async deleteSocialIntegration(id: number, userId: string): Promise<void> {
