@@ -1146,7 +1146,7 @@ export class DatabaseStorage implements IStorage {
 
     const [agentDocument] = await db
       .insert(agentChatbotDocuments)
-      .values({ agentId, documentId })
+      .values({ agentId, documentId, userId })
       .returning();
 
     return agentDocument;
