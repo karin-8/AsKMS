@@ -20,7 +20,8 @@ import {
   Calendar,
   Users,
   Power,
-  PowerOff
+  PowerOff,
+  FileText
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -85,6 +86,31 @@ export default function AgentChatbots() {
     enabled: isAuthenticated,
     retry: false,
   }) as { data: AgentChatbot[], isLoading: boolean };
+
+  // Component to display agent document count
+  const AgentDocumentCount = ({ agentId }: { agentId: number }) => {
+    const { data: documents = [], isLoading } = useQuery({
+      queryKey: ['/api/agent-chatbots', agentId, 'documents'],
+      enabled: isAuthenticated && !!agentId,
+      retry: false,
+    }) as { data: any[], isLoading: boolean };
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center space-x-1 text-xs text-slate-500">
+          <FileText className="w-3 h-3" />
+          <span>...</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center space-x-1 text-xs text-slate-500">
+        <FileText className="w-3 h-3" />
+        <span>{documents.length} documents</span>
+      </div>
+    );
+  };
 
   // Delete agent mutation
   const deleteAgentMutation = useMutation({
@@ -328,9 +354,12 @@ export default function AgentChatbots() {
                     
                     {/* Stats */}
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>Created {new Date(agent.createdAt).toLocaleDateString()}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>Created {new Date(agent.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <AgentDocumentCount agentId={agent.id} />
                       </div>
                       <div className="flex items-center space-x-1">
                         <MessageSquare className="w-3 h-3" />

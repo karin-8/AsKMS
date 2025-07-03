@@ -144,6 +144,7 @@ export interface IStorage {
   getAgentChatbotDocuments(agentId: number, userId: string): Promise<AgentChatbotDocument[]>;
   addDocumentToAgent(agentId: number, documentId: number, userId: string): Promise<AgentChatbotDocument>;
   removeDocumentFromAgent(agentId: number, documentId: number, userId: string): Promise<void>;
+  removeAllDocumentsFromAgent(agentId: number, userId: string): Promise<void>;
 
   // AI Response Analysis operations
   createAiResponseAnalysis(analysis: InsertAiResponseAnalysis): Promise<AiResponseAnalysis>;
@@ -1151,6 +1152,18 @@ export class DatabaseStorage implements IStorage {
         eq(agentChatbotDocuments.agentId, agentId),
         eq(agentChatbotDocuments.documentId, documentId)
       ));
+  }
+
+  async removeAllDocumentsFromAgent(agentId: number, userId: string): Promise<void> {
+    // Verify the agent belongs to the user
+    const agent = await this.getAgentChatbot(agentId, userId);
+    if (!agent) {
+      throw new Error("Agent not found");
+    }
+
+    await db
+      .delete(agentChatbotDocuments)
+      .where(eq(agentChatbotDocuments.agentId, agentId));
   }
 
   // AI Response Analysis operations

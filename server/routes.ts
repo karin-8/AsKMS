@@ -2464,11 +2464,32 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.put("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const agentId = parseInt(req.params.id);
+      
+      // Extract documentIds from request body
+      const { documentIds, ...agentData } = req.body;
+      
       const agent = await storage.updateAgentChatbot(
-        parseInt(req.params.id),
-        req.body,
+        agentId,
+        agentData,
         userId
       );
+      
+      // Update document associations if provided
+      if (documentIds !== undefined) {
+        console.log("Updating agent documents:", documentIds);
+        
+        // Remove all existing document associations
+        await storage.removeAllDocumentsFromAgent(agentId, userId);
+        
+        // Add new document associations
+        if (documentIds && documentIds.length > 0) {
+          for (const documentId of documentIds) {
+            await storage.addDocumentToAgent(agentId, documentId, userId);
+          }
+        }
+      }
+      
       res.json(agent);
     } catch (error) {
       console.error("Error updating agent chatbot:", error);
