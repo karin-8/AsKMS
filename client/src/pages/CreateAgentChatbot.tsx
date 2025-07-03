@@ -81,6 +81,11 @@ export default function CreateAgentChatbot() {
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Check if we're editing an existing agent
+  const urlParams = new URLSearchParams(window.location.search);
+  const editAgentId = urlParams.get('edit');
+  const isEditing = !!editAgentId;
 
   // Form setup
   const form = useForm<CreateAgentForm>({
@@ -125,15 +130,62 @@ export default function CreateAgentChatbot() {
     retry: false,
   }) as { data: Document[] };
 
-  // Create agent mutation
-  const createAgentMutation = useMutation({
+  // Fetch agent data for editing
+  const { data: existingAgent, isLoading: isLoadingAgent } = useQuery({
+    queryKey: ['/api/agent-chatbots', editAgentId],
+    enabled: isAuthenticated && isEditing,
+    retry: false,
+  });
+
+  // Fetch agent documents for editing
+  const { data: agentDocuments = [] } = useQuery({
+    queryKey: ['/api/agent-chatbots', editAgentId, 'documents'],
+    enabled: isAuthenticated && isEditing,
+    retry: false,
+  });
+
+  // Load existing agent data into form when editing
+  useEffect(() => {
+    if (isEditing && existingAgent) {
+      const agent = existingAgent as any;
+      form.reset({
+        name: agent.name || "",
+        description: agent.description || "",
+        systemPrompt: agent.systemPrompt || "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
+        personality: agent.personality || "",
+        profession: agent.profession || "",
+        responseStyle: agent.responseStyle || "",
+        specialSkills: agent.specialSkills || [],
+        contentFiltering: agent.contentFiltering !== false,
+        toxicityPrevention: agent.toxicityPrevention !== false,
+        privacyProtection: agent.privacyProtection !== false,
+        factualAccuracy: agent.factualAccuracy !== false,
+        responseLength: agent.responseLength || "medium",
+        allowedTopics: agent.allowedTopics || [],
+        blockedTopics: agent.blockedTopics || [],
+      });
+      
+      // Load selected documents
+      const docs = agentDocuments as any[];
+      if (docs && docs.length > 0) {
+        setSelectedDocuments(docs.map((doc: any) => doc.documentId));
+      }
+    }
+  }, [existingAgent, agentDocuments, isEditing, form]);
+
+  // Create/Update agent mutation
+  const saveAgentMutation = useMutation({
     mutationFn: async (agentData: CreateAgentForm & { documentIds: number[] }) => {
-      return await apiRequest("POST", "/api/agent-chatbots", agentData);
+      if (isEditing) {
+        return await apiRequest("PUT", `/api/agent-chatbots/${editAgentId}`, agentData);
+      } else {
+        return await apiRequest("POST", "/api/agent-chatbots", agentData);
+      }
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Agent chatbot created successfully!",
+        description: isEditing ? "Agent chatbot updated successfully!" : "Agent chatbot created successfully!",
       });
       // Clear form and navigate back
       form.reset();
@@ -155,14 +207,14 @@ export default function CreateAgentChatbot() {
       }
       toast({
         title: "Error",
-        description: "Failed to create agent chatbot",
+        description: isEditing ? "Failed to update agent chatbot" : "Failed to create agent chatbot",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: CreateAgentForm) => {
-    createAgentMutation.mutate({
+    saveAgentMutation.mutate({
       ...data,
       documentIds: selectedDocuments,
     });
@@ -263,10 +315,10 @@ export default function CreateAgentChatbot() {
               </Link>
               <div>
                 <h1 className="text-2xl font-semibold text-slate-800 mb-2">
-                  Create Agent Chatbot
+                  {isEditing ? "Edit Agent Chatbot" : "Create Agent Chatbot"}
                 </h1>
                 <p className="text-sm text-slate-500">
-                  Set up your AI-powered chatbot agent with custom prompts and document knowledge
+                  {isEditing ? "Update your AI-powered chatbot agent configuration" : "Set up your AI-powered chatbot agent with custom prompts and document knowledge"}
                 </p>
               </div>
             </div>
@@ -898,18 +950,18 @@ export default function CreateAgentChatbot() {
                       </Link>
                       <Button 
                         type="submit" 
-                        disabled={createAgentMutation.isPending}
+                        disabled={saveAgentMutation.isPending}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
-                        {createAgentMutation.isPending ? (
+                        {saveAgentMutation.isPending ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Creating...
+                            {isEditing ? "Updating..." : "Creating..."}
                           </>
                         ) : (
                           <>
                             <Plus className="w-4 h-4 mr-2" />
-                            Create Agent
+                            {isEditing ? "Update Agent" : "Create Agent"}
                           </>
                         )}
                       </Button>

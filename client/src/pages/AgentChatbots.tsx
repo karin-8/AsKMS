@@ -266,13 +266,15 @@ export default function AgentChatbots() {
                             <Power className="w-4 h-4 text-green-600" />
                           )}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="w-4 h-4 text-blue-500" />
-                        </Button>
+                        <Link href={`/create-agent-chatbot?edit=${agent.id}`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="w-4 h-4 text-blue-500" />
+                          </Button>
+                        </Link>
                         <Button
                           size="sm"
                           variant="ghost"
