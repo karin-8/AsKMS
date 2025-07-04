@@ -128,6 +128,7 @@ Changelog:
 - July 3, 2025. Successfully implemented Line OA webhook system with OpenAI integration - Agent Chatbots can now respond to real Line OA messages using GPT-4, fixed database schema issues with social integrations, added webhook endpoints for Line messaging, integrated AI responses with agent configuration and document context
 - July 3, 2025. Fixed Line OA webhook user identification system - resolved critical issue where webhook couldn't identify correct user by implementing Bot User ID matching instead of Channel ID, added bot_user_id field to database schema, implemented fallback logic for automatic Bot User ID detection, and added Channel Access Token support for sending replies to Line users
 - July 3, 2025. Fixed Agent Chatbot document association bug - resolved database constraint violation in agent_chatbot_documents table by ensuring userId field is properly included when linking documents to agents, and added document count display component to show linked documents for each agent in the Agent Chatbots list
+- July 4, 2025. Enhanced Agent Chatbot RAG system and UI improvements - 1) Fixed Line OA webhook to actually use document content in conversations instead of just showing document IDs, implemented proper RAG with document content retrieval and context building, 2) Enhanced Agent Chatbot cards to show actual document names with "...More" overflow instead of just count, 3) Improved Create Agent Chatbot page to display selected document names with individual remove buttons for better UX
 ```
 
 ## User Preferences

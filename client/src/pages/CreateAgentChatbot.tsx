@@ -632,12 +632,37 @@ export default function CreateAgentChatbot() {
                                 />
                               </div>
 
-                              {/* Selected Documents Count */}
+                              {/* Selected Documents */}
                               {selectedDocuments.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                    {selectedDocuments.length} documents selected
-                                  </Badge>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                      {selectedDocuments.length} documents selected
+                                    </Badge>
+                                  </div>
+                                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                    <p className="text-sm font-medium text-blue-800 mb-2">Selected Documents:</p>
+                                    <div className="space-y-1">
+                                      {selectedDocuments.map(docId => {
+                                        const doc = documents.find(d => d.id === docId);
+                                        return doc ? (
+                                          <div key={docId} className="flex items-center justify-between text-sm text-blue-700">
+                                            <span className="flex items-center gap-2">
+                                              <FileText className="w-3 h-3" />
+                                              {doc.name}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleDocument(docId)}
+                                              className="text-blue-500 hover:text-blue-700"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        ) : null;
+                                      })}
+                                    </div>
+                                  </div>
                                 </div>
                               )}
 

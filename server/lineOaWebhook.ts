@@ -98,12 +98,38 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
       }
     }
 
-    // Get agent's documents for context
+    // Get agent's documents for context with actual content
     const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
     let contextPrompt = "";
     
     if (agentDocs.length > 0) {
-      contextPrompt = `\n\nคุณมีเอกสารอ้างอิงต่อไปนี้:\n${agentDocs.map(doc => `- Document ID: ${doc.documentId}`).join('\n')}`;
+      console.log(`📚 Found ${agentDocs.length} documents for agent`);
+      
+      // Get actual document content for each linked document
+      const documentContents: string[] = [];
+      for (const agentDoc of agentDocs) {
+        try {
+          const document = await storage.getDocument(agentDoc.documentId, userId);
+          if (document && document.content) {
+            // Limit content to first 2000 characters to avoid token limits
+            const truncatedContent = document.content.length > 2000 
+              ? document.content.substring(0, 2000) + "..."
+              : document.content;
+            
+            documentContents.push(`=== เอกสาร: ${document.name} ===\n${truncatedContent}\n`);
+            console.log(`📄 Added document: ${document.name} (${document.content.length} chars)`);
+          }
+        } catch (error) {
+          console.error(`❌ Error fetching document ${agentDoc.documentId}:`, error);
+        }
+      }
+      
+      if (documentContents.length > 0) {
+        contextPrompt = `\n\nเอกสารอ้างอิงสำหรับการตอบคำถาม:\n${documentContents.join('\n')}
+        
+กรุณาใช้ข้อมูลจากเอกสารข้างต้นเป็นหลักในการตอบคำถาม และระบุแหล่งที่มาของข้อมูลด้วย`;
+        console.log(`✅ Built context with ${documentContents.length} documents`);
+      }
     }
 
     // Build conversation messages including history

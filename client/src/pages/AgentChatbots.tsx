@@ -87,11 +87,18 @@ export default function AgentChatbots() {
     retry: false,
   }) as { data: AgentChatbot[], isLoading: boolean };
 
-  // Component to display agent document count
-  const AgentDocumentCount = ({ agentId }: { agentId: number }) => {
-    const { data: documents = [], isLoading } = useQuery({
+  // Component to display agent document list
+  const AgentDocumentList = ({ agentId }: { agentId: number }) => {
+    const { data: agentDocuments = [], isLoading } = useQuery({
       queryKey: ['/api/agent-chatbots', agentId, 'documents'],
       enabled: isAuthenticated && !!agentId,
+      retry: false,
+    }) as { data: any[], isLoading: boolean };
+
+    // Also fetch document details
+    const { data: allDocuments = [] } = useQuery({
+      queryKey: ['/api/documents'],
+      enabled: isAuthenticated,
       retry: false,
     }) as { data: any[], isLoading: boolean };
 
@@ -99,15 +106,50 @@ export default function AgentChatbots() {
       return (
         <div className="flex items-center space-x-1 text-xs text-slate-500">
           <FileText className="w-3 h-3" />
-          <span>...</span>
+          <span>Loading...</span>
         </div>
       );
     }
 
+    if (agentDocuments.length === 0) {
+      return (
+        <div className="flex items-center space-x-1 text-xs text-slate-500">
+          <FileText className="w-3 h-3" />
+          <span>No documents</span>
+        </div>
+      );
+    }
+
+    // Get document names
+    const documentNames = agentDocuments
+      .map(agentDoc => {
+        const doc = allDocuments.find(d => d.id === agentDoc.documentId);
+        return doc ? doc.name : `Document ${agentDoc.documentId}`;
+      })
+      .filter(Boolean);
+
+    const maxDisplay = 2;
+    const displayNames = documentNames.slice(0, maxDisplay);
+    const remainingCount = documentNames.length - maxDisplay;
+
     return (
-      <div className="flex items-center space-x-1 text-xs text-slate-500">
-        <FileText className="w-3 h-3" />
-        <span>{documents.length} documents</span>
+      <div className="text-xs text-slate-500">
+        <div className="flex items-center space-x-1 mb-1">
+          <FileText className="w-3 h-3" />
+          <span>{documentNames.length} documents:</span>
+        </div>
+        <div className="ml-4 space-y-0.5">
+          {displayNames.map((name, index) => (
+            <div key={index} className="text-slate-600 truncate max-w-48">
+              • {name}
+            </div>
+          ))}
+          {remainingCount > 0 && (
+            <div className="text-slate-400 italic">
+              ...และอีก {remainingCount} ไฟล์
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -352,14 +394,16 @@ export default function AgentChatbots() {
                       </div>
                     </div>
                     
+                    {/* Documents */}
+                    <div className="mb-3 pt-3 border-t border-slate-100">
+                      <AgentDocumentList agentId={agent.id} />
+                    </div>
+                    
                     {/* Stats */}
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>Created {new Date(agent.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <AgentDocumentCount agentId={agent.id} />
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>Created {new Date(agent.createdAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <MessageSquare className="w-3 h-3" />
