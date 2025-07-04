@@ -129,6 +129,9 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
         
 กรุณาใช้ข้อมูลจากเอกสารข้างต้นเป็นหลักในการตอบคำถาม และระบุแหล่งที่มาของข้อมูลด้วย`;
         console.log(`✅ Built context with ${documentContents.length} documents`);
+        console.log(`📄 Context prompt length: ${contextPrompt.length} characters`);
+      } else {
+        console.log(`⚠️ No documents found or no content available`);
       }
     }
 
@@ -160,6 +163,18 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
     });
 
     console.log(`🤖 Sending ${messages.length} messages to OpenAI (including ${chatHistory.length} history messages)`);
+    
+    // Debug: Log the complete system prompt for verification
+    console.log('\n=== 🔍 DEBUG: Complete System Prompt ===');
+    console.log(messages[0].content);
+    console.log('=== End System Prompt ===\n');
+    
+    // Debug: Log user message
+    console.log(`📝 User Message: "${userMessage}"`);
+    
+    // Debug: Log total prompt length
+    const totalTokens = messages.reduce((sum, msg) => sum + msg.content.length, 0);
+    console.log(`📊 Total prompt length: ${totalTokens} characters`);
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
