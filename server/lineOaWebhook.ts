@@ -260,6 +260,19 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
 
     // Save chat history
     try {
+      // Check if this exact user message already exists in the last 60 seconds to prevent duplicates
+      const recentMessages = await storage.getRecentChatHistory(userId, channelType, channelId, 60);
+      const isDuplicate = recentMessages.some(msg => 
+        msg.messageType === 'user' && 
+        msg.content === userMessage &&
+        new Date().getTime() - new Date(msg.createdAt).getTime() < 60000 // within 60 seconds
+      );
+      
+      if (isDuplicate) {
+        console.log(`⚠️ Duplicate user message detected: "${userMessage}" - skipping save`);
+        return aiResponse;
+      }
+
       // Save user message
       await storage.createChatHistory({
         userId,
