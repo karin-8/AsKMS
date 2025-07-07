@@ -514,30 +514,57 @@ export default function AgentConsole() {
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <ImageIcon className="w-4 h-4" />
-                                          <span className="text-sm">รูปภาพ</span>
+                                          <span className="text-sm font-semibold">รูปภาพ</span>
                                         </div>
-                                        <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
-                                          Message ID: {message.metadata.messageId}
-                                        </div>
+                                        {message.metadata.originalContentUrl ? (
+                                          <a href={message.metadata.originalContentUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                            <img
+                                              src={message.metadata.previewImageUrl || message.metadata.originalContentUrl}
+                                              alt="User sent image"
+                                              className="max-w-48 max-h-48 rounded-lg shadow-md object-cover cursor-pointer"
+                                              onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150?text=Image+Load+Error'; }}
+                                            />
+                                          </a>
+                                        ) : (
+                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
+                                            Message ID: {message.metadata.messageId}
+                                          </div>
+                                        )}
+                                        {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}
                                       </div>
                                     ) : message.metadata?.messageType === 'sticker' ? (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <span className="text-lg">😀</span>
-                                          <span className="text-sm">สติ๊กเกอร์</span>
+                                          <span className="text-sm font-semibold">สติ๊กเกอร์</span>
                                         </div>
-                                        <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
-                                          Package: {message.metadata.packageId}<br/>
-                                          Sticker: {message.metadata.stickerId}
-                                        </div>
+                                        {message.metadata.packageId && message.metadata.stickerId ? (
+                                          <img
+                                            src={`https://stickershop.line-scdn.net/stickershop/v1/sticker/${message.metadata.stickerId}/android/sticker.png`}
+                                            alt="Line Sticker"
+                                            className="w-24 h-24 object-contain"
+                                            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100?text=Sticker+Error'; }}
+                                          />
+                                        ) : (
+                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
+                                            Package: {message.metadata.packageId}<br/>
+                                            Sticker: {message.metadata.stickerId}
+                                          </div>
+                                        )}
+                                        {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}
                                       </div>
                                     ) : message.metadata?.messageType && message.metadata.messageType !== 'text' ? (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <FileIcon className="w-4 h-4" />
-                                          <span className="text-sm">{message.metadata.messageType}</span>
+                                          <span className="text-sm font-semibold">{message.metadata.messageType.charAt(0).toUpperCase() + message.metadata.messageType.slice(1)}</span>
                                         </div>
-                                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                        {message.metadata.originalContentUrl && (
+                                          <a href={message.metadata.originalContentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                                            เปิดไฟล์ {message.metadata.messageType}
+                                          </a>
+                                        )}
+                                        <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>
                                       </div>
                                     ) : (
                                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
