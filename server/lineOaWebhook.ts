@@ -312,6 +312,22 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
   }
 }
 
+// Store processed message IDs to prevent duplicates with timestamp for cleanup
+const processedMessageIds = new Map<string, number>();
+
+// Clean up old processed message IDs (older than 1 hour)
+const cleanupProcessedMessages = () => {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  for (const [messageId, timestamp] of processedMessageIds.entries()) {
+    if (timestamp < oneHourAgo) {
+      processedMessageIds.delete(messageId);
+    }
+  }
+};
+
+// Schedule cleanup every 30 minutes
+setInterval(cleanupProcessedMessages, 30 * 60 * 1000);
+
 // Main webhook handler
 export async function handleLineWebhook(req: Request, res: Response) {
   try {
@@ -423,6 +439,17 @@ export async function handleLineWebhook(req: Request, res: Response) {
           };
           console.log('📎 Other message type:', message.type);
         }
+        
+        // Check if this message has already been processed
+        const messageId = message.id;
+        if (processedMessageIds.has(messageId)) {
+          console.log(`⚠️ Message ${messageId} already processed, skipping...`);
+          continue;
+        }
+        
+        // Mark message as processed with timestamp
+        processedMessageIds.set(messageId, Date.now());
+        console.log(`✅ Processing new message ${messageId}`);
         
         // Save user message with metadata
         let chatHistoryId: number | null = null;
