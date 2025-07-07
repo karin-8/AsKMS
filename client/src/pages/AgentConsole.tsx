@@ -110,7 +110,16 @@ export default function AgentConsole() {
         channelId: selectedUser.channelId,
         agentId: selectedUser.agentId.toString(),
       });
-      return await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+      console.log("🔍 Agent Console: Fetching conversation with params:", {
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId
+      });
+      const result = await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+      console.log("📨 Agent Console: Conversation API response:", result);
+      console.log("📨 Agent Console: Is array?", Array.isArray(result));
+      return Array.isArray(result) ? result : [];
     },
     enabled: isAuthenticated && !!selectedUser,
     refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
@@ -127,7 +136,14 @@ export default function AgentConsole() {
         channelType: selectedUser.channelType,
         channelId: selectedUser.channelId,
       });
-      return await apiRequest("GET", `/api/agent-console/summary?${params}`);
+      console.log("📊 Agent Console: Fetching summary with params:", {
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId
+      });
+      const result = await apiRequest("GET", `/api/agent-console/summary?${params}`);
+      console.log("📊 Agent Console: Summary API response:", result);
+      return result;
     },
     enabled: isAuthenticated && !!selectedUser,
     retry: false,
@@ -332,7 +348,10 @@ export default function AgentConsole() {
                                   ? "bg-blue-50 border border-blue-200"
                                   : "border border-transparent"
                               }`}
-                              onClick={() => setSelectedUser(chatUser)}
+                              onClick={() => {
+                                console.log("👤 Agent Console: User selected:", chatUser);
+                                setSelectedUser(chatUser);
+                              }}
                             >
                               <div className="flex items-start space-x-3">
                                 <div className="relative">
@@ -429,8 +448,10 @@ export default function AgentConsole() {
                           <div className="space-y-4">
                             {isLoadingMessages ? (
                               <div className="text-center py-4 text-gray-500">Loading messages...</div>
-                            ) : conversationMessages.length === 0 ? (
-                              <div className="text-center py-4 text-gray-500">No messages yet</div>
+                            ) : !Array.isArray(conversationMessages) || conversationMessages.length === 0 ? (
+                              <div className="text-center py-4 text-gray-500">
+                                {!Array.isArray(conversationMessages) ? "Error loading messages" : "No messages yet"}
+                              </div>
                             ) : (
                               conversationMessages.map((message: ConversationMessage) => (
                                 <div

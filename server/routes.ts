@@ -3409,7 +3409,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       
       // Get all unique users from chat history grouped by user, channel, and agent
       const query = `
-        SELECT DISTINCT ON (ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id)
+        SELECT DISTINCT ON (ch.channel_id, ch.channel_type, ch.agent_id)
           ch.user_id,
           ch.channel_type,
           ch.channel_id,
@@ -3417,12 +3417,12 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           ac.name as agent_name,
           ch.content as last_message,
           ch.created_at as last_message_at,
-          COUNT(*) OVER (PARTITION BY ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id) as message_count
+          COUNT(*) OVER (PARTITION BY ch.channel_id, ch.channel_type, ch.agent_id) as message_count
         FROM chat_history ch
         JOIN agent_chatbots ac ON ch.agent_id = ac.id
         WHERE ac.user_id = $1
         ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
-        ORDER BY ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id, ch.created_at DESC
+        ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
       `;
       
       const params = channelFilter !== 'all' ? [userId, channelFilter] : [userId];
@@ -3431,7 +3431,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       const chatUsers = result.rows.map(row => ({
         userId: row.user_id,
         channelType: row.channel_type,
-        channelId: row.channel_id,
+        channelId: row.channel_id, // This is the actual Line user ID
         agentId: row.agent_id,
         agentName: row.agent_name,
         lastMessage: row.last_message,
@@ -3439,10 +3439,13 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         messageCount: parseInt(row.message_count),
         isOnline: Math.random() > 0.7, // Simplified online status
         userProfile: {
-          name: `User ${row.user_id.slice(-4)}`,
+          name: `User ${row.channel_id.slice(-4)}`, // Use channel_id (Line user ID) for display
           // Add more profile fields as needed
         }
       }));
+      
+      console.log("🔍 Agent Console Users API: Found users:", chatUsers.length);
+      console.log("🔍 Agent Console Users API: Sample user:", chatUsers[0]);
       
       res.json(chatUsers);
     } catch (error) {
@@ -3459,6 +3462,13 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         return res.status(400).json({ message: "Missing required parameters" });
       }
       
+      console.log("🔍 Agent Console Conversation API: Query params:", {
+        targetUserId,
+        channelType,
+        channelId,
+        agentId
+      });
+      
       const messages = await storage.getChatHistory(
         targetUserId,
         channelType,
@@ -3466,6 +3476,9 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         parseInt(agentId),
         50 // Get last 50 messages
       );
+      
+      console.log("📨 Agent Console Conversation API: Found messages:", messages.length);
+      console.log("📨 Agent Console Conversation API: Sample message:", messages[0]);
       
       res.json(messages);
     } catch (error) {
