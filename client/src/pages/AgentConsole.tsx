@@ -142,6 +142,18 @@ export default function AgentConsole() {
     retry: false,
   });
 
+  // Debug logging for selectedUser and messages
+  console.log("🔧 Agent Console Debug:", {
+    isAuthenticated,
+    selectedUser: selectedUser ? {
+      userId: selectedUser.userId,
+      channelId: selectedUser.channelId,
+      agentId: selectedUser.agentId
+    } : null,
+    conversationMessages: conversationMessages?.length || 0,
+    isLoadingMessages
+  });
+
   // Query for conversation summary
   const { data: conversationSummary } = useQuery({
     queryKey: ["/api/agent-console/summary", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId],
