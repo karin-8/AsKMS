@@ -510,7 +510,15 @@ export default function AgentConsole() {
                                       </span>
                                     </div>
                                     {/* Render message content based on type */}
-                                    {message.metadata?.messageType === 'image' ? (
+                                    {message.metadata?.messageType === 'image_analysis' ? (
+                                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">การวิเคราะห์รูปภาพด้วย AI</span>
+                                        </div>
+                                        <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{message.content.replace('[การวิเคราะห์รูปภาพ] ', '')}</p>
+                                      </div>
+                                    ) : message.metadata?.messageType === 'image' ? (
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
                                           <ImageIcon className="w-4 h-4" />
@@ -544,6 +552,15 @@ export default function AgentConsole() {
                                             <div className="text-xs text-gray-400">
                                               (ไม่สามารถแสดงรูปภาพ - ต้องการ Line Content API)
                                             </div>
+                                          </div>
+                                        )}
+                                        {message.metadata.imageAnalysis && (
+                                          <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                            <div className="flex items-center space-x-2 mb-2">
+                                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">การวิเคราะห์รูปภาพด้วย AI</span>
+                                            </div>
+                                            <p className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{message.metadata.imageAnalysis}</p>
                                           </div>
                                         )}
                                         {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}

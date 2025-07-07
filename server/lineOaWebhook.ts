@@ -383,7 +383,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
         if (lineIntegration.agentId) {
           let contextMessage = userMessage;
           if (message.type === 'image') {
-            contextMessage = 'ผู้ใช้ส่งรูปภาพมา กรุณาตอบรับรูปภาพและถามว่ามีอะไรให้ช่วย';
+            contextMessage = 'ผู้ใช้ส่งรูปภาพมา ระบบกำลังวิเคราะห์รูปภาพด้วย AI และจะเพิ่มข้อมูลการวิเคราะห์ในข้อความถัดไป กรุณาตอบรับรูปภาพและบอกว่ากำลังวิเคราะห์รูป';
           } else if (message.type === 'sticker') {
             contextMessage = 'ผู้ใช้ส่งสติ๊กเกอร์มา กรุณาตอบอย่างเป็นมิตรและถามว่ามีอะไรให้ช่วย';
           }

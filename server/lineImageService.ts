@@ -2,6 +2,9 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { storage } from './storage';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export class LineImageService {
   private static instance: LineImageService;
@@ -89,7 +92,55 @@ export class LineImageService {
   }
 
   /**
-   * Process image message and update chat history with image URL
+   * Analyze image with OpenAI GPT-4o Vision
+   */
+  async analyzeImageWithGPT4o(imageUrl: string): Promise<string | null> {
+    try {
+      console.log('🔍 Analyzing image with GPT-4o Vision:', imageUrl);
+      
+      // Convert local file path to full URL for OpenAI
+      const fullImageUrl = imageUrl.startsWith('http') 
+        ? imageUrl 
+        : `file://${path.join(process.cwd(), imageUrl.replace('/uploads/', 'uploads/'))}`;
+      
+      // Read image as base64 for OpenAI
+      const imagePath = path.join(process.cwd(), imageUrl.replace('/uploads/', 'uploads/'));
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString('base64');
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "กรุณาวิเคราะห์รูปภาพนี้อย่างละเอียด โดยบอกสิ่งที่เห็นในรูป รวมถึงข้อความ ตัวเลข หรือข้อมูลสำคัญที่อาจมีในรูป ตอบเป็นภาษาไทยและให้รายละเอียดครบถ้วน"
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000
+      });
+
+      const analysis = response.choices[0].message.content;
+      console.log('✅ Image analysis completed:', analysis?.substring(0, 100) + '...');
+      return analysis;
+    } catch (error) {
+      console.error('💥 Error analyzing image with GPT-4o:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Process image message and update chat history with image URL and analysis
    */
   async processImageMessage(
     messageId: string,
@@ -107,18 +158,42 @@ export class LineImageService {
       const imageUrl = await this.downloadAndSaveImage(messageId, channelAccessToken);
       
       if (imageUrl) {
-        // Update chat history with image URL
+        console.log('🔍 Starting image analysis with GPT-4o...');
+        
+        // Analyze image with GPT-4o
+        const imageAnalysis = await this.analyzeImageWithGPT4o(imageUrl);
+        
+        // Update chat history with image URL and analysis
         const updatedMetadata = {
           messageType: 'image',
           messageId: messageId,
           contentProvider: { type: 'line' },
           originalContentUrl: imageUrl,
           previewImageUrl: imageUrl, // Use same URL for preview
-          downloadedAt: new Date().toISOString()
+          downloadedAt: new Date().toISOString(),
+          imageAnalysis: imageAnalysis // Add GPT-4o analysis
         };
 
         await storage.updateChatHistoryMetadata(chatHistoryId, updatedMetadata);
-        console.log('✅ Updated chat history with image URL:', imageUrl);
+        console.log('✅ Updated chat history with image URL and analysis');
+        
+        // Also save the analysis as a separate chat message for context
+        if (imageAnalysis) {
+          await storage.createChatHistory({
+            userId: userId,
+            channelType: channelType,
+            channelId: channelId,
+            agentId: agentId,
+            messageType: 'system',
+            content: `[การวิเคราะห์รูปภาพ] ${imageAnalysis}`,
+            metadata: {
+              messageType: 'image_analysis',
+              relatedImageMessageId: messageId,
+              isSystemGenerated: true
+            }
+          });
+          console.log('📝 Saved image analysis as system message for AI context');
+        }
       } else {
         console.log('❌ Failed to download image, keeping original metadata');
       }
