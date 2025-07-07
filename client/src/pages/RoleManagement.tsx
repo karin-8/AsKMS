@@ -62,22 +62,36 @@ export default function RoleManagement() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      return await apiRequest(`/api/admin/users/${userId}/role`, {
+      console.log(`Updating role for user ${userId} to ${role}`);
+      
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
         method: "PUT",
-        body: JSON.stringify({ role }),
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ role }),
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        console.error("Role update failed:", response.status, errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to update role`);
+      }
+
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log(`Successfully updated role for user ${variables.userId} to ${variables.role}`);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Role Updated",
         description: "User role has been updated successfully.",
       });
     },
-    onError: (error) => {
+    onError: (error: any, variables) => {
+      console.error(`Failed to update role for user ${variables.userId}:`, error);
+      
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -91,8 +105,8 @@ export default function RoleManagement() {
       }
 
       toast({
-        title: "Error",
-        description: "Failed to update user role. Please try again.",
+        title: "Error", 
+        description: error.message || "Failed to update user role. Please try again.",
         variant: "destructive",
       });
     },

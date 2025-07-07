@@ -622,28 +622,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { userId } = req.params;
         const { role } = req.body;
+        const adminUserId = req.user.claims.sub;
 
-        console.log(role);
+        console.log(`Role update request from admin ${adminUserId}: userId=${userId}, newRole=${role}`);
+        console.log("Request body:", req.body);
+
+        // Validate required fields
+        if (!userId) {
+          console.log("Missing userId in request params");
+          return res.status(400).json({
+            message: "User ID is required",
+          });
+        }
+
+        if (!role) {
+          console.log("Missing role in request body");
+          return res.status(400).json({
+            message: "Role is required",
+          });
+        }
 
         // Validate role
         if (!["admin", "user", "viewer"].includes(role)) {
+          console.log(`Invalid role provided: ${role}`);
           return res.status(400).json({
             message: "Invalid role. Must be 'admin', 'user', or 'viewer'",
           });
         }
 
-        await db
+        // Check if user exists
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (!existingUser) {
+          console.log(`User not found: ${userId}`);
+          return res.status(404).json({
+            message: "User not found",
+          });
+        }
+
+        console.log(`Updating user ${userId} role from ${existingUser.role} to ${role}`);
+
+        // Update user role
+        const [updatedUser] = await db
           .update(users)
           .set({
             role: role,
             updatedAt: new Date(),
           })
-          .where(eq(users.id, userId));
+          .where(eq(users.id, userId))
+          .returning();
+
+        if (!updatedUser) {
+          console.log(`Failed to update user ${userId}`);
+          return res.status(500).json({
+            message: "Failed to update user role",
+          });
+        }
+
+        console.log(`Successfully updated user ${userId} role to ${role}`);
 
         // Log role change for audit
         try {
           await storage.createAuditLog({
-            userId: req.user.claims.sub,
+            userId: adminUserId,
             action: "role_change",
             resourceType: "user",
             resourceId: userId,
@@ -652,6 +697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: true,
             details: {
               targetUser: userId,
+              oldRole: existingUser.role,
               newRole: role,
             },
           });
@@ -662,10 +708,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         }
 
-        res.json({ message: "User role updated successfully" });
+        res.json({ 
+          message: "User role updated successfully",
+          user: {
+            id: updatedUser.id,
+            role: updatedUser.role,
+          }
+        });
       } catch (error) {
         console.error("Error updating user role:", error);
-        res.status(500).json({ message: "Failed to update user role" });
+        res.status(500).json({ 
+          message: "Failed to update user role",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
       }
     },
   );
