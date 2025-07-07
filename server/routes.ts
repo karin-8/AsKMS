@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { handleLineWebhook } from "./lineOaWebhook";
 import OpenAI from "openai";
-import { db } from "./db";
+import { db, pool } from "./db";
 
 // Initialize OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -25,6 +25,7 @@ import {
   documents,
   categories,
   auditLogs,
+  socialIntegrations,
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
