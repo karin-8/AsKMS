@@ -3421,6 +3421,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         FROM chat_history ch
         JOIN agent_chatbots ac ON ch.agent_id = ac.id
         WHERE ac.user_id = $1
+        AND ch.channel_id LIKE 'U%'
         ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
         ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
       `;
@@ -3444,8 +3445,13 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         }
       }));
       
+      console.log("🔍 Agent Console Users API: Raw DB results:", result.rows.length);
+      console.log("🔍 Agent Console Users API: Raw DB sample:", result.rows[0]);
       console.log("🔍 Agent Console Users API: Found users:", chatUsers.length);
-      console.log("🔍 Agent Console Users API: Sample user:", chatUsers[0]);
+      if (chatUsers.length > 0) {
+        console.log("🔍 Agent Console Users API: Sample user:", chatUsers[0]);
+        console.log("🔍 Agent Console Users API: All channelIds:", chatUsers.map(u => u.channelId));
+      }
       
       res.json(chatUsers);
     } catch (error) {
