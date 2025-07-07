@@ -92,7 +92,70 @@ export default function AgentConsole() {
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [messageInput, setMessageInput] = useState("");
   const [isHumanTakeover, setIsHumanTakeover] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // WebSocket connection setup
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    console.log('🔌 Connecting to WebSocket:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('🔌 WebSocket connected');
+      setWsConnected(true);
+      
+      // Subscribe to Agent Console updates
+      ws.send(JSON.stringify({
+        type: 'subscribe',
+        target: 'agent-console'
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('📨 WebSocket message received:', message);
+        
+        if (message.type === 'new_message') {
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/agent-console/users"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/agent-console/conversation"] });
+          
+          toast({
+            title: "New Message",
+            description: `New message from ${message.data.userId}`,
+            duration: 3000,
+          });
+        }
+      } catch (error) {
+        console.error('❌ WebSocket message parse error:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+      setWsConnected(false);
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+      setWsConnected(false);
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [isAuthenticated, queryClient, toast]);
 
   // Authentication check
   useEffect(() => {
@@ -109,15 +172,15 @@ export default function AgentConsole() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Query for active chat users
+  // Query for active chat users (reduced refresh frequency with WebSocket)
   const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ["/api/agent-console/users", channelFilter],
     enabled: isAuthenticated,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: wsConnected ? 30000 : 5000, // 30s if WebSocket connected, 5s if not
     retry: false,
   });
 
-  // Query for conversation messages
+  // Query for conversation messages (reduced refresh with WebSocket)
   const { data: conversationMessages = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId],
     queryFn: async () => {
@@ -138,7 +201,7 @@ export default function AgentConsole() {
       }
     },
     enabled: isAuthenticated && !!selectedUser,
-    refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
+    refetchInterval: wsConnected ? false : 10000, // Only refresh every 10s if WebSocket not connected
     retry: false,
   });
 
@@ -333,9 +396,17 @@ export default function AgentConsole() {
                   <UserCheck className="w-6 h-6" />
                   <h1 className="text-2xl font-bold">Agent Console</h1>
                 </div>
-                <Badge variant="outline" className="px-3 py-1">
-                  {chatUsers.length} Active Conversations
-                </Badge>
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <Circle className={`w-2 h-2 ${wsConnected ? 'fill-green-500 text-green-500' : 'fill-red-500 text-red-500'}`} />
+                    <span className="text-xs text-gray-600">
+                      {wsConnected ? 'Real-time WebSocket' : 'Polling Mode'}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="px-3 py-1">
+                    {chatUsers.length} Active Conversations
+                  </Badge>
+                </div>
               </div>
 
               <div className="grid grid-cols-12 gap-6 h-[calc(100vh-200px)]">

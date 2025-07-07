@@ -283,6 +283,23 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
       });
 
       console.log(`💾 Saved chat history for user ${userId}`);
+      
+      // Broadcast new message to Agent Console via WebSocket
+      if (typeof (global as any).broadcastToAgentConsole === 'function') {
+        (global as any).broadcastToAgentConsole({
+          type: 'new_message',
+          data: {
+            userId,
+            channelType,
+            channelId,
+            agentId,
+            userMessage,
+            aiResponse,
+            timestamp: new Date().toISOString()
+          }
+        });
+        console.log('📡 Broadcasted new message to Agent Console');
+      }
     } catch (error) {
       console.error('⚠️ Error saving chat history:', error);
       // Continue even if saving history fails

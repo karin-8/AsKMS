@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
@@ -3665,5 +3666,72 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.post("/api/line/webhook", handleLineWebhook);
 
   const httpServer = createServer(app);
+  
+  // Create WebSocket server on /ws path to avoid conflicts with Vite HMR
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws' 
+  });
+
+  // Store connected WebSocket clients
+  const wsClients = new Set<WebSocket>();
+
+  wss.on('connection', (ws) => {
+    console.log('🔌 WebSocket client connected');
+    wsClients.add(ws);
+
+    // Send initial connection confirmation
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'connection',
+        message: 'Connected to Agent Console WebSocket'
+      }));
+    }
+
+    // Handle incoming messages from client
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log('📨 WebSocket message received:', message);
+        
+        // Handle different message types if needed
+        if (message.type === 'subscribe') {
+          console.log('📡 Client subscribed to Agent Console updates');
+        }
+      } catch (error) {
+        console.error('❌ WebSocket message parse error:', error);
+      }
+    });
+
+    // Clean up on disconnect
+    ws.on('close', () => {
+      console.log('🔌 WebSocket client disconnected');
+      wsClients.delete(ws);
+    });
+
+    ws.on('error', (error) => {
+      console.error('❌ WebSocket error:', error);
+      wsClients.delete(ws);
+    });
+  });
+
+  // Export function to broadcast messages to all connected clients
+  (global as any).broadcastToAgentConsole = (message: any) => {
+    console.log(`📡 Broadcasting to ${wsClients.size} connected clients:`, message);
+    
+    wsClients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(JSON.stringify(message));
+        } catch (error) {
+          console.error('❌ Error sending WebSocket message:', error);
+          wsClients.delete(client);
+        }
+      } else {
+        wsClients.delete(client);
+      }
+    });
+  };
+
   return httpServer;
 }
