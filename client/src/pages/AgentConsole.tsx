@@ -526,8 +526,17 @@ export default function AgentConsole() {
                                             />
                                           </a>
                                         ) : (
-                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
-                                            Message ID: {message.metadata.messageId}
+                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs space-y-1">
+                                            <div className="flex items-center space-x-2">
+                                              <ImageIcon className="w-3 h-3" />
+                                              <span>รูปภาพจาก Line OA</span>
+                                            </div>
+                                            {message.metadata.messageId && (
+                                              <div className="text-gray-500">Message ID: {message.metadata.messageId}</div>
+                                            )}
+                                            <div className="text-xs text-gray-400">
+                                              (ไม่สามารถแสดงรูปภาพ - ต้องการ Line Content API)
+                                            </div>
                                           </div>
                                         )}
                                         {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}

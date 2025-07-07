@@ -309,12 +309,20 @@ export async function handleLineWebhook(req: Request, res: Response) {
           console.log('💬 Text message:', userMessage);
         } else if (message.type === 'image') {
           userMessage = '[รูปภาพ]';
+          
+          // For Line images, construct content URLs using messageId and Channel Access Token
+          const originalContentUrl = `https://api-data.line.me/v2/bot/message/${message.id}/content`;
+          const previewImageUrl = `https://api-data.line.me/v2/bot/message/${message.id}/content/preview`;
+          
           messageMetadata = {
             messageType: 'image',
             messageId: message.id,
-            contentProvider: message.contentProvider
+            contentProvider: message.contentProvider,
+            originalContentUrl,
+            previewImageUrl
           };
           console.log('🖼️ Image message received, ID:', message.id);
+          console.log('🔗 Image URLs:', { originalContentUrl, previewImageUrl });
         } else if (message.type === 'sticker') {
           userMessage = '[สติ๊กเกอร์]';
           messageMetadata = {
