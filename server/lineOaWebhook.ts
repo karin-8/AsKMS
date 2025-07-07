@@ -312,6 +312,9 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
   }
 }
 
+// Store processed message IDs to prevent duplicates
+const processedMessageIds = new Set<string>();
+
 // Main webhook handler
 export async function handleLineWebhook(req: Request, res: Response) {
   try {
@@ -378,6 +381,22 @@ export async function handleLineWebhook(req: Request, res: Response) {
     // Process each event
     for (const event of webhookBody.events) {
       if (event.type === 'message' && event.message) {
+        const messageId = event.message.id;
+        
+        // Check if we've already processed this message
+        if (processedMessageIds.has(messageId)) {
+          console.log(`⚠️ Message ${messageId} already processed, skipping...`);
+          continue;
+        }
+        
+        // Add to processed messages
+        processedMessageIds.add(messageId);
+        
+        // Clean up old message IDs (keep only last 1000 messages)
+        if (processedMessageIds.size > 1000) {
+          const oldestEntries = Array.from(processedMessageIds).slice(0, 500);
+          oldestEntries.forEach(id => processedMessageIds.delete(id));
+        }
         const message = event.message;
         const replyToken = event.replyToken!;
         let userMessage = '';
