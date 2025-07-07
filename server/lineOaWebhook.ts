@@ -11,6 +11,13 @@ interface LineMessage {
   type: string;
   id: string;
   text?: string;
+  // Image message
+  contentProvider?: {
+    type: string;
+  };
+  // Sticker message
+  packageId?: string;
+  stickerId?: string;
 }
 
 interface LineEvent {
@@ -287,17 +294,72 @@ export async function handleLineWebhook(req: Request, res: Response) {
     
     // Process each event
     for (const event of webhookBody.events) {
-      if (event.type === 'message' && event.message?.type === 'text') {
-        const userMessage = event.message.text!;
+      if (event.type === 'message' && event.message) {
+        const message = event.message;
         const replyToken = event.replyToken!;
+        let userMessage = '';
+        let messageMetadata: any = {};
         
-        console.log('💬 User message:', userMessage);
+        console.log('📱 Message type:', message.type);
         console.log('👤 User ID:', event.source.userId);
         
-        // Get AI response with chat history
+        // Handle different message types
+        if (message.type === 'text') {
+          userMessage = message.text!;
+          console.log('💬 Text message:', userMessage);
+        } else if (message.type === 'image') {
+          userMessage = '[รูปภาพ]';
+          messageMetadata = {
+            messageType: 'image',
+            messageId: message.id,
+            contentProvider: message.contentProvider
+          };
+          console.log('🖼️ Image message received, ID:', message.id);
+        } else if (message.type === 'sticker') {
+          userMessage = '[สติ๊กเกอร์]';
+          messageMetadata = {
+            messageType: 'sticker',
+            packageId: message.packageId,
+            stickerId: message.stickerId
+          };
+          console.log('😀 Sticker message received, Package:', message.packageId, 'Sticker:', message.stickerId);
+        } else {
+          // Handle other message types (video, audio, location, etc.)
+          userMessage = `[${message.type}]`;
+          messageMetadata = {
+            messageType: message.type,
+            messageId: message.id
+          };
+          console.log('📎 Other message type:', message.type);
+        }
+        
+        // Save user message with metadata
+        try {
+          await storage.createChatHistory({
+            userId: lineIntegration.userId,
+            channelType: 'lineoa',
+            channelId: event.source.userId,
+            agentId: lineIntegration.agentId!,
+            messageType: 'user',
+            content: userMessage,
+            metadata: messageMetadata
+          });
+          console.log('💾 Saved user message with metadata');
+        } catch (error) {
+          console.error('⚠️ Error saving user message:', error);
+        }
+        
+        // Get AI response with chat history (only for text messages or provide context for multimedia)
         if (lineIntegration.agentId) {
+          let contextMessage = userMessage;
+          if (message.type === 'image') {
+            contextMessage = 'ผู้ใช้ส่งรูปภาพมา กรุณาตอบรับรูปภาพและถามว่ามีอะไรให้ช่วย';
+          } else if (message.type === 'sticker') {
+            contextMessage = 'ผู้ใช้ส่งสติ๊กเกอร์มา กรุณาตอบอย่างเป็นมิตรและถามว่ามีอะไรให้ช่วย';
+          }
+          
           const aiResponse = await getAiResponse(
-            userMessage, 
+            contextMessage, 
             lineIntegration.agentId, 
             lineIntegration.userId,
             'lineoa',
@@ -310,7 +372,6 @@ export async function handleLineWebhook(req: Request, res: Response) {
             await sendLineReply(replyToken, aiResponse, lineIntegration.channelAccessToken);
           } else {
             console.log('❌ No channel access token available for Line integration');
-            // Send a basic reply using channel secret as fallback (this won't work in production)
             await sendLineReply(replyToken, "ขออภัย ระบบยังไม่ได้ตั้งค่า access token กรุณาติดต่อผู้ดูแลระบบ", lineIntegration.channelSecret!);
           }
         } else {

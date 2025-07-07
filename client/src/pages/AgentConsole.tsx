@@ -26,7 +26,9 @@ import {
   UserCheck,
   Circle,
   Hash,
-  ExternalLink
+  ExternalLink,
+  Image as ImageIcon,
+  File as FileIcon
 } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 
@@ -507,7 +509,39 @@ export default function AgentConsole() {
                                          message.messageType === "human_agent" ? "Human Agent" : "AI Agent"}
                                       </span>
                                     </div>
-                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                    {/* Render message content based on type */}
+                                    {message.metadata?.messageType === 'image' ? (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center space-x-2">
+                                          <ImageIcon className="w-4 h-4" />
+                                          <span className="text-sm">รูปภาพ</span>
+                                        </div>
+                                        <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
+                                          Message ID: {message.metadata.messageId}
+                                        </div>
+                                      </div>
+                                    ) : message.metadata?.messageType === 'sticker' ? (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-lg">😀</span>
+                                          <span className="text-sm">สติ๊กเกอร์</span>
+                                        </div>
+                                        <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
+                                          Package: {message.metadata.packageId}<br/>
+                                          Sticker: {message.metadata.stickerId}
+                                        </div>
+                                      </div>
+                                    ) : message.metadata?.messageType && message.metadata.messageType !== 'text' ? (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center space-x-2">
+                                          <FileIcon className="w-4 h-4" />
+                                          <span className="text-sm">{message.metadata.messageType}</span>
+                                        </div>
+                                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                    )}
                                     <p className="text-xs opacity-75 mt-1">
                                       {safeFormatDate(message.createdAt, "HH:mm")}
                                     </p>
