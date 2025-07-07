@@ -102,6 +102,16 @@ export default function AgentConsole() {
   // Query for conversation messages
   const { data: conversationMessages = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId],
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      const params = new URLSearchParams({
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId.toString(),
+      });
+      return await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+    },
     enabled: isAuthenticated && !!selectedUser,
     refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
     retry: false,
@@ -110,6 +120,15 @@ export default function AgentConsole() {
   // Query for conversation summary
   const { data: conversationSummary } = useQuery({
     queryKey: ["/api/agent-console/summary", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId],
+    queryFn: async () => {
+      if (!selectedUser) return null;
+      const params = new URLSearchParams({
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+      });
+      return await apiRequest("GET", `/api/agent-console/summary?${params}`);
+    },
     enabled: isAuthenticated && !!selectedUser,
     retry: false,
   });
