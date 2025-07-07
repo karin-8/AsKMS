@@ -42,7 +42,7 @@ function verifyLineSignature(body: string, signature: string, channelSecret: str
     .createHmac('sha256', channelSecret)
     .update(body)
     .digest('base64');
-  
+
   return hash === signature;
 }
 
@@ -89,7 +89,7 @@ function isImageRelatedQuery(message: string): boolean {
     'what\'s in', 'describe', 'tell me about', 'show', 'picture',
     'ข้อมูล', 'รายละเอียด', 'เนื้อหา', 'สิ่งที่เห็น'
   ];
-  
+
   const lowerMessage = message.toLowerCase();
   return imageKeywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()));
 }
@@ -102,28 +102,28 @@ function extractImageAnalysis(messages: any[]): string {
     msg.messageType === 'system' && 
     msg.metadata?.messageType === 'image_analysis'
   );
-  
+
   if (systemMessages.length === 0) {
     return "";
   }
-  
+
   let imageContext = "\n=== การวิเคราะห์รูปภาพที่ส่งมาก่อนหน้า ===\n";
-  
+
   // Get the most recent image analyses (last 3)
   const recentAnalyses = systemMessages.slice(-3);
-  
+
   recentAnalyses.forEach((msg, index) => {
     const analysisContent = msg.content.replace('[การวิเคราะห์รูปภาพ] ', '');
     imageContext += `\n--- รูปภาพที่ ${index + 1} ---\n${analysisContent}\n`;
   });
-  
+
   return imageContext;
 }
 
 async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
   try {
     console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
-    
+
     // Get agent configuration
     const agent = await storage.getAgentChatbot(agentId, userId);
     if (!agent) {
@@ -142,7 +142,7 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
     if (agent.memoryEnabled) {
       const memoryLimit = agent.memoryLimit || 10;
       console.log(`📚 Fetching chat history with memory strategy (limit: ${memoryLimit})`);
-      
+
       try {
         // Use new memory strategy that includes ALL message types
         chatHistory = await storage.getChatHistoryWithMemoryStrategy(userId, channelType, channelId, agentId, memoryLimit);
@@ -162,10 +162,10 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
     // Get agent's documents for context with actual content
     const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
     let contextPrompt = "";
-    
+
     if (agentDocs.length > 0) {
       console.log(`📚 Found ${agentDocs.length} documents for agent`);
-      
+
       // Get actual document content for each linked document
       const documentContents: string[] = [];
       for (const agentDoc of agentDocs) {
@@ -176,7 +176,7 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
             const truncatedContent = document.content.length > 2000 
               ? document.content.substring(0, 2000) + "..."
               : document.content;
-            
+
             documentContents.push(`=== เอกสาร: ${document.name} ===\n${truncatedContent}\n`);
             console.log(`📄 Added document: ${document.name} (${document.content.length} chars)`);
           }
@@ -184,10 +184,10 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
           console.error(`❌ Error fetching document ${agentDoc.documentId}:`, error);
         }
       }
-      
+
       if (documentContents.length > 0) {
         contextPrompt = `\n\nเอกสารอ้างอิงสำหรับการตอบคำถาม:\n${documentContents.join('\n')}
-        
+
 กรุณาใช้ข้อมูลจากเอกสารข้างต้นเป็นหลักในการตอบคำถาม และระบุแหล่งที่มาของข้อมูลด้วย`;
         console.log(`✅ Built context with ${documentContents.length} documents`);
         console.log(`📄 Context prompt length: ${contextPrompt.length} characters`);
@@ -221,7 +221,7 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
     const userBotMessages = chatHistory.filter(msg => 
       msg.messageType === 'user' || msg.messageType === 'assistant'
     );
-    
+
     userBotMessages.forEach(msg => {
       messages.push({
         role: msg.messageType === 'user' ? 'user' : 'assistant',
@@ -236,15 +236,15 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
     });
 
     console.log(`🤖 Sending ${messages.length} messages to OpenAI (including ${chatHistory.length} history messages)`);
-    
+
     // Debug: Log the complete system prompt for verification
     console.log('\n=== 🔍 DEBUG: Complete System Prompt ===');
     console.log(messages[0].content);
     console.log('=== End System Prompt ===\n');
-    
+
     // Debug: Log user message
     console.log(`📝 User Message: "${userMessage}"`);
-    
+
     // Debug: Log total prompt length
     const totalTokens = messages.reduce((sum, msg) => sum + msg.content.length, 0);
     console.log(`📊 Total prompt length: ${totalTokens} characters`);
@@ -283,7 +283,7 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
       });
 
       console.log(`💾 Saved chat history for user ${userId}`);
-      
+
       // Broadcast new message to Agent Console via WebSocket
       if (typeof (global as any).broadcastToAgentConsole === 'function') {
         (global as any).broadcastToAgentConsole({
@@ -321,18 +321,18 @@ export async function handleLineWebhook(req: Request, res: Response) {
     const signature = req.headers['x-line-signature'] as string;
     const webhookBody: LineWebhookBody = req.body;
     const body = JSON.stringify(webhookBody);
-    
+
     console.log('🔔 Line webhook received');
     console.log('📝 Body:', body);
-    
+
     // Find the Line OA integration by matching the destination (Channel ID)
     const destination = webhookBody.destination;
     console.log('🔍 Debug: Looking for integration with destination:', destination);
-    
+
     // Get all Line OA integrations to find the matching one
     const allIntegrations = await storage.getAllSocialIntegrations();
     console.log('✅ Found', allIntegrations.length, 'total social integrations');
-    
+
     // In Line webhooks, the destination is the Bot's User ID, not Channel ID
     // First try to match by Bot User ID, then fall back to any active integration
     let lineIntegration = allIntegrations.find(integration => 
@@ -340,7 +340,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
       integration.isActive && 
       integration.botUserId === destination
     );
-    
+
     // If no exact match found by Bot User ID, try fallback to any active Line OA integration
     if (!lineIntegration) {
       lineIntegration = allIntegrations.find(integration => 
@@ -367,7 +367,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
       console.log('❌ No active Line OA integration found for destination:', destination);
       return res.status(404).json({ error: 'No active Line OA integration found' });
     }
-    
+
     console.log('✅ Found matching Line OA integration for user:', lineIntegration.userId);
     console.log('🔑 Debug: Channel Access Token available:', !!lineIntegration.channelAccessToken);
     console.log('🔍 Debug: Integration object keys:', Object.keys(lineIntegration));
@@ -377,21 +377,21 @@ export async function handleLineWebhook(req: Request, res: Response) {
       console.log('❌ Invalid Line signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
-    
+
     // Process each event
     for (const event of webhookBody.events) {
       if (event.type === 'message' && event.message) {
         const messageId = event.message.id;
-        
+
         // Check if we've already processed this message
         if (processedMessageIds.has(messageId)) {
           console.log(`⚠️ Message ${messageId} already processed, skipping...`);
           continue;
         }
-        
+
         // Add to processed messages
         processedMessageIds.add(messageId);
-        
+
         // Clean up old message IDs (keep only last 1000 messages)
         if (processedMessageIds.size > 1000) {
           const oldestEntries = Array.from(processedMessageIds).slice(0, 500);
@@ -401,21 +401,21 @@ export async function handleLineWebhook(req: Request, res: Response) {
         const replyToken = event.replyToken!;
         let userMessage = '';
         let messageMetadata: any = {};
-        
+
         console.log('📱 Message type:', message.type);
         console.log('👤 User ID:', event.source.userId);
-        
+
         // Handle different message types
         if (message.type === 'text') {
           userMessage = message.text!;
           console.log('💬 Text message:', userMessage);
         } else if (message.type === 'image') {
           userMessage = '[รูปภาพ]';
-          
+
           // For Line images, construct content URLs using messageId and Channel Access Token
           const originalContentUrl = `https://api-data.line.me/v2/bot/message/${message.id}/content`;
           const previewImageUrl = `https://api-data.line.me/v2/bot/message/${message.id}/content/preview`;
-          
+
           messageMetadata = {
             messageType: 'image',
             messageId: message.id,
@@ -442,7 +442,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
           };
           console.log('📎 Other message type:', message.type);
         }
-        
+
         // Save user message with metadata
         let chatHistoryId: number | null = null;
         try {
@@ -460,12 +460,12 @@ export async function handleLineWebhook(req: Request, res: Response) {
         } catch (error) {
           console.error('⚠️ Error saving user message:', error);
         }
-        
+
         // Process image download if it's an image message
         if (message.type === 'image' && chatHistoryId && lineIntegration.channelAccessToken) {
           console.log('🖼️ Starting image processing...');
           const imageService = LineImageService.getInstance();
-          
+
           // Process image asynchronously (don't wait for completion)
           imageService.processImageMessage(
             message.id,
@@ -479,7 +479,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
             console.error('⚠️ Error processing image message:', error);
           });
         }
-        
+
         // Get AI response with chat history (only for text messages or provide context for multimedia)
         if (lineIntegration.agentId) {
           let contextMessage = userMessage;
@@ -488,7 +488,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
           } else if (message.type === 'sticker') {
             contextMessage = 'ผู้ใช้ส่งสติ๊กเกอร์มา กรุณาตอบอย่างเป็นมิตรและถามว่ามีอะไรให้ช่วย';
           }
-          
+
           const aiResponse = await getAiResponse(
             contextMessage, 
             lineIntegration.agentId, 
@@ -497,7 +497,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
             event.source.userId // Use Line user ID as channel identifier
           );
           console.log('🤖 AI response:', aiResponse);
-          
+
           // Send reply to Line using stored access token
           if (lineIntegration.channelAccessToken) {
             await sendLineReply(replyToken, aiResponse, lineIntegration.channelAccessToken);
@@ -510,7 +510,7 @@ export async function handleLineWebhook(req: Request, res: Response) {
         }
       }
     }
-    
+
     res.status(200).json({ status: 'ok' });
   } catch (error) {
     console.error('💥 Line webhook error:', error);
