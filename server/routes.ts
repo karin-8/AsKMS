@@ -3431,7 +3431,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       const chatUsers = result.rows.map(row => ({
         userId: row.user_id,
         channelType: row.channel_type,
-        channelId: row.channel_id, // This is the actual Line user ID
+        channelId: row.channel_id, // This is the Line user ID from database
         agentId: row.agent_id,
         agentName: row.agent_name,
         lastMessage: row.last_message,
@@ -3439,7 +3439,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         messageCount: parseInt(row.message_count),
         isOnline: Math.random() > 0.7, // Simplified online status
         userProfile: {
-          name: `User ${row.channel_id.slice(-4)}`, // Use channel_id (Line user ID) for display
+          name: `User ${row.channel_id.slice(-4)}`, // Use Line user ID for display
           // Add more profile fields as needed
         }
       }));
@@ -3469,7 +3469,8 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         agentId
       });
       
-      const messages = await storage.getChatHistory(
+      // Try to get messages with the provided channelId first
+      let messages = await storage.getChatHistory(
         targetUserId,
         channelType,
         channelId,
@@ -3477,8 +3478,38 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         50 // Get last 50 messages
       );
       
+      // If no messages found and channelId looks like a Line OA channel ID, 
+      // try to find with actual Line user ID from the database
+      if (messages.length === 0 && channelType === 'lineoa') {
+        console.log("🔍 No messages found with channelId:", channelId, "- trying to find Line user ID");
+        
+        // Query to find actual Line user IDs for this user and agent
+        const lineUserQuery = `
+          SELECT DISTINCT channel_id 
+          FROM chat_history 
+          WHERE user_id = $1 AND channel_type = $2 AND agent_id = $3
+          AND channel_id LIKE 'U%'
+        `;
+        const lineUserResult = await pool.query(lineUserQuery, [targetUserId, channelType, parseInt(agentId)]);
+        
+        if (lineUserResult.rows.length > 0) {
+          const actualChannelId = lineUserResult.rows[0].channel_id;
+          console.log("🔍 Found actual Line user ID:", actualChannelId);
+          
+          messages = await storage.getChatHistory(
+            targetUserId,
+            channelType,
+            actualChannelId,
+            parseInt(agentId),
+            50
+          );
+        }
+      }
+      
       console.log("📨 Agent Console Conversation API: Found messages:", messages.length);
-      console.log("📨 Agent Console Conversation API: Sample message:", messages[0]);
+      if (messages.length > 0) {
+        console.log("📨 Agent Console Conversation API: Sample message:", messages[0]);
+      }
       
       res.json(messages);
     } catch (error) {
