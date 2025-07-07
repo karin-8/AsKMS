@@ -78,6 +78,48 @@ async function sendLineReply(replyToken: string, message: string, channelAccessT
 }
 
 // Get AI response using OpenAI with chat history
+/**
+ * Detect if user message is asking about image content
+ */
+function isImageRelatedQuery(message: string): boolean {
+  const imageKeywords = [
+    'รูป', 'ภาพ', 'รูปภาพ', 'ภาพถ่าย', 'image', 'picture', 'photo',
+    'เห็นอะไร', 'ในรูป', 'ในภาพ', 'อธิบาย', 'บรรยาย', 'ดูเหมือน',
+    'รูปนี้', 'ภาพนี้', 'รูปที่ส่ง', 'ภาพที่ส่ง', 'รูปที่แนบ',
+    'what\'s in', 'describe', 'tell me about', 'show', 'picture',
+    'ข้อมูล', 'รายละเอียด', 'เนื้อหา', 'สิ่งที่เห็น'
+  ];
+  
+  const lowerMessage = message.toLowerCase();
+  return imageKeywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()));
+}
+
+/**
+ * Extract image analysis from system messages
+ */
+function extractImageAnalysis(messages: any[]): string {
+  const systemMessages = messages.filter(msg => 
+    msg.messageType === 'system' && 
+    msg.metadata?.messageType === 'image_analysis'
+  );
+  
+  if (systemMessages.length === 0) {
+    return "";
+  }
+  
+  let imageContext = "\n=== การวิเคราะห์รูปภาพที่ส่งมาก่อนหน้า ===\n";
+  
+  // Get the most recent image analyses (last 3)
+  const recentAnalyses = systemMessages.slice(-3);
+  
+  recentAnalyses.forEach((msg, index) => {
+    const analysisContent = msg.content.replace('[การวิเคราะห์รูปภาพ] ', '');
+    imageContext += `\n--- รูปภาพที่ ${index + 1} ---\n${analysisContent}\n`;
+  });
+  
+  return imageContext;
+}
+
 async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
   try {
     console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
@@ -91,14 +133,20 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
 
     console.log(`✅ Found agent: ${agent.name}`);
 
-    // Get chat history if memory is enabled
+    // Check if this is an image-related query
+    const isImageQuery = isImageRelatedQuery(userMessage);
+    console.log(`🔍 Is image-related query: ${isImageQuery}`);
+
+    // Get chat history if memory is enabled (get more messages to include system messages)
     let chatHistory: any[] = [];
     if (agent.memoryEnabled) {
       const memoryLimit = agent.memoryLimit || 10;
-      console.log(`📚 Fetching chat history (limit: ${memoryLimit})`);
+      // Increase limit to capture system messages for image analysis
+      const extendedLimit = isImageQuery ? Math.max(memoryLimit, 30) : memoryLimit;
+      console.log(`📚 Fetching chat history (limit: ${extendedLimit})`);
       
       try {
-        chatHistory = await storage.getChatHistory(userId, channelType, channelId, agentId, memoryLimit);
+        chatHistory = await storage.getChatHistory(userId, channelType, channelId, agentId, extendedLimit);
         console.log(`📝 Found ${chatHistory.length} previous messages`);
       } catch (error) {
         console.error('⚠️ Error fetching chat history:', error);
@@ -143,21 +191,33 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
       }
     }
 
+    // Extract image analysis if this is an image-related query
+    let imageContext = "";
+    if (isImageQuery && chatHistory.length > 0) {
+      imageContext = extractImageAnalysis(chatHistory);
+      console.log(`📸 Image context extracted: ${imageContext.length} characters`);
+    }
+
     // Build conversation messages including history
     const messages: any[] = [
       {
         role: "system",
-        content: `${agent.systemPrompt}${contextPrompt}
+        content: `${agent.systemPrompt}${contextPrompt}${imageContext}
 
 ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
 ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
 
-คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม`
+คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม
+${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี่ยวกับรูปภาพ กรุณาใช้ข้อมูลจากการวิเคราะห์รูปภาพข้างต้นในการตอบคำถาม' : ''}`
       }
     ];
 
-    // Add chat history
-    chatHistory.forEach(msg => {
+    // Add chat history (exclude system messages from conversation flow)
+    const userBotMessages = chatHistory.filter(msg => 
+      msg.messageType === 'user' || msg.messageType === 'assistant'
+    );
+    
+    userBotMessages.forEach(msg => {
       messages.push({
         role: msg.messageType === 'user' ? 'user' : 'assistant',
         content: msg.content

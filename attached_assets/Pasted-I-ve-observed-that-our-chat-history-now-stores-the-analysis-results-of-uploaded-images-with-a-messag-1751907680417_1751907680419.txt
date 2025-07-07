@@ -1,0 +1,49 @@
+I've observed that our chat history now stores the analysis results of uploaded images with a message_type of 'system'. This is a great step!
+
+What I need next is to enable our AI Agent to reference these past image analysis results when a user asks questions about the content of an uploaded image.
+
+Goal:
+Improve the AI Agent's ability to answer questions related to previously uploaded images by utilizing the existing message_type = 'system' entries in the chat history.
+
+Steps for Replit Agent to execute:
+AI Agent's Contextual Understanding Enhancement:
+Identify User Queries about Images: Implement logic within the AI Agent's processing pipeline to recognize when a user's current query pertains to image content (e.g., "What's in this picture?", "Can you describe the image I sent?", "Tell me about the product in the photo?"). This might involve keyword detection, natural language understanding (NLU), or referring to the message type of the preceding user message.
+
+Prioritize System Messages with Image Analysis: When an image-related query is detected, instruct the AI Agent to prioritize and retrieve relevant message_type = 'system' entries from the conversation history that occurred before the current user query. These system messages are expected to contain the analysis or description of the image.
+
+Integrate Image Analysis into AI Context: The content from these retrieved 'system' messages should then be fed into the AI Agent's context window or prompt, along with the user's current question and recent conversation history. This ensures the AI has the necessary information about the image to formulate an accurate and relevant response.
+
+Backend/AI Service Integration (if applicable):
+If the AI Agent's logic resides in a separate service or function, ensure that the chat history, including message_type = 'system' entries, is properly passed to the AI inference call.
+
+Verify that the data structure of the 'system' messages (specifically their content) is suitable for the AI to understand and extract information from.
+
+Testing and Validation:
+Scenario 1: Image Upload + Direct Question:
+
+User uploads an image.
+
+System logs message_type = 'system' with image analysis.
+
+User immediately asks: "What do you see?" or "Describe this image."
+
+Expected Result: AI Agent provides a detailed answer based on the stored system analysis.
+
+Scenario 2: Image Upload + Later Question:
+
+User uploads an image.
+
+System logs message_type = 'system' with image analysis.
+
+Conversation continues with other topics.
+
+User later asks: "Going back to the picture I sent earlier, what was that again?" or "Can you tell me more about the item in that last photo?"
+
+Expected Result: AI Agent can retrieve the relevant system message and answer the question, demonstrating memory of previous image uploads.
+
+Additional Requests for Replit Agent:
+Code Explanation: Provide clear explanations of the code changes implemented, focusing on how the AI's context is augmented.
+
+Assumptions/Limitations: Highlight any assumptions made about the format of the image analysis within the system messages, or any limitations of the current approach.
+
+Recommendations: Suggest any improvements for future iterations (e.g., more sophisticated NLU for image-related queries, methods for long-term image context retention).
