@@ -269,7 +269,25 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
       );
       
       if (isDuplicate) {
-        console.log(`⚠️ Duplicate user message detected: "${userMessage}" - skipping save`);
+        console.log(`⚠️ Duplicate user message detected: "${userMessage}" - skipping save but still broadcasting`);
+        
+        // Still broadcast to WebSocket even if we don't save to avoid missing real-time updates
+        if (typeof (global as any).broadcastToAgentConsole === 'function') {
+          (global as any).broadcastToAgentConsole({
+            type: 'new_message',
+            data: {
+              userId,
+              channelType,
+              channelId,
+              agentId,
+              userMessage,
+              aiResponse,
+              timestamp: new Date().toISOString()
+            }
+          });
+          console.log('📡 Broadcasted duplicate message to Agent Console for real-time updates');
+        }
+        
         return aiResponse;
       }
 

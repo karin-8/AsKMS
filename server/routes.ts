@@ -3665,6 +3665,32 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Line OA Webhook endpoint (no authentication required)
   app.post("/api/line/webhook", handleLineWebhook);
 
+  // Test WebSocket broadcast endpoint
+  app.post("/api/test/websocket", async (req, res) => {
+    try {
+      if (typeof (global as any).broadcastToAgentConsole === 'function') {
+        (global as any).broadcastToAgentConsole({
+          type: 'new_message',
+          data: {
+            userId: '43981095',
+            channelType: 'lineoa', 
+            channelId: 'U672d3afb11fa9ef4c95bf38145f44a98',
+            agentId: 2,
+            userMessage: 'ทดสอบ WebSocket ผ่าน API endpoint',
+            aiResponse: 'ระบบ WebSocket ทำงานได้แล้ว!',
+            timestamp: new Date().toISOString()
+          }
+        });
+        res.json({ success: true, message: 'WebSocket broadcast sent' });
+      } else {
+        res.status(500).json({ error: 'WebSocket broadcast function not available' });
+      }
+    } catch (error) {
+      console.error('Test WebSocket error:', error);
+      res.status(500).json({ error: 'Failed to test WebSocket' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Create WebSocket server on /ws path to avoid conflicts with Vite HMR
