@@ -6,10 +6,22 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Users, Shield, UserCog, Settings } from "lucide-react";
 
 type User = {
@@ -77,7 +89,7 @@ export default function RoleManagement() {
         }, 500);
         return;
       }
-      
+
       toast({
         title: "Error",
         description: "Failed to update user role. Please try again.",
@@ -142,123 +154,144 @@ export default function RoleManagement() {
           <TopBar />
           <main className="p-6">
             <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Settings className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">Role Management</h1>
-        </div>
-        <Badge variant="outline" className="px-3 py-1">
-          {users.length} Total Users
-        </Badge>
-      </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Settings className="w-6 h-6" />
+                  <h1 className="text-2xl font-bold">Role Management</h1>
+                </div>
+                <Badge variant="outline" className="px-3 py-1">
+                  {users.length} Total Users
+                </Badge>
+              </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User Roles & Permissions</CardTitle>
-          <CardDescription>
-            Manage user roles and access permissions. Admin users have full access to all features.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Shield className="w-4 h-4 text-red-600" />
-                  <span className="font-semibold text-red-800">Admin</span>
-                </div>
-                <p className="text-sm text-red-700">
-                  Full system access, user management, settings, and all features
-                </p>
-              </div>
-              
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <UserCog className="w-4 h-4 text-blue-600" />
-                  <span className="font-semibold text-blue-800">User</span>
-                </div>
-                <p className="text-sm text-blue-700">
-                  Upload, view, and manage documents. Access to AI features
-                </p>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Users className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-800">Viewer</span>
-                </div>
-                <p className="text-sm text-gray-700">
-                  Read-only access to documents and basic search functionality
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Roles & Permissions</CardTitle>
+                  <CardDescription>
+                    Manage user roles and access permissions. Admin users have
+                    full access to all features.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Shield className="w-4 h-4 text-red-600" />
+                          <span className="font-semibold text-red-800">
+                            Admin
+                          </span>
+                        </div>
+                        <p className="text-sm text-red-700">
+                          Full system access, user management, settings, and all
+                          features
+                        </p>
+                      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User List</CardTitle>
-          <CardDescription>
-            View and modify user roles. Changes take effect immediately.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {users.map((user: User) => (
-              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    {getRoleIcon(user.role)}
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.email}
-                      </span>
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        {user.role}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {user.email}
-                      {user.departmentName && (
-                        <span className="ml-2">• {user.departmentName}</span>
-                      )}
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <UserCog className="w-4 h-4 text-blue-600" />
+                          <span className="font-semibold text-blue-800">
+                            User
+                          </span>
+                        </div>
+                        <p className="text-sm text-blue-700">
+                          Upload, view, and manage documents. Access to AI
+                          features
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Users className="w-4 h-4 text-gray-600" />
+                          <span className="font-semibold text-gray-800">
+                            Viewer
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          Read-only access to documents and basic search
+                          functionality
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Select
-                    value={user.role}
-                    onValueChange={(newRole) => {
-                      if (newRole !== user.role) {
-                        updateRoleMutation.mutate({
-                          userId: user.id,
-                          role: newRole,
-                        });
-                      }
-                    }}
-                    disabled={updateRoleMutation.isPending}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>User List</CardTitle>
+                  <CardDescription>
+                    View and modify user roles. Changes take effect immediately.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {users.map((user: User) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                            {getRoleIcon(user.role)}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">
+                                {user.firstName && user.lastName
+                                  ? `${user.firstName} ${user.lastName}`
+                                  : user.email}
+                              </span>
+                              <Badge variant={getRoleBadgeVariant(user.role)}>
+                                {user.role}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {user.email}
+                              {user.departmentName && (
+                                <span className="ml-2">
+                                  • {user.departmentName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <Select
+                            value={user.role}
+                            onValueChange={(newRole) => {
+                              console.log("Old Role:", user.role);
+                              console.log("New Role:", newRole);
+                              if (newRole !== user.role) {
+                                updateRoleMutation.mutate({
+                                  userId: user.id,
+                                  role: newRole,
+                                });
+                              } else {
+                                console.log(
+                                  "Role is the same, not sending update request.",
+                                );
+                              }
+                            }}
+                            disabled={updateRoleMutation.isPending}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="viewer">Viewer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </main>
         </div>
