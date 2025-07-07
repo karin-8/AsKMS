@@ -1559,28 +1559,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatHistory.id, chatHistoryId));
   }
 
-  async getRecentChatHistory(userId: string, channelType: string, channelId: string, seconds: number = 60): Promise<ChatHistory[]> {
-    const { chatHistory } = await import('@shared/schema');
-    const { desc, and, eq, gte } = await import('drizzle-orm');
-    
-    const cutoffTime = new Date(Date.now() - (seconds * 1000));
-    const results = await db
-      .select()
-      .from(chatHistory)
-      .where(
-        and(
-          eq(chatHistory.userId, userId),
-          eq(chatHistory.channelType, channelType),
-          eq(chatHistory.channelId, channelId),
-          gte(chatHistory.createdAt, cutoffTime)
-        )
-      )
-      .orderBy(desc(chatHistory.createdAt))
-      .limit(20);
-    
-    return results;
-  }
-
   async getChatHistory(userId: string, channelType: string, channelId: string, agentId: number, limit: number = 10): Promise<ChatHistory[]> {
     const { chatHistory } = await import('@shared/schema');
     const { desc, and, eq } = await import('drizzle-orm');
