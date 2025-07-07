@@ -120,7 +120,8 @@ function extractImageAnalysis(messages: any[]): string {
   return imageContext;
 }
 
-async function getAiResponse(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
+// New function to get AI response without saving chat history (to prevent duplicates)
+async function getAiResponseDirectly(userMessage: string, agentId: number, userId: string, channelType: string, channelId: string): Promise<string> {
   try {
     console.log(`🔍 Debug: Getting agent ${agentId} for user ${userId}`);
     
@@ -258,52 +259,8 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
 
     const aiResponse = response.choices[0].message.content || "ขออภัย ไม่สามารถประมวลผลคำถามได้ในขณะนี้";
 
-    // Save chat history
-    try {
-      // Save user message
-      await storage.createChatHistory({
-        userId,
-        channelType,
-        channelId,
-        agentId,
-        messageType: 'user',
-        content: userMessage,
-        metadata: {}
-      });
-
-      // Save assistant response
-      await storage.createChatHistory({
-        userId,
-        channelType,
-        channelId,
-        agentId,
-        messageType: 'assistant',
-        content: aiResponse,
-        metadata: {}
-      });
-
-      console.log(`💾 Saved chat history for user ${userId}`);
-      
-      // Broadcast new message to Agent Console via WebSocket
-      if (typeof (global as any).broadcastToAgentConsole === 'function') {
-        (global as any).broadcastToAgentConsole({
-          type: 'new_message',
-          data: {
-            userId,
-            channelType,
-            channelId,
-            agentId,
-            userMessage,
-            aiResponse,
-            timestamp: new Date().toISOString()
-          }
-        });
-        console.log('📡 Broadcasted new message to Agent Console');
-      }
-    } catch (error) {
-      console.error('⚠️ Error saving chat history:', error);
-      // Continue even if saving history fails
-    }
+    // NOTE: Chat history saving is now handled by the calling function to prevent duplicates
+    console.log(`🤖 Generated AI response for user ${userId} (${aiResponse.length} characters)`);
 
     return aiResponse;
   } catch (error) {
@@ -497,7 +454,8 @@ export async function handleLineWebhook(req: Request, res: Response) {
             contextMessage = 'ผู้ใช้ส่งสติ๊กเกอร์มา กรุณาตอบอย่างเป็นมิตรและถามว่ามีอะไรให้ช่วย';
           }
           
-          const aiResponse = await getAiResponse(
+          // Get AI response WITHOUT saving history (it's already handled in getAiResponse)
+          const aiResponse = await getAiResponseDirectly(
             contextMessage, 
             lineIntegration.agentId, 
             lineIntegration.userId,
@@ -505,6 +463,39 @@ export async function handleLineWebhook(req: Request, res: Response) {
             event.source.userId // Use Line user ID as channel identifier
           );
           console.log('🤖 AI response:', aiResponse);
+          
+          // Save only the assistant response (user message already saved above)
+          try {
+            await storage.createChatHistory({
+              userId: lineIntegration.userId,
+              channelType: 'lineoa',
+              channelId: event.source.userId,
+              agentId: lineIntegration.agentId,
+              messageType: 'assistant',
+              content: aiResponse,
+              metadata: {}
+            });
+            console.log('💾 Saved AI response to chat history');
+            
+            // Broadcast new message to Agent Console via WebSocket
+            if (typeof (global as any).broadcastToAgentConsole === 'function') {
+              (global as any).broadcastToAgentConsole({
+                type: 'new_message',
+                data: {
+                  userId: lineIntegration.userId,
+                  channelType: 'lineoa',
+                  channelId: event.source.userId,
+                  agentId: lineIntegration.agentId,
+                  userMessage: contextMessage,
+                  aiResponse,
+                  timestamp: new Date().toISOString()
+                }
+              });
+              console.log('📡 Broadcasted new message to Agent Console');
+            }
+          } catch (error) {
+            console.error('⚠️ Error saving AI response:', error);
+          }
           
           // Send reply to Line using stored access token
           if (lineIntegration.channelAccessToken) {
