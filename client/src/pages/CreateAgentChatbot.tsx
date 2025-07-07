@@ -9,24 +9,44 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { 
-  Bot, 
-  Settings, 
-  MessageSquare, 
-  FileText, 
+import {
+  Bot,
+  Settings,
+  MessageSquare,
+  FileText,
   Check,
   X,
   Search,
@@ -42,7 +62,7 @@ import {
   AlertTriangle,
   Info,
   BookOpen,
-  Lightbulb
+  Lightbulb,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -82,14 +102,14 @@ export default function CreateAgentChatbot() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // Check if we're editing an existing agent
   const urlParams = new URLSearchParams(window.location.search);
-  const editAgentId = urlParams.get('edit');
+  const editAgentId = urlParams.get("edit");
   const isEditing = !!editAgentId;
 
   // Form setup
@@ -98,7 +118,8 @@ export default function CreateAgentChatbot() {
     defaultValues: {
       name: "",
       description: "",
-      systemPrompt: "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
+      systemPrompt:
+        "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
       personality: "",
       profession: "",
       responseStyle: "",
@@ -130,7 +151,7 @@ export default function CreateAgentChatbot() {
 
   // Fetch documents for RAG selection
   const { data: documents = [] } = useQuery({
-    queryKey: ['/api/documents'],
+    queryKey: ["/api/documents"],
     enabled: isAuthenticated,
     retry: false,
   }) as { data: Document[] };
@@ -156,7 +177,9 @@ export default function CreateAgentChatbot() {
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
-        systemPrompt: agent.systemPrompt || "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
+        systemPrompt:
+          agent.systemPrompt ||
+          "You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional.",
         personality: agent.personality || "",
         profession: agent.profession || "",
         responseStyle: agent.responseStyle || "",
@@ -171,7 +194,7 @@ export default function CreateAgentChatbot() {
         memoryEnabled: agent.memoryEnabled || false,
         memoryLimit: agent.memoryLimit || 10,
       });
-      
+
       // Load selected documents
       const docs = agentDocuments as any[];
       if (docs && docs.length > 0) {
@@ -182,9 +205,15 @@ export default function CreateAgentChatbot() {
 
   // Create/Update agent mutation
   const saveAgentMutation = useMutation({
-    mutationFn: async (agentData: CreateAgentForm & { documentIds: number[] }) => {
+    mutationFn: async (
+      agentData: CreateAgentForm & { documentIds: number[] },
+    ) => {
       if (isEditing) {
-        return await apiRequest("PUT", `/api/agent-chatbots/${editAgentId}`, agentData);
+        return await apiRequest(
+          "PUT",
+          `/api/agent-chatbots/${editAgentId}`,
+          agentData,
+        );
       } else {
         return await apiRequest("POST", "/api/agent-chatbots", agentData);
       }
@@ -192,12 +221,14 @@ export default function CreateAgentChatbot() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: isEditing ? "Agent chatbot updated successfully!" : "Agent chatbot created successfully!",
+        description: isEditing
+          ? "Agent chatbot updated successfully!"
+          : "Agent chatbot created successfully!",
       });
       // Clear form and navigate back
       form.reset();
       setSelectedDocuments([]);
-      queryClient.invalidateQueries({ queryKey: ['/api/agent-chatbots'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
       window.history.back();
     },
     onError: (error) => {
@@ -214,7 +245,9 @@ export default function CreateAgentChatbot() {
       }
       toast({
         title: "Error",
-        description: isEditing ? "Failed to update agent chatbot" : "Failed to create agent chatbot",
+        description: isEditing
+          ? "Failed to update agent chatbot"
+          : "Failed to create agent chatbot",
         variant: "destructive",
       });
     },
@@ -228,71 +261,179 @@ export default function CreateAgentChatbot() {
   };
 
   const toggleDocument = (documentId: number) => {
-    setSelectedDocuments(prev => 
-      prev.includes(documentId) 
-        ? prev.filter(id => id !== documentId)
-        : [...prev, documentId]
+    setSelectedDocuments((prev) =>
+      prev.includes(documentId)
+        ? prev.filter((id) => id !== documentId)
+        : [...prev, documentId],
     );
   };
 
-  const filteredDocuments = documents.filter(doc => 
-    doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredDocuments = documents.filter(
+    (doc) =>
+      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Mock LineOA channels
   const lineOaChannels = [
     { id: "U1234567890", name: "4urney HR", description: "HR Support Channel" },
-    { id: "U0987654321", name: "Customer Support", description: "General Support" },
-    { id: "U1122334455", name: "Sales Inquiry", description: "Sales Team Channel" },
+    {
+      id: "U0987654321",
+      name: "Customer Support",
+      description: "General Support",
+    },
+    {
+      id: "U1122334455",
+      name: "Sales Inquiry",
+      description: "Sales Team Channel",
+    },
   ];
 
   // Personality options
   const personalityOptions = [
-    { id: "friendly", label: "Friendly", description: "Warm, approachable, and conversational", icon: Heart },
-    { id: "professional", label: "Professional", description: "Formal, business-like, and authoritative", icon: Briefcase },
-    { id: "energetic", label: "Energetic", description: "Enthusiastic, dynamic, and motivating", icon: Zap },
-    { id: "empathetic", label: "Empathetic", description: "Understanding, supportive, and compassionate", icon: User },
-    { id: "analytical", label: "Analytical", description: "Data-driven, logical, and systematic", icon: Target },
-    { id: "creative", label: "Creative", description: "Innovative, imaginative, and inspiring", icon: Lightbulb },
+    {
+      id: "friendly",
+      label: "Friendly",
+      description: "Warm, approachable, and conversational",
+      icon: Heart,
+    },
+    {
+      id: "professional",
+      label: "Professional",
+      description: "Formal, business-like, and authoritative",
+      icon: Briefcase,
+    },
+    {
+      id: "energetic",
+      label: "Energetic",
+      description: "Enthusiastic, dynamic, and motivating",
+      icon: Zap,
+    },
+    {
+      id: "empathetic",
+      label: "Empathetic",
+      description: "Understanding, supportive, and compassionate",
+      icon: User,
+    },
+    {
+      id: "analytical",
+      label: "Analytical",
+      description: "Data-driven, logical, and systematic",
+      icon: Target,
+    },
+    {
+      id: "creative",
+      label: "Creative",
+      description: "Innovative, imaginative, and inspiring",
+      icon: Lightbulb,
+    },
   ];
 
   // Profession options
   const professionOptions = [
-    { id: "sales", label: "Sales Representative", description: "Focused on customer acquisition and relationship building" },
-    { id: "analyst", label: "Business Analyst", description: "Data analysis and insights generation" },
-    { id: "marketing", label: "Marketing Specialist", description: "Brand promotion and content marketing" },
-    { id: "engineer", label: "Software Engineer", description: "Technical problem solving and development" },
-    { id: "it", label: "IT Support", description: "Technical assistance and troubleshooting" },
-    { id: "hr", label: "HR Representative", description: "Employee relations and policy guidance" },
-    { id: "finance", label: "Financial Advisor", description: "Financial planning and advisory services" },
-    { id: "customer_service", label: "Customer Service", description: "Customer support and issue resolution" },
+    {
+      id: "sales",
+      label: "Sales Representative",
+      description: "Focused on customer acquisition and relationship building",
+    },
+    {
+      id: "analyst",
+      label: "Business Analyst",
+      description: "Data analysis and insights generation",
+    },
+    {
+      id: "marketing",
+      label: "Marketing Specialist",
+      description: "Brand promotion and content marketing",
+    },
+    {
+      id: "engineer",
+      label: "Software Engineer",
+      description: "Technical problem solving and development",
+    },
+    {
+      id: "it",
+      label: "IT Support",
+      description: "Technical assistance and troubleshooting",
+    },
+    {
+      id: "hr",
+      label: "HR Representative",
+      description: "Employee relations and policy guidance",
+    },
+    {
+      id: "finance",
+      label: "Financial Advisor",
+      description: "Financial planning and advisory services",
+    },
+    {
+      id: "customer_service",
+      label: "Customer Service",
+      description: "Customer support and issue resolution",
+    },
   ];
 
   // Response style options
   const responseStyleOptions = [
-    { id: "concise", label: "Concise", description: "Brief and to-the-point responses" },
-    { id: "detailed", label: "Detailed", description: "Comprehensive and thorough explanations" },
-    { id: "conversational", label: "Conversational", description: "Natural, dialogue-style responses" },
-    { id: "educational", label: "Educational", description: "Teaching-focused with examples" },
+    {
+      id: "concise",
+      label: "Concise",
+      description: "Brief and to-the-point responses",
+    },
+    {
+      id: "detailed",
+      label: "Detailed",
+      description: "Comprehensive and thorough explanations",
+    },
+    {
+      id: "conversational",
+      label: "Conversational",
+      description: "Natural, dialogue-style responses",
+    },
+    {
+      id: "educational",
+      label: "Educational",
+      description: "Teaching-focused with examples",
+    },
   ];
 
   // Special skills options
   const specialSkillsOptions = [
-    "Document Analysis", "Data Interpretation", "Problem Solving", "Research", 
-    "Technical Writing", "Customer Relations", "Project Management", "Financial Analysis",
-    "Risk Assessment", "Quality Assurance", "Training & Development", "Process Optimization"
+    "Document Analysis",
+    "Data Interpretation",
+    "Problem Solving",
+    "Research",
+    "Technical Writing",
+    "Customer Relations",
+    "Project Management",
+    "Financial Analysis",
+    "Risk Assessment",
+    "Quality Assurance",
+    "Training & Development",
+    "Process Optimization",
   ];
 
   // Guardrails topic suggestions
   const commonTopics = [
-    "Company Policies", "HR Guidelines", "Technical Documentation", "Product Information",
-    "Customer Support", "Financial Data", "Legal Compliance", "Safety Procedures"
+    "Company Policies",
+    "HR Guidelines",
+    "Technical Documentation",
+    "Product Information",
+    "Customer Support",
+    "Financial Data",
+    "Legal Compliance",
+    "Safety Procedures",
   ];
 
   const blockedTopicSuggestions = [
-    "Personal Financial Information", "Medical Records", "Legal Advice", "Investment Recommendations",
-    "Political Opinions", "Religious Views", "Confidential Data", "Competitor Information"
+    "Personal Financial Information",
+    "Medical Records",
+    "Legal Advice",
+    "Investment Recommendations",
+    "Political Opinions",
+    "Religious Views",
+    "Confidential Data",
+    "Competitor Information",
   ];
 
   if (isLoading) {
@@ -306,10 +447,10 @@ export default function CreateAgentChatbot() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col">
         <TopBar />
-        
+
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-6xl mx-auto">
             {/* Header */}
@@ -325,7 +466,9 @@ export default function CreateAgentChatbot() {
                   {isEditing ? "Edit Agent Chatbot" : "Create Agent Chatbot"}
                 </h1>
                 <p className="text-sm text-slate-500">
-                  {isEditing ? "Update your AI-powered chatbot agent configuration" : "Set up your AI-powered chatbot agent with custom prompts and document knowledge"}
+                  {isEditing
+                    ? "Update your AI-powered chatbot agent configuration"
+                    : "Set up your AI-powered chatbot agent with custom prompts and document knowledge"}
                 </p>
               </div>
             </div>
@@ -362,7 +505,10 @@ export default function CreateAgentChatbot() {
               {/* Main Content */}
               <div className="flex-1">
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6"
+                  >
                     {activeTab === "overview" && (
                       <div className="space-y-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -382,9 +528,9 @@ export default function CreateAgentChatbot() {
                                   <FormItem>
                                     <FormLabel>Agent Name</FormLabel>
                                     <FormControl>
-                                      <Input 
-                                        placeholder="HR Assistant Bot" 
-                                        {...field} 
+                                      <Input
+                                        placeholder="HR Assistant Bot"
+                                        {...field}
                                       />
                                     </FormControl>
                                     <FormMessage />
@@ -399,10 +545,10 @@ export default function CreateAgentChatbot() {
                                   <FormItem>
                                     <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                      <Textarea 
+                                      <Textarea
                                         placeholder="Brief description of what this agent does"
                                         className="min-h-[80px]"
-                                        {...field} 
+                                        {...field}
                                       />
                                     </FormControl>
                                     <FormMessage />
@@ -411,8 +557,6 @@ export default function CreateAgentChatbot() {
                               />
                             </CardContent>
                           </Card>
-
-
                         </div>
 
                         {/* Personality & Profession */}
@@ -438,17 +582,23 @@ export default function CreateAgentChatbot() {
                                         <div
                                           key={personality.id}
                                           className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                                            field.value === personality.id 
-                                              ? 'border-blue-500 bg-blue-50' 
-                                              : 'border-gray-200 hover:border-gray-300'
+                                            field.value === personality.id
+                                              ? "border-blue-500 bg-blue-50"
+                                              : "border-gray-200 hover:border-gray-300"
                                           }`}
-                                          onClick={() => field.onChange(personality.id)}
+                                          onClick={() =>
+                                            field.onChange(personality.id)
+                                          }
                                         >
                                           <div className="flex items-center space-x-2 mb-2">
                                             <IconComponent className="w-5 h-5 text-blue-600" />
-                                            <span className="font-medium">{personality.label}</span>
+                                            <span className="font-medium">
+                                              {personality.label}
+                                            </span>
                                           </div>
-                                          <p className="text-xs text-gray-600">{personality.description}</p>
+                                          <p className="text-xs text-gray-600">
+                                            {personality.description}
+                                          </p>
                                         </div>
                                       );
                                     })}
@@ -465,7 +615,10 @@ export default function CreateAgentChatbot() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Bot Profession</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Choose the bot's professional role" />
@@ -473,10 +626,17 @@ export default function CreateAgentChatbot() {
                                     </FormControl>
                                     <SelectContent>
                                       {professionOptions.map((profession) => (
-                                        <SelectItem key={profession.id} value={profession.id}>
+                                        <SelectItem
+                                          key={profession.id}
+                                          value={profession.id}
+                                        >
                                           <div className="flex flex-col">
-                                            <span className="font-medium">{profession.label}</span>
-                                            <span className="text-xs text-gray-500">{profession.description}</span>
+                                            <span className="font-medium">
+                                              {profession.label}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                              {profession.description}
+                                            </span>
                                           </div>
                                         </SelectItem>
                                       ))}
@@ -494,7 +654,10 @@ export default function CreateAgentChatbot() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Response Style</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="How should the bot respond?" />
@@ -502,10 +665,17 @@ export default function CreateAgentChatbot() {
                                     </FormControl>
                                     <SelectContent>
                                       {responseStyleOptions.map((style) => (
-                                        <SelectItem key={style.id} value={style.id}>
+                                        <SelectItem
+                                          key={style.id}
+                                          value={style.id}
+                                        >
                                           <div className="flex flex-col">
-                                            <span className="font-medium">{style.label}</span>
-                                            <span className="text-xs text-gray-500">{style.description}</span>
+                                            <span className="font-medium">
+                                              {style.label}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                              {style.description}
+                                            </span>
                                           </div>
                                         </SelectItem>
                                       ))}
@@ -534,14 +704,16 @@ export default function CreateAgentChatbot() {
                                 <FormItem>
                                   <FormLabel>System Prompt</FormLabel>
                                   <FormControl>
-                                    <Textarea 
+                                    <Textarea
                                       placeholder="You are a helpful AI assistant. Answer questions based on the provided documents and be polite and professional."
                                       className="min-h-[120px]"
-                                      {...field} 
+                                      {...field}
                                     />
                                   </FormControl>
                                   <FormDescription>
-                                    This prompt defines your agent's personality, behavior, and how it should respond to users.
+                                    This prompt defines your agent's
+                                    personality, behavior, and how it should
+                                    respond to users.
                                   </FormDescription>
                                   <FormMessage />
                                 </FormItem>
@@ -583,14 +755,22 @@ export default function CreateAgentChatbot() {
                                             >
                                               <FormControl>
                                                 <Checkbox
-                                                  checked={field.value?.includes(skill)}
-                                                  onCheckedChange={(checked) => {
+                                                  checked={field.value?.includes(
+                                                    skill,
+                                                  )}
+                                                  onCheckedChange={(
+                                                    checked,
+                                                  ) => {
                                                     return checked
-                                                      ? field.onChange([...field.value, skill])
+                                                      ? field.onChange([
+                                                          ...field.value,
+                                                          skill,
+                                                        ])
                                                       : field.onChange(
                                                           field.value?.filter(
-                                                            (value) => value !== skill
-                                                          )
+                                                            (value) =>
+                                                              value !== skill,
+                                                          ),
                                                         );
                                                   }}
                                                 />
@@ -627,7 +807,9 @@ export default function CreateAgentChatbot() {
                                 <Input
                                   placeholder="Search documents..."
                                   value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  onChange={(e) =>
+                                    setSearchQuery(e.target.value)
+                                  }
                                   className="pl-10"
                                 />
                               </div>
@@ -636,24 +818,37 @@ export default function CreateAgentChatbot() {
                               {selectedDocuments.length > 0 && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                      {selectedDocuments.length} documents selected
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-blue-100 text-blue-800"
+                                    >
+                                      {selectedDocuments.length} documents
+                                      selected
                                     </Badge>
                                   </div>
                                   <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                                    <p className="text-sm font-medium text-blue-800 mb-2">Selected Documents:</p>
+                                    <p className="text-sm font-medium text-blue-800 mb-2">
+                                      Selected Documents:
+                                    </p>
                                     <div className="space-y-1">
-                                      {selectedDocuments.map(docId => {
-                                        const doc = documents.find(d => d.id === docId);
+                                      {selectedDocuments.map((docId) => {
+                                        const doc = documents.find(
+                                          (d) => d.id === docId,
+                                        );
                                         return doc ? (
-                                          <div key={docId} className="flex items-center justify-between text-sm text-blue-700">
+                                          <div
+                                            key={docId}
+                                            className="flex items-center justify-between text-sm text-blue-700"
+                                          >
                                             <span className="flex items-center gap-2">
                                               <FileText className="w-3 h-3" />
                                               {doc.name}
                                             </span>
                                             <button
                                               type="button"
-                                              onClick={() => toggleDocument(docId)}
+                                              onClick={() =>
+                                                toggleDocument(docId)
+                                              }
                                               className="text-blue-500 hover:text-blue-700"
                                             >
                                               <X className="w-3 h-3" />
@@ -686,9 +881,14 @@ export default function CreateAgentChatbot() {
                                     >
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                          <h4 className="font-medium text-slate-800">{doc.name}</h4>
+                                          <h4 className="font-medium text-slate-800">
+                                            {doc.name}
+                                          </h4>
                                           {doc.categoryName && (
-                                            <Badge variant="outline" className="text-xs">
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
                                               {doc.categoryName}
                                             </Badge>
                                           )}
@@ -744,7 +944,8 @@ export default function CreateAgentChatbot() {
                                     <div className="space-y-1 leading-none">
                                       <FormLabel>Content Filtering</FormLabel>
                                       <FormDescription>
-                                        Filter inappropriate or harmful content automatically
+                                        Filter inappropriate or harmful content
+                                        automatically
                                       </FormDescription>
                                     </div>
                                   </FormItem>
@@ -765,7 +966,8 @@ export default function CreateAgentChatbot() {
                                     <div className="space-y-1 leading-none">
                                       <FormLabel>Toxicity Prevention</FormLabel>
                                       <FormDescription>
-                                        Prevent toxic or offensive language in responses
+                                        Prevent toxic or offensive language in
+                                        responses
                                       </FormDescription>
                                     </div>
                                   </FormItem>
@@ -786,7 +988,8 @@ export default function CreateAgentChatbot() {
                                     <div className="space-y-1 leading-none">
                                       <FormLabel>Privacy Protection</FormLabel>
                                       <FormDescription>
-                                        Protect sensitive personal information in conversations
+                                        Protect sensitive personal information
+                                        in conversations
                                       </FormDescription>
                                     </div>
                                   </FormItem>
@@ -807,7 +1010,8 @@ export default function CreateAgentChatbot() {
                                     <div className="space-y-1 leading-none">
                                       <FormLabel>Factual Accuracy</FormLabel>
                                       <FormDescription>
-                                        Verify information accuracy before responding
+                                        Verify information accuracy before
+                                        responding
                                       </FormDescription>
                                     </div>
                                   </FormItem>
@@ -822,16 +1026,25 @@ export default function CreateAgentChatbot() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Response Length Control</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Choose response length" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="short">Short (1-2 sentences)</SelectItem>
-                                      <SelectItem value="medium">Medium (3-5 sentences)</SelectItem>
-                                      <SelectItem value="long">Long (Detailed explanations)</SelectItem>
+                                      <SelectItem value="short">
+                                        Short (1-2 sentences)
+                                      </SelectItem>
+                                      <SelectItem value="medium">
+                                        Medium (3-5 sentences)
+                                      </SelectItem>
+                                      <SelectItem value="long">
+                                        Long (Detailed explanations)
+                                      </SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -858,8 +1071,12 @@ export default function CreateAgentChatbot() {
                                   name="allowedTopics"
                                   render={() => (
                                     <FormItem>
-                                      <FormLabel className="text-green-700">Allowed Topics</FormLabel>
-                                      <FormDescription>Topics the bot can discuss</FormDescription>
+                                      <FormLabel className="text-green-700">
+                                        Allowed Topics
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Topics the bot can discuss
+                                      </FormDescription>
                                       <div className="space-y-2 mt-2">
                                         {commonTopics.map((topic) => (
                                           <FormField
@@ -874,14 +1091,23 @@ export default function CreateAgentChatbot() {
                                                 >
                                                   <FormControl>
                                                     <Checkbox
-                                                      checked={field.value?.includes(topic)}
-                                                      onCheckedChange={(checked) => {
+                                                      checked={field.value?.includes(
+                                                        topic,
+                                                      )}
+                                                      onCheckedChange={(
+                                                        checked,
+                                                      ) => {
                                                         return checked
-                                                          ? field.onChange([...field.value, topic])
+                                                          ? field.onChange([
+                                                              ...field.value,
+                                                              topic,
+                                                            ])
                                                           : field.onChange(
                                                               field.value?.filter(
-                                                                (value) => value !== topic
-                                                              )
+                                                                (value) =>
+                                                                  value !==
+                                                                  topic,
+                                                              ),
                                                             );
                                                       }}
                                                     />
@@ -908,42 +1134,57 @@ export default function CreateAgentChatbot() {
                                   name="blockedTopics"
                                   render={() => (
                                     <FormItem>
-                                      <FormLabel className="text-red-700">Blocked Topics</FormLabel>
-                                      <FormDescription>Topics the bot should avoid</FormDescription>
+                                      <FormLabel className="text-red-700">
+                                        Blocked Topics
+                                      </FormLabel>
+                                      <FormDescription>
+                                        Topics the bot should avoid
+                                      </FormDescription>
                                       <div className="space-y-2 mt-2">
-                                        {blockedTopicSuggestions.map((topic) => (
-                                          <FormField
-                                            key={topic}
-                                            control={form.control}
-                                            name="blockedTopics"
-                                            render={({ field }) => {
-                                              return (
-                                                <FormItem
-                                                  key={topic}
-                                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                                >
-                                                  <FormControl>
-                                                    <Checkbox
-                                                      checked={field.value?.includes(topic)}
-                                                      onCheckedChange={(checked) => {
-                                                        return checked
-                                                          ? field.onChange([...field.value, topic])
-                                                          : field.onChange(
-                                                              field.value?.filter(
-                                                                (value) => value !== topic
-                                                              )
-                                                            );
-                                                      }}
-                                                    />
-                                                  </FormControl>
-                                                  <FormLabel className="text-sm font-normal text-red-700">
-                                                    {topic}
-                                                  </FormLabel>
-                                                </FormItem>
-                                              );
-                                            }}
-                                          />
-                                        ))}
+                                        {blockedTopicSuggestions.map(
+                                          (topic) => (
+                                            <FormField
+                                              key={topic}
+                                              control={form.control}
+                                              name="blockedTopics"
+                                              render={({ field }) => {
+                                                return (
+                                                  <FormItem
+                                                    key={topic}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                  >
+                                                    <FormControl>
+                                                      <Checkbox
+                                                        checked={field.value?.includes(
+                                                          topic,
+                                                        )}
+                                                        onCheckedChange={(
+                                                          checked,
+                                                        ) => {
+                                                          return checked
+                                                            ? field.onChange([
+                                                                ...field.value,
+                                                                topic,
+                                                              ])
+                                                            : field.onChange(
+                                                                field.value?.filter(
+                                                                  (value) =>
+                                                                    value !==
+                                                                    topic,
+                                                                ),
+                                                              );
+                                                        }}
+                                                      />
+                                                    </FormControl>
+                                                    <FormLabel className="text-sm font-normal text-red-700">
+                                                      {topic}
+                                                    </FormLabel>
+                                                  </FormItem>
+                                                );
+                                              }}
+                                            />
+                                          ),
+                                        )}
                                       </div>
                                       <FormMessage />
                                     </FormItem>
@@ -962,7 +1203,8 @@ export default function CreateAgentChatbot() {
                               Memory Configuration
                             </CardTitle>
                             <CardDescription>
-                              Configure how the chatbot remembers previous conversations
+                              Configure how the chatbot remembers previous
+                              conversations
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-4">
@@ -976,7 +1218,9 @@ export default function CreateAgentChatbot() {
                                       Enable Memory
                                     </FormLabel>
                                     <FormDescription>
-                                      Allow the chatbot to remember conversation history and provide context-aware responses
+                                      Allow the chatbot to remember conversation
+                                      history and provide context-aware
+                                      responses
                                     </FormDescription>
                                   </div>
                                   <FormControl>
@@ -997,24 +1241,35 @@ export default function CreateAgentChatbot() {
                                   <FormItem>
                                     <FormLabel>Memory Limit</FormLabel>
                                     <FormDescription>
-                                      Number of previous messages to remember (1-50). Higher values improve context but use more resources.
+                                      Number of previous messages to remember
+                                      (1-50). Higher values improve context but
+                                      use more resources.
                                     </FormDescription>
                                     <FormControl>
                                       <div className="space-y-2">
                                         <div className="flex items-center space-x-2">
-                                          <span className="text-sm text-slate-500">1</span>
+                                          <span className="text-sm text-slate-500">
+                                            1
+                                          </span>
                                           <Slider
                                             value={[field.value || 10]}
-                                            onValueChange={(value) => field.onChange(value[0])}
+                                            onValueChange={(value) =>
+                                              field.onChange(value[0])
+                                            }
                                             max={50}
                                             min={1}
                                             step={1}
                                             className="flex-1"
                                           />
-                                          <span className="text-sm text-slate-500">50</span>
+                                          <span className="text-sm text-slate-500">
+                                            50
+                                          </span>
                                         </div>
                                         <div className="text-center">
-                                          <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                                          <Badge
+                                            variant="secondary"
+                                            className="bg-slate-100 text-slate-700"
+                                          >
                                             {field.value || 10} messages
                                           </Badge>
                                         </div>
@@ -1034,11 +1289,22 @@ export default function CreateAgentChatbot() {
                             <div className="flex items-start space-x-3">
                               <Info className="w-5 h-5 text-blue-600 mt-0.5" />
                               <div>
-                                <h4 className="font-medium text-blue-900">About Guardrails</h4>
+                                <h4 className="font-medium text-blue-900">
+                                  About Guardrails
+                                </h4>
                                 <p className="text-sm text-blue-700 mt-1">
-                                  Guardrails help ensure your AI agent behaves safely and appropriately. 
-                                  These settings are inspired by <a href="https://www.guardrailsai.com/" target="_blank" rel="noopener noreferrer" className="underline">Guardrails AI</a> best practices 
-                                  for responsible AI deployment.
+                                  Guardrails help ensure your AI agent behaves
+                                  safely and appropriately. These settings are
+                                  inspired by{" "}
+                                  <a
+                                    href="https://www.guardrailsai.com/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                  >
+                                    Guardrails AI
+                                  </a>{" "}
+                                  best practices for responsible AI deployment.
                                 </p>
                               </div>
                             </div>
@@ -1054,8 +1320,8 @@ export default function CreateAgentChatbot() {
                           Cancel
                         </Button>
                       </Link>
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         disabled={saveAgentMutation.isPending}
                         className="bg-blue-600 hover:bg-blue-700"
                       >

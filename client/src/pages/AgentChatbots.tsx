@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Bot, 
-  Plus, 
+import {
+  Bot,
+  Plus,
   Edit,
   Trash2,
   MessageSquare,
@@ -21,7 +21,7 @@ import {
   Users,
   Power,
   PowerOff,
-  FileText
+  FileText,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -82,25 +82,25 @@ export default function AgentChatbots() {
 
   // Fetch agent chatbots
   const { data: agents = [], isLoading: isLoadingAgents } = useQuery({
-    queryKey: ['/api/agent-chatbots'],
+    queryKey: ["/api/agent-chatbots"],
     enabled: isAuthenticated,
     retry: false,
-  }) as { data: AgentChatbot[], isLoading: boolean };
+  }) as { data: AgentChatbot[]; isLoading: boolean };
 
   // Component to display agent document list
   const AgentDocumentList = ({ agentId }: { agentId: number }) => {
     const { data: agentDocuments = [], isLoading } = useQuery({
-      queryKey: ['/api/agent-chatbots', agentId, 'documents'],
+      queryKey: [`/api/agent-chatbots/${agentId}/documents`],
       enabled: isAuthenticated && !!agentId,
       retry: false,
-    }) as { data: any[], isLoading: boolean };
+    }) as { data: any[]; isLoading: boolean };
 
     // Also fetch document details
     const { data: allDocuments = [] } = useQuery({
-      queryKey: ['/api/documents'],
+      queryKey: ["/api/documents"],
       enabled: isAuthenticated,
       retry: false,
-    }) as { data: any[], isLoading: boolean };
+    }) as { data: any[]; isLoading: boolean };
 
     if (isLoading) {
       return (
@@ -122,8 +122,8 @@ export default function AgentChatbots() {
 
     // Get document names
     const documentNames = agentDocuments
-      .map(agentDoc => {
-        const doc = allDocuments.find(d => d.id === agentDoc.documentId);
+      .map((agentDoc) => {
+        const doc = allDocuments.find((d) => d.id === agentDoc.documentId);
         return doc ? doc.name : `Document ${agentDoc.documentId}`;
       })
       .filter(Boolean);
@@ -164,7 +164,7 @@ export default function AgentChatbots() {
         title: "Success",
         description: "Agent chatbot deleted successfully!",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/agent-chatbots'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -188,11 +188,19 @@ export default function AgentChatbots() {
 
   // Toggle agent status mutation
   const toggleAgentMutation = useMutation({
-    mutationFn: async ({ agentId, isActive }: { agentId: number; isActive: boolean }) => {
-      return await apiRequest("PUT", `/api/agent-chatbots/${agentId}`, { isActive });
+    mutationFn: async ({
+      agentId,
+      isActive,
+    }: {
+      agentId: number;
+      isActive: boolean;
+    }) => {
+      return await apiRequest("PUT", `/api/agent-chatbots/${agentId}`, {
+        isActive,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/agent-chatbots'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -237,7 +245,9 @@ export default function AgentChatbots() {
         variant="secondary"
         className={`text-xs ${channelColors[channel] || "bg-gray-100 text-gray-800"}`}
       >
-        {channel === "lineoa" ? "LINE OA" : channel.charAt(0).toUpperCase() + channel.slice(1)}
+        {channel === "lineoa"
+          ? "LINE OA"
+          : channel.charAt(0).toUpperCase() + channel.slice(1)}
       </Badge>
     ));
   };
@@ -253,15 +263,17 @@ export default function AgentChatbots() {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col">
         <TopBar />
-        
+
         <main className="flex-1 overflow-auto p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-semibold text-slate-800 mb-2">Agent Chatbots</h1>
+              <h1 className="text-2xl font-semibold text-slate-800 mb-2">
+                Agent Chatbots
+              </h1>
               <p className="text-sm text-slate-500">
                 Manage your AI-powered chatbot agents for different channels
               </p>
@@ -278,9 +290,12 @@ export default function AgentChatbots() {
           {agents.length === 0 ? (
             <div className="text-center py-12">
               <Bot className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-              <h3 className="text-lg font-medium text-slate-800 mb-2">No Agent Chatbots Yet</h3>
+              <h3 className="text-lg font-medium text-slate-800 mb-2">
+                No Agent Chatbots Yet
+              </h3>
               <p className="text-sm text-slate-500 mb-6">
-                Create your first AI-powered chatbot agent to start automating customer interactions
+                Create your first AI-powered chatbot agent to start automating
+                customer interactions
               </p>
               <Link href="/create-agent-chatbot">
                 <Button className="bg-blue-600 hover:bg-blue-700">
@@ -292,7 +307,10 @@ export default function AgentChatbots() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {agents.map((agent) => (
-                <Card key={agent.id} className="border border-slate-200 hover:shadow-md transition-shadow">
+                <Card
+                  key={agent.id}
+                  className="border border-slate-200 hover:shadow-md transition-shadow"
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
@@ -312,7 +330,10 @@ export default function AgentChatbots() {
                                 Active
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="bg-gray-100 text-gray-600 text-xs"
+                              >
                                 <PowerOff className="w-3 h-3 mr-1" />
                                 Inactive
                               </Badge>
@@ -320,12 +341,14 @@ export default function AgentChatbots() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-1">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleToggleAgent(agent.id, agent.isActive)}
+                          onClick={() =>
+                            handleToggleAgent(agent.id, agent.isActive)
+                          }
                           className="h-8 w-8 p-0"
                         >
                           {agent.isActive ? (
@@ -354,7 +377,7 @@ export default function AgentChatbots() {
                       </div>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent className="pt-0">
                     {agent.description && (
                       <p className="text-sm text-slate-600 mb-3 line-clamp-2">
@@ -367,43 +390,64 @@ export default function AgentChatbots() {
                       <div className="mb-3">
                         <div className="flex flex-wrap gap-2">
                           {agent.personality && (
-                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                              {agent.personality.charAt(0).toUpperCase() + agent.personality.slice(1)}
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                            >
+                              {agent.personality.charAt(0).toUpperCase() +
+                                agent.personality.slice(1)}
                             </Badge>
                           )}
                           {agent.profession && (
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                              {agent.profession === 'hr' ? 'HR' : agent.profession === 'it' ? 'IT' : 
-                               agent.profession.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                            >
+                              {agent.profession === "hr"
+                                ? "HR"
+                                : agent.profession === "it"
+                                  ? "IT"
+                                  : agent.profession
+                                      .replace("_", " ")
+                                      .replace(/\b\w/g, (l) => l.toUpperCase())}
                             </Badge>
                           )}
                           {agent.responseStyle && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                              {agent.responseStyle.charAt(0).toUpperCase() + agent.responseStyle.slice(1)}
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-green-50 text-green-700 border-green-200"
+                            >
+                              {agent.responseStyle.charAt(0).toUpperCase() +
+                                agent.responseStyle.slice(1)}
                             </Badge>
                           )}
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Channels */}
                     <div className="mb-3">
-                      <p className="text-xs font-medium text-slate-500 mb-2">Channels:</p>
+                      <p className="text-xs font-medium text-slate-500 mb-2">
+                        Channels:
+                      </p>
                       <div className="flex flex-wrap gap-1">
                         {getChannelBadges(agent.channels)}
                       </div>
                     </div>
-                    
+
                     {/* Documents */}
                     <div className="mb-3 pt-3 border-t border-slate-100">
                       <AgentDocumentList agentId={agent.id} />
                     </div>
-                    
+
                     {/* Stats */}
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-3 h-3" />
-                        <span>Created {new Date(agent.createdAt).toLocaleDateString()}</span>
+                        <span>
+                          Created{" "}
+                          {new Date(agent.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <MessageSquare className="w-3 h-3" />
