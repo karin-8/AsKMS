@@ -100,7 +100,7 @@ export default function AgentConsole() {
   });
 
   // Query for conversation messages
-  const { data: conversationMessages = [], isLoading: isLoadingMessages } = useQuery({
+  const { data: conversationMessagesRaw = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId],
     queryFn: async () => {
       if (!selectedUser) return [];
@@ -110,12 +110,16 @@ export default function AgentConsole() {
         channelId: selectedUser.channelId,
         agentId: selectedUser.agentId.toString(),
       });
-      return await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+      const result = await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+      return Array.isArray(result) ? result : [];
     },
     enabled: isAuthenticated && !!selectedUser,
     refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
     retry: false,
   });
+
+  // Ensure conversationMessages is always an array
+  const conversationMessages = Array.isArray(conversationMessagesRaw) ? conversationMessagesRaw : [];
 
   // Query for conversation summary
   const { data: conversationSummary } = useQuery({
