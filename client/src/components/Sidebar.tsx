@@ -16,6 +16,7 @@ import {
   Video,
   Bot,
   BarChart3,
+  UserCheck,
 } from "lucide-react";
 
 const allNavigation = [
@@ -34,6 +35,12 @@ const allNavigation = [
     name: "Agent Chatbots",
     href: "/agent-chatbots",
     icon: Bot,
+    roles: ["admin", "user"],
+  },
+  {
+    name: "Agent Console",
+    href: "/agent-console",
+    icon: UserCheck,
     roles: ["admin", "user"],
   },
   {

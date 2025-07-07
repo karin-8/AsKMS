@@ -23,6 +23,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+import kingpowerLogo from "@assets/kingpower_1750867302870.webp";
+
 interface SidebarProps {
   isMobileOpen: boolean;
   onMobileClose: () => void;
@@ -312,7 +314,7 @@ export default function Sidebar({
               </div>
 
               {/* Only show Settings for admin users */}
-              {((user as any)?.role === "admin") && (
+              {(user as any)?.role === "admin" && (
                 <Link href="/settings" onClick={onMobileClose}>
                   <Button
                     variant="ghost"

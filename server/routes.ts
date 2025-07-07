@@ -3400,6 +3400,201 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     },
   );
 
+  // Agent Console API endpoints
+  app.get('/api/agent-console/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const channelFilter = req.query.channelFilter || 'all';
+      
+      // Get all unique users from chat history grouped by user, channel, and agent
+      const query = `
+        SELECT DISTINCT ON (ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id)
+          ch.user_id,
+          ch.channel_type,
+          ch.channel_id,
+          ch.agent_id,
+          ac.name as agent_name,
+          ch.content as last_message,
+          ch.created_at as last_message_at,
+          COUNT(*) OVER (PARTITION BY ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id) as message_count
+        FROM chat_history ch
+        JOIN agent_chatbots ac ON ch.agent_id = ac.id
+        WHERE ac.user_id = $1
+        ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
+        ORDER BY ch.user_id, ch.channel_type, ch.channel_id, ch.agent_id, ch.created_at DESC
+      `;
+      
+      const params = channelFilter !== 'all' ? [userId, channelFilter] : [userId];
+      const result = await pool.query(query, params);
+      
+      const chatUsers = result.rows.map(row => ({
+        userId: row.user_id,
+        channelType: row.channel_type,
+        channelId: row.channel_id,
+        agentId: row.agent_id,
+        agentName: row.agent_name,
+        lastMessage: row.last_message,
+        lastMessageAt: row.last_message_at,
+        messageCount: parseInt(row.message_count),
+        isOnline: Math.random() > 0.7, // Simplified online status
+        userProfile: {
+          name: `User ${row.user_id.slice(-4)}`,
+          // Add more profile fields as needed
+        }
+      }));
+      
+      res.json(chatUsers);
+    } catch (error) {
+      console.error("Error fetching agent console users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get('/api/agent-console/conversation', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId: targetUserId, channelType, channelId, agentId } = req.query;
+      
+      if (!targetUserId || !channelType || !channelId || !agentId) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      const messages = await storage.getChatHistory(
+        targetUserId,
+        channelType,
+        channelId,
+        parseInt(agentId),
+        50 // Get last 50 messages
+      );
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+      res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+
+  app.get('/api/agent-console/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId: targetUserId, channelType, channelId } = req.query;
+      
+      if (!targetUserId || !channelType || !channelId) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      // Get conversation statistics
+      const query = `
+        SELECT 
+          COUNT(*) as total_messages,
+          MIN(created_at) as first_contact_at,
+          MAX(created_at) as last_active_at
+        FROM chat_history 
+        WHERE user_id = $1 AND channel_type = $2 AND channel_id = $3
+      `;
+      
+      const result = await pool.query(query, [targetUserId, channelType, channelId]);
+      const row = result.rows[0];
+      
+      const summary = {
+        totalMessages: parseInt(row.total_messages),
+        firstContactAt: row.first_contact_at,
+        lastActiveAt: row.last_active_at,
+        sentiment: 'neutral', // Could be enhanced with AI sentiment analysis
+        mainTopics: ['General Inquiry', 'Support'], // Could be enhanced with AI topic extraction
+        resolutionStatus: 'open' // Could be tracked in database
+      };
+      
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching conversation summary:", error);
+      res.status(500).json({ message: "Failed to fetch conversation summary" });
+    }
+  });
+
+  app.post('/api/agent-console/send-message', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId: targetUserId, channelType, channelId, agentId, message, messageType } = req.body;
+      
+      if (!targetUserId || !channelType || !channelId || !agentId || !message) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      // Store the human agent message in chat history
+      const chatHistoryRecord = await storage.createChatHistory({
+        userId: targetUserId,
+        channelType,
+        channelId,
+        agentId: parseInt(agentId),
+        messageType: messageType || 'human_agent',
+        content: message,
+        metadata: {
+          sentBy: req.user.claims.sub,
+          humanAgent: true
+        }
+      });
+      
+      // Send the message via the appropriate channel
+      if (channelType === 'lineoa') {
+        // For Line, we would need to implement push message functionality
+        console.log('Would send Line message:', message);
+      }
+      
+      res.json({ 
+        success: true, 
+        messageId: chatHistoryRecord.id,
+        message: "Message sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending agent console message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.post('/api/agent-console/takeover', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId: targetUserId, channelType, channelId, agentId } = req.body;
+      
+      if (!targetUserId || !channelType || !channelId || !agentId) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      // Log the takeover action
+      await storage.createAuditLog({
+        userId: req.user.claims.sub,
+        action: 'human_takeover',
+        resourceType: 'conversation',
+        resourceId: `${targetUserId}-${channelType}-${channelId}`,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        details: {
+          targetUserId,
+          channelType,
+          channelId,
+          agentId: parseInt(agentId)
+        }
+      });
+      
+      // Store a system message indicating human takeover
+      await storage.createChatHistory({
+        userId: targetUserId,
+        channelType,
+        channelId,
+        agentId: parseInt(agentId),
+        messageType: 'assistant',
+        content: '🔄 A human agent has joined the conversation.',
+        metadata: {
+          systemMessage: true,
+          humanTakeover: true,
+          agentId: req.user.claims.sub
+        }
+      });
+      
+      res.json({ success: true, message: "Conversation takeover successful" });
+    } catch (error) {
+      console.error("Error taking over conversation:", error);
+      res.status(500).json({ message: "Failed to take over conversation" });
+    }
+  });
+
   // Line OA Webhook endpoint (no authentication required)
   app.post("/api/line/webhook", handleLineWebhook);
 

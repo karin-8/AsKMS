@@ -31,6 +31,7 @@ import MeetingNotes from "@/pages/MeetingNotes";
 import CreateAgentChatbot from "@/pages/CreateAgentChatbot";
 import AgentChatbots from "@/pages/AgentChatbots";
 import RoleManagement from "@/pages/RoleManagement";
+import AgentConsole from "@/pages/AgentConsole";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -65,6 +66,7 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/agent-chatbots" component={AgentChatbots} />
           <Route path="/create-agent-chatbot" component={CreateAgentChatbot} />
+          <Route path="/agent-console" component={AgentConsole} />
           <Route path="/audit-monitoring" component={AuditMonitoring} />
           <Route path="/role-management" component={RoleManagement} />
           <Route path="/live-chat-widget" component={LiveChatWidget} />

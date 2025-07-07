@@ -1,0 +1,609 @@
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  MessageSquare, 
+  Send, 
+  User, 
+  Phone, 
+  Mail, 
+  Filter,
+  Clock,
+  MessageCircle,
+  Bot,
+  UserCheck,
+  Circle,
+  Hash,
+  ExternalLink
+} from "lucide-react";
+import { format } from "date-fns";
+
+interface ChatUser {
+  userId: string;
+  channelType: string;
+  channelId: string;
+  agentId: number;
+  agentName: string;
+  lastMessage: string;
+  lastMessageAt: Date;
+  messageCount: number;
+  isOnline: boolean;
+  userProfile?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+}
+
+interface ConversationMessage {
+  id: number;
+  messageType: 'user' | 'assistant' | 'human_agent';
+  content: string;
+  createdAt: Date;
+  metadata?: any;
+}
+
+interface ConversationSummary {
+  totalMessages: number;
+  firstContactAt: Date;
+  lastActiveAt: Date;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  mainTopics: string[];
+  resolutionStatus: 'open' | 'resolved' | 'pending';
+}
+
+export default function AgentConsole() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // State management
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
+  const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [messageInput, setMessageInput] = useState("");
+  const [isHumanTakeover, setIsHumanTakeover] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Authentication check
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  // Query for active chat users
+  const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["/api/agent-console/users", channelFilter],
+    enabled: isAuthenticated,
+    refetchInterval: 5000, // Refresh every 5 seconds
+    retry: false,
+  });
+
+  // Query for conversation messages
+  const { data: conversationMessages = [], isLoading: isLoadingMessages } = useQuery({
+    queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId],
+    enabled: isAuthenticated && !!selectedUser,
+    refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
+    retry: false,
+  });
+
+  // Query for conversation summary
+  const { data: conversationSummary } = useQuery({
+    queryKey: ["/api/agent-console/summary", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId],
+    enabled: isAuthenticated && !!selectedUser,
+    retry: false,
+  });
+
+  // Mutation for sending human agent message
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ message }: { message: string }) => {
+      if (!selectedUser) throw new Error("No user selected");
+      
+      return await apiRequest("POST", "/api/agent-console/send-message", {
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId,
+        message,
+        messageType: "human_agent",
+      });
+    },
+    onSuccess: () => {
+      setMessageInput("");
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId] 
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for taking over conversation
+  const takeoverMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedUser) throw new Error("No user selected");
+      
+      return await apiRequest("POST", "/api/agent-console/takeover", {
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId,
+      });
+    },
+    onSuccess: () => {
+      setIsHumanTakeover(true);
+      toast({
+        title: "Takeover Activated",
+        description: "You are now handling this conversation manually.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
+      toast({
+        title: "Error",
+        description: "Failed to take over conversation. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversationMessages]);
+
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || !selectedUser) return;
+    sendMessageMutation.mutate({ message: messageInput });
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const getChannelIcon = (channelType: string) => {
+    switch (channelType) {
+      case "lineoa":
+        return <MessageCircle className="w-4 h-4 text-green-600" />;
+      case "facebook":
+        return <MessageSquare className="w-4 h-4 text-blue-600" />;
+      case "tiktok":
+        return <Hash className="w-4 h-4 text-pink-600" />;
+      case "web":
+        return <ExternalLink className="w-4 h-4 text-gray-600" />;
+      default:
+        return <MessageSquare className="w-4 h-4" />;
+    }
+  };
+
+  const getChannelBadge = (channelType: string) => {
+    const variants = {
+      lineoa: "bg-green-100 text-green-800",
+      facebook: "bg-blue-100 text-blue-800",
+      tiktok: "bg-pink-100 text-pink-800",
+      web: "bg-gray-100 text-gray-800",
+    };
+    
+    return variants[channelType as keyof typeof variants] || "bg-gray-100 text-gray-800";
+  };
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1">
+            <TopBar />
+            <main className="p-6">
+              <div className="text-center py-8">Loading...</div>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1">
+          <TopBar />
+          <main className="p-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="w-6 h-6" />
+                  <h1 className="text-2xl font-bold">Agent Console</h1>
+                </div>
+                <Badge variant="outline" className="px-3 py-1">
+                  {chatUsers.length} Active Conversations
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-12 gap-6 h-[calc(100vh-200px)]">
+                {/* Left Panel - User List */}
+                <Card className="col-span-3">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Active Users</CardTitle>
+                      <Filter className="w-4 h-4 text-gray-500" />
+                    </div>
+                    <div className="pt-2">
+                      <Select value={channelFilter} onValueChange={setChannelFilter}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Filter by channel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Channels</SelectItem>
+                          <SelectItem value="lineoa">Line OA</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="tiktok">TikTok</SelectItem>
+                          <SelectItem value="web">Web Widget</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-1 p-3">
+                        {isLoadingUsers ? (
+                          <div className="text-center py-4 text-gray-500">Loading users...</div>
+                        ) : chatUsers.length === 0 ? (
+                          <div className="text-center py-4 text-gray-500">No active conversations</div>
+                        ) : (
+                          chatUsers.map((chatUser: ChatUser) => (
+                            <div
+                              key={`${chatUser.userId}-${chatUser.channelType}-${chatUser.channelId}`}
+                              className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                                selectedUser?.userId === chatUser.userId &&
+                                selectedUser?.channelType === chatUser.channelType &&
+                                selectedUser?.channelId === chatUser.channelId
+                                  ? "bg-blue-50 border border-blue-200"
+                                  : "border border-transparent"
+                              }`}
+                              onClick={() => setSelectedUser(chatUser)}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className="relative">
+                                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-gray-600" />
+                                  </div>
+                                  {chatUser.isOnline && (
+                                    <Circle className="absolute -bottom-1 -right-1 w-3 h-3 fill-green-500 text-green-500" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {chatUser.userProfile?.name || `User ${chatUser.userId.slice(-4)}`}
+                                    </p>
+                                    <div className="flex items-center space-x-1">
+                                      {getChannelIcon(chatUser.channelType)}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <p className="text-xs text-gray-500 truncate max-w-[100px]">
+                                      {chatUser.lastMessage}
+                                    </p>
+                                    <span className="text-xs text-gray-400">
+                                      {format(new Date(chatUser.lastMessageAt), "HH:mm")}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(chatUser.channelType)}`}>
+                                      {chatUser.channelType.toUpperCase()}
+                                    </span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {chatUser.messageCount} msgs
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1">
+                                    <p className="text-xs text-gray-400">
+                                      Agent: {chatUser.agentName}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Center Panel - Conversation */}
+                <Card className="col-span-6">
+                  <CardHeader className="pb-3">
+                    {selectedUser ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-gray-600" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">
+                              {selectedUser.userProfile?.name || `User ${selectedUser.userId.slice(-4)}`}
+                            </CardTitle>
+                            <CardDescription>
+                              {selectedUser.channelType.toUpperCase()} • Agent: {selectedUser.agentName}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {!isHumanTakeover && (
+                            <Button
+                              size="sm"
+                              onClick={() => takeoverMutation.mutate()}
+                              disabled={takeoverMutation.isPending}
+                            >
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Open Message
+                            </Button>
+                          )}
+                          {isHumanTakeover && (
+                            <Badge variant="destructive">Human Agent Active</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <CardTitle className="text-lg">Select a conversation</CardTitle>
+                    )}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {selectedUser ? (
+                      <div className="flex flex-col h-[500px]">
+                        {/* Messages Area */}
+                        <ScrollArea className="flex-1 p-4">
+                          <div className="space-y-4">
+                            {isLoadingMessages ? (
+                              <div className="text-center py-4 text-gray-500">Loading messages...</div>
+                            ) : conversationMessages.length === 0 ? (
+                              <div className="text-center py-4 text-gray-500">No messages yet</div>
+                            ) : (
+                              conversationMessages.map((message: ConversationMessage) => (
+                                <div
+                                  key={message.id}
+                                  className={`flex ${
+                                    message.messageType === "user" ? "justify-start" : "justify-end"
+                                  }`}
+                                >
+                                  <div
+                                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                      message.messageType === "user"
+                                        ? "bg-gray-100 text-gray-900"
+                                        : message.messageType === "human_agent"
+                                        ? "bg-green-500 text-white"
+                                        : "bg-blue-500 text-white"
+                                    }`}
+                                  >
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      {message.messageType === "user" && <User className="w-3 h-3" />}
+                                      {message.messageType === "assistant" && <Bot className="w-3 h-3" />}
+                                      {message.messageType === "human_agent" && <UserCheck className="w-3 h-3" />}
+                                      <span className="text-xs opacity-75">
+                                        {message.messageType === "user" ? "User" : 
+                                         message.messageType === "human_agent" ? "Human Agent" : "AI Agent"}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                    <p className="text-xs opacity-75 mt-1">
+                                      {format(new Date(message.createdAt), "MMM dd, HH:mm")}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                            <div ref={messagesEndRef} />
+                          </div>
+                        </ScrollArea>
+
+                        {/* Message Input */}
+                        {isHumanTakeover && (
+                          <div className="border-t p-4">
+                            <div className="flex space-x-2">
+                              <Textarea
+                                placeholder="Type your message..."
+                                value={messageInput}
+                                onChange={(e) => setMessageInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                className="flex-1 resize-none"
+                                rows={2}
+                              />
+                              <Button
+                                onClick={handleSendMessage}
+                                disabled={!messageInput.trim() || sendMessageMutation.isPending}
+                              >
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-[500px] flex items-center justify-center text-gray-500">
+                        Select a user to view conversation
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Right Panel - Customer Profile & Summary */}
+                <Card className="col-span-3">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Customer Profile</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedUser ? (
+                      <div className="space-y-6">
+                        {/* User Profile */}
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Contact Information</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <User className="w-4 h-4 text-gray-500" />
+                              <span className="text-sm">
+                                {selectedUser.userProfile?.name || `User ${selectedUser.userId.slice(-4)}`}
+                              </span>
+                            </div>
+                            {selectedUser.userProfile?.email && (
+                              <div className="flex items-center space-x-2">
+                                <Mail className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm">{selectedUser.userProfile.email}</span>
+                              </div>
+                            )}
+                            {selectedUser.userProfile?.phone && (
+                              <div className="flex items-center space-x-2">
+                                <Phone className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm">{selectedUser.userProfile.phone}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center space-x-2">
+                              <MessageSquare className="w-4 h-4 text-gray-500" />
+                              <span className="text-sm">ID: {selectedUser.userId}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Conversation Summary */}
+                        {conversationSummary && (
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-sm">Conversation Summary</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Total Messages:</span>
+                                <span className="text-sm font-medium">{conversationSummary.totalMessages}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">First Contact:</span>
+                                <span className="text-sm font-medium">
+                                  {format(new Date(conversationSummary.firstContactAt), "MMM dd")}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Last Active:</span>
+                                <span className="text-sm font-medium">
+                                  {format(new Date(conversationSummary.lastActiveAt), "MMM dd, HH:mm")}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Status:</span>
+                                <Badge variant={
+                                  conversationSummary.resolutionStatus === "resolved" ? "default" :
+                                  conversationSummary.resolutionStatus === "pending" ? "secondary" : "destructive"
+                                }>
+                                  {conversationSummary.resolutionStatus}
+                                </Badge>
+                              </div>
+                              {conversationSummary.sentiment && (
+                                <div className="flex justify-between">
+                                  <span className="text-sm text-gray-600">Sentiment:</span>
+                                  <Badge variant={
+                                    conversationSummary.sentiment === "positive" ? "default" :
+                                    conversationSummary.sentiment === "neutral" ? "secondary" : "destructive"
+                                  }>
+                                    {conversationSummary.sentiment}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Main Topics */}
+                        {conversationSummary?.mainTopics && conversationSummary.mainTopics.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-sm">Main Topics</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {conversationSummary.mainTopics.map((topic, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {topic}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Agent Information */}
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm">Agent Details</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Bot className="w-4 h-4 text-gray-500" />
+                              <span className="text-sm">{selectedUser.agentName}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(selectedUser.channelType)}`}>
+                                {selectedUser.channelType.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        Select a conversation to view customer profile
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
