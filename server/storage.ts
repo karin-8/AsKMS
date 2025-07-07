@@ -1579,6 +1579,38 @@ export class DatabaseStorage implements IStorage {
     return history.reverse();
   }
 
+  async getChatHistoryWithMemoryStrategy(userId: string, channelType: string, channelId: string, agentId: number, memoryLimit: number): Promise<ChatHistory[]> {
+    const { chatHistory } = await import('@shared/schema');
+    const { desc, and, eq, sql } = await import('drizzle-orm');
+    
+    // Get all message types within memory limit
+    // This includes user, assistant, system messages (including image analysis)
+    const history = await db
+      .select()
+      .from(chatHistory)
+      .where(and(
+        eq(chatHistory.userId, userId),
+        eq(chatHistory.channelType, channelType),
+        eq(chatHistory.channelId, channelId),
+        eq(chatHistory.agentId, agentId)
+      ))
+      .orderBy(desc(chatHistory.createdAt))
+      .limit(memoryLimit);
+    
+    console.log(`📚 Retrieved ${history.length} messages for memory (limit: ${memoryLimit})`);
+    
+    // Count by message type for debugging
+    const messageTypeCounts = history.reduce((acc, msg) => {
+      acc[msg.messageType] = (acc[msg.messageType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log(`📊 Message type breakdown:`, messageTypeCounts);
+    
+    // Return in chronological order (oldest first)
+    return history.reverse();
+  }
+
   async clearChatHistory(userId: string, channelType: string, channelId: string, agentId: number): Promise<void> {
     const { chatHistory } = await import('@shared/schema');
     const { and, eq } = await import('drizzle-orm');

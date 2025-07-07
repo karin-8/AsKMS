@@ -137,20 +137,25 @@ async function getAiResponse(userMessage: string, agentId: number, userId: strin
     const isImageQuery = isImageRelatedQuery(userMessage);
     console.log(`🔍 Is image-related query: ${isImageQuery}`);
 
-    // Get chat history if memory is enabled (get more messages to include system messages)
+    // Get chat history if memory is enabled using new memory strategy
     let chatHistory: any[] = [];
     if (agent.memoryEnabled) {
       const memoryLimit = agent.memoryLimit || 10;
-      // Increase limit to capture system messages for image analysis
-      const extendedLimit = isImageQuery ? Math.max(memoryLimit, 30) : memoryLimit;
-      console.log(`📚 Fetching chat history (limit: ${extendedLimit})`);
+      console.log(`📚 Fetching chat history with memory strategy (limit: ${memoryLimit})`);
       
       try {
-        chatHistory = await storage.getChatHistory(userId, channelType, channelId, agentId, extendedLimit);
-        console.log(`📝 Found ${chatHistory.length} previous messages`);
+        // Use new memory strategy that includes ALL message types
+        chatHistory = await storage.getChatHistoryWithMemoryStrategy(userId, channelType, channelId, agentId, memoryLimit);
+        console.log(`📝 Found ${chatHistory.length} previous messages (all types included)`);
       } catch (error) {
         console.error('⚠️ Error fetching chat history:', error);
-        // Continue without history if there's an error
+        // Fallback to original method if new method fails
+        try {
+          chatHistory = await storage.getChatHistory(userId, channelType, channelId, agentId, memoryLimit);
+          console.log(`📝 Fallback: Found ${chatHistory.length} previous messages`);
+        } catch (fallbackError) {
+          console.error('⚠️ Fallback error:', fallbackError);
+        }
       }
     }
 
