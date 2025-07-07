@@ -6,19 +6,31 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MessageSquare, 
-  Send, 
-  User, 
-  Phone, 
-  Mail, 
+import {
+  MessageSquare,
+  Send,
+  User,
+  Phone,
+  Mail,
   Filter,
   Clock,
   MessageCircle,
@@ -28,7 +40,7 @@ import {
   Hash,
   ExternalLink,
   Image as ImageIcon,
-  File as FileIcon
+  File as FileIcon,
 } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 
@@ -51,7 +63,7 @@ interface ChatUser {
 
 interface ConversationMessage {
   id: number;
-  messageType: 'user' | 'assistant' | 'human_agent';
+  messageType: "user" | "assistant" | "human_agent";
   content: string;
   createdAt: Date;
   metadata?: any;
@@ -61,24 +73,28 @@ interface ConversationSummary {
   totalMessages: number;
   firstContactAt: Date;
   lastActiveAt: Date;
-  sentiment: 'positive' | 'neutral' | 'negative';
+  sentiment: "positive" | "neutral" | "negative";
   mainTopics: string[];
-  resolutionStatus: 'open' | 'resolved' | 'pending';
+  resolutionStatus: "open" | "resolved" | "pending";
 }
 
 // Helper function to safely format dates
-const safeFormatDate = (dateStr: string | null | undefined, formatStr: string = "MMM dd, HH:mm"): string => {
+const safeFormatDate = (
+  dateStr: string | null | undefined,
+  formatStr: string = "MMM dd, HH:mm",
+): string => {
   if (!dateStr) return "N/A";
-  
+
   try {
-    const date = typeof dateStr === 'string' ? parseISO(dateStr) : new Date(dateStr);
+    const date =
+      typeof dateStr === "string" ? parseISO(dateStr) : new Date(dateStr);
     if (isValid(date)) {
       return format(date, formatStr);
     }
   } catch (error) {
     console.warn("Date formatting error:", error, dateStr);
   }
-  
+
   return "Invalid Date";
 };
 
@@ -86,7 +102,7 @@ export default function AgentConsole() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // State management
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [channelFilter, setChannelFilter] = useState<string>("all");
@@ -102,33 +118,39 @@ export default function AgentConsole() {
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    console.log('🔌 Connecting to WebSocket:', wsUrl);
-    
+
+    console.log("🔌 Connecting to WebSocket:", wsUrl);
+
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('🔌 WebSocket connected');
+      console.log("🔌 WebSocket connected");
       setWsConnected(true);
-      
+
       // Subscribe to Agent Console updates
-      ws.send(JSON.stringify({
-        type: 'subscribe',
-        target: 'agent-console'
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "subscribe",
+          target: "agent-console",
+        }),
+      );
     };
 
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('📨 WebSocket message received:', message);
-        
-        if (message.type === 'new_message') {
+        console.log("📨 WebSocket message received:", message);
+
+        if (message.type === "new_message") {
           // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ["/api/agent-console/users"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/agent-console/conversation"] });
-          
+          queryClient.invalidateQueries({
+            queryKey: ["/api/agent-console/users"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["/api/agent-console/conversation"],
+          });
+
           toast({
             title: "New Message",
             description: `New message from ${message.data.userId}`,
@@ -136,17 +158,17 @@ export default function AgentConsole() {
           });
         }
       } catch (error) {
-        console.error('❌ WebSocket message parse error:', error);
+        console.error("❌ WebSocket message parse error:", error);
       }
     };
 
     ws.onclose = () => {
-      console.log('🔌 WebSocket disconnected');
+      console.log("🔌 WebSocket disconnected");
       setWsConnected(false);
     };
 
     ws.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
+      console.error("❌ WebSocket error:", error);
       setWsConnected(false);
     };
 
@@ -181,29 +203,39 @@ export default function AgentConsole() {
   });
 
   // Query for conversation messages (reduced refresh with WebSocket)
-  const { data: conversationMessages = [], isLoading: isLoadingMessages } = useQuery({
-    queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId],
-    queryFn: async () => {
-      if (!selectedUser) return [];
-      const params = new URLSearchParams({
-        userId: selectedUser.userId,
-        channelType: selectedUser.channelType,
-        channelId: selectedUser.channelId,
-        agentId: selectedUser.agentId.toString(),
-      });
-      try {
-        const response = await apiRequest("GET", `/api/agent-console/conversation?${params}`);
-        const result = await response.json();
-        return Array.isArray(result) ? result : [];
-      } catch (error) {
-        console.error("❌ Agent Console: API error:", error);
-        return [];
-      }
-    },
-    enabled: isAuthenticated && !!selectedUser,
-    refetchInterval: wsConnected ? false : 10000, // Only refresh every 10s if WebSocket not connected
-    retry: false,
-  });
+  const { data: conversationMessages = [], isLoading: isLoadingMessages } =
+    useQuery({
+      queryKey: [
+        "/api/agent-console/conversation",
+        selectedUser?.userId,
+        selectedUser?.channelType,
+        selectedUser?.channelId,
+        selectedUser?.agentId,
+      ],
+      queryFn: async () => {
+        if (!selectedUser) return [];
+        const params = new URLSearchParams({
+          userId: selectedUser.userId,
+          channelType: selectedUser.channelType,
+          channelId: selectedUser.channelId,
+          agentId: selectedUser.agentId.toString(),
+        });
+        try {
+          const response = await apiRequest(
+            "GET",
+            `/api/agent-console/conversation?${params}`,
+          );
+          const result = await response.json();
+          return Array.isArray(result) ? result : [];
+        } catch (error) {
+          console.error("❌ Agent Console: API error:", error);
+          return [];
+        }
+      },
+      enabled: isAuthenticated && !!selectedUser,
+      refetchInterval: wsConnected ? false : 10000, // Only refresh every 10s if WebSocket not connected
+      retry: false,
+    });
 
   // Auto-select first user if none selected
   useEffect(() => {
@@ -222,7 +254,12 @@ export default function AgentConsole() {
 
   // Query for conversation summary
   const { data: conversationSummary } = useQuery({
-    queryKey: ["/api/agent-console/summary", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId],
+    queryKey: [
+      "/api/agent-console/summary",
+      selectedUser?.userId,
+      selectedUser?.channelType,
+      selectedUser?.channelId,
+    ],
     queryFn: async () => {
       if (!selectedUser) return null;
       const params = new URLSearchParams({
@@ -233,9 +270,12 @@ export default function AgentConsole() {
       console.log("📊 Agent Console: Fetching summary with params:", {
         userId: selectedUser.userId,
         channelType: selectedUser.channelType,
-        channelId: selectedUser.channelId
+        channelId: selectedUser.channelId,
       });
-      const result = await apiRequest("GET", `/api/agent-console/summary?${params}`);
+      const result = await apiRequest(
+        "GET",
+        `/api/agent-console/summary?${params}`,
+      );
       console.log("📊 Agent Console: Summary API response:", result);
       return result;
     },
@@ -247,20 +287,26 @@ export default function AgentConsole() {
   const sendMessageMutation = useMutation({
     mutationFn: async ({ message }: { message: string }) => {
       if (!selectedUser) throw new Error("No user selected");
-      
+
       return await apiRequest("POST", "/api/agent-console/send-message", {
         userId: selectedUser.userId,
         channelType: selectedUser.channelType,
         channelId: selectedUser.channelId,
         agentId: selectedUser.agentId,
         message,
-        messageType: "human_agent",
+        messageType: "agent", // Human agent message type
       });
     },
     onSuccess: () => {
       setMessageInput("");
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/agent-console/conversation", selectedUser?.userId, selectedUser?.channelType, selectedUser?.channelId, selectedUser?.agentId] 
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/conversation",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+          selectedUser?.agentId,
+        ],
       });
     },
     onError: (error) => {
@@ -275,7 +321,7 @@ export default function AgentConsole() {
         }, 500);
         return;
       }
-      
+
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
@@ -288,7 +334,7 @@ export default function AgentConsole() {
   const takeoverMutation = useMutation({
     mutationFn: async () => {
       if (!selectedUser) throw new Error("No user selected");
-      
+
       return await apiRequest("POST", "/api/agent-console/takeover", {
         userId: selectedUser.userId,
         channelType: selectedUser.channelType,
@@ -315,7 +361,7 @@ export default function AgentConsole() {
         }, 500);
         return;
       }
-      
+
       toast({
         title: "Error",
         description: "Failed to take over conversation. Please try again.",
@@ -363,8 +409,11 @@ export default function AgentConsole() {
       tiktok: "bg-pink-100 text-pink-800",
       web: "bg-gray-100 text-gray-800",
     };
-    
-    return variants[channelType as keyof typeof variants] || "bg-gray-100 text-gray-800";
+
+    return (
+      variants[channelType as keyof typeof variants] ||
+      "bg-gray-100 text-gray-800"
+    );
   };
 
   if (isLoading || !isAuthenticated) {
@@ -398,9 +447,11 @@ export default function AgentConsole() {
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
-                    <Circle className={`w-2 h-2 ${wsConnected ? 'fill-green-500 text-green-500' : 'fill-red-500 text-red-500'}`} />
+                    <Circle
+                      className={`w-2 h-2 ${wsConnected ? "fill-green-500 text-green-500" : "fill-red-500 text-red-500"}`}
+                    />
                     <span className="text-xs text-gray-600">
-                      {wsConnected ? 'Real-time WebSocket' : 'Polling Mode'}
+                      {wsConnected ? "Real-time WebSocket" : "Polling Mode"}
                     </span>
                   </div>
                   <Badge variant="outline" className="px-3 py-1">
@@ -418,7 +469,10 @@ export default function AgentConsole() {
                       <Filter className="w-4 h-4 text-gray-500" />
                     </div>
                     <div className="pt-2">
-                      <Select value={channelFilter} onValueChange={setChannelFilter}>
+                      <Select
+                        value={channelFilter}
+                        onValueChange={setChannelFilter}
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Filter by channel" />
                         </SelectTrigger>
@@ -436,22 +490,30 @@ export default function AgentConsole() {
                     <ScrollArea className="h-[500px]">
                       <div className="space-y-1 p-3">
                         {isLoadingUsers ? (
-                          <div className="text-center py-4 text-gray-500">Loading users...</div>
+                          <div className="text-center py-4 text-gray-500">
+                            Loading users...
+                          </div>
                         ) : chatUsers.length === 0 ? (
-                          <div className="text-center py-4 text-gray-500">No active conversations</div>
+                          <div className="text-center py-4 text-gray-500">
+                            No active conversations
+                          </div>
                         ) : (
                           chatUsers.map((chatUser: ChatUser) => (
                             <div
                               key={`${chatUser.userId}-${chatUser.channelType}-${chatUser.channelId}`}
                               className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
                                 selectedUser?.userId === chatUser.userId &&
-                                selectedUser?.channelType === chatUser.channelType &&
+                                selectedUser?.channelType ===
+                                  chatUser.channelType &&
                                 selectedUser?.channelId === chatUser.channelId
                                   ? "bg-blue-50 border border-blue-200"
                                   : "border border-transparent"
                               }`}
                               onClick={() => {
-                                console.log("👤 Agent Console: User selected:", chatUser);
+                                console.log(
+                                  "👤 Agent Console: User selected:",
+                                  chatUser,
+                                );
                                 setSelectedUser(chatUser);
                               }}
                             >
@@ -467,7 +529,8 @@ export default function AgentConsole() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
                                     <p className="text-sm font-medium text-gray-900 truncate">
-                                      {chatUser.userProfile?.name || `User ${chatUser.userId.slice(-4)}`}
+                                      {chatUser.userProfile?.name ||
+                                        `User ${chatUser.userId.slice(-4)}`}
                                     </p>
                                     <div className="flex items-center space-x-1">
                                       {getChannelIcon(chatUser.channelType)}
@@ -478,14 +541,22 @@ export default function AgentConsole() {
                                       {chatUser.lastMessage}
                                     </p>
                                     <span className="text-xs text-gray-400">
-                                      {safeFormatDate(chatUser.lastMessageAt, "HH:mm")}
+                                      {safeFormatDate(
+                                        chatUser.lastMessageAt,
+                                        "HH:mm",
+                                      )}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-between mt-2">
-                                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(chatUser.channelType)}`}>
+                                    <span
+                                      className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(chatUser.channelType)}`}
+                                    >
                                       {chatUser.channelType.toUpperCase()}
                                     </span>
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
                                       {chatUser.messageCount} msgs
                                     </Badge>
                                   </div>
@@ -515,10 +586,12 @@ export default function AgentConsole() {
                           </div>
                           <div>
                             <CardTitle className="text-lg">
-                              {selectedUser.userProfile?.name || `User ${selectedUser.userId.slice(-4)}`}
+                              {selectedUser.userProfile?.name ||
+                                `User ${selectedUser.userId.slice(-4)}`}
                             </CardTitle>
                             <CardDescription>
-                              {selectedUser.channelType.toUpperCase()} • Agent: {selectedUser.agentName}
+                              {selectedUser.channelType.toUpperCase()} • Agent:{" "}
+                              {selectedUser.agentName}
                             </CardDescription>
                           </div>
                         </div>
@@ -526,20 +599,29 @@ export default function AgentConsole() {
                           {!isHumanTakeover && (
                             <Button
                               size="sm"
-                              onClick={() => takeoverMutation.mutate()}
-                              disabled={takeoverMutation.isPending}
+                              onClick={() => {
+                                setIsHumanTakeover(true);
+                                toast({
+                                  title: "Human Agent Mode",
+                                  description: `${user?.firstName || user?.email || 'You'} is now responding to this conversation.`,
+                                });
+                              }}
                             >
                               <UserCheck className="w-4 h-4 mr-2" />
                               Open Message
                             </Button>
                           )}
                           {isHumanTakeover && (
-                            <Badge variant="destructive">Human Agent Active</Badge>
+                            <Badge variant="default" className="bg-green-500">
+                              Agent Human - {user?.firstName || user?.email || 'Active'}
+                            </Badge>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <CardTitle className="text-lg">Select a conversation</CardTitle>
+                      <CardTitle className="text-lg">
+                        Select a conversation
+                      </CardTitle>
                     )}
                   </CardHeader>
                   <CardContent className="p-0">
@@ -549,136 +631,240 @@ export default function AgentConsole() {
                         <ScrollArea className="flex-1 p-4">
                           <div className="space-y-4">
                             {isLoadingMessages ? (
-                              <div className="text-center py-4 text-gray-500">Loading messages...</div>
-                            ) : !Array.isArray(conversationMessages) || conversationMessages.length === 0 ? (
                               <div className="text-center py-4 text-gray-500">
-                                {!Array.isArray(conversationMessages) ? "Error loading messages" : "No messages yet"}
+                                Loading messages...
+                              </div>
+                            ) : !Array.isArray(conversationMessages) ||
+                              conversationMessages.length === 0 ? (
+                              <div className="text-center py-4 text-gray-500">
+                                {!Array.isArray(conversationMessages)
+                                  ? "Error loading messages"
+                                  : "No messages yet"}
                               </div>
                             ) : (
-                              conversationMessages.map((message: ConversationMessage) => (
-                                <div
-                                  key={message.id}
-                                  className={`flex ${
-                                    message.messageType === "user" ? "justify-start" : "justify-end"
-                                  }`}
-                                >
+                              conversationMessages.map(
+                                (message: ConversationMessage) => (
                                   <div
-                                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                    key={message.id}
+                                    className={`flex ${
                                       message.messageType === "user"
-                                        ? "bg-gray-100 text-gray-900"
-                                        : message.messageType === "human_agent"
-                                        ? "bg-green-500 text-white"
-                                        : "bg-blue-500 text-white"
+                                        ? "justify-start"
+                                        : "justify-end"
                                     }`}
                                   >
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      {message.messageType === "user" && <User className="w-3 h-3" />}
-                                      {message.messageType === "assistant" && <Bot className="w-3 h-3" />}
-                                      {message.messageType === "human_agent" && <UserCheck className="w-3 h-3" />}
-                                      <span className="text-xs opacity-75">
-                                        {message.messageType === "user" ? "User" : 
-                                         message.messageType === "human_agent" ? "Human Agent" : "AI Agent"}
-                                      </span>
-                                    </div>
-                                    {/* Render message content based on type */}
-                                    {message.metadata?.messageType === 'image_analysis' ? (
-                                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                        <div className="flex items-center space-x-2 mb-2">
-                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">การวิเคราะห์รูปภาพด้วย AI</span>
-                                        </div>
-                                        <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{message.content.replace('[การวิเคราะห์รูปภาพ] ', '')}</p>
+                                    <div
+                                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                        message.messageType === "user"
+                                          ? "bg-gray-100 text-gray-900"
+                                          : message.messageType === "agent" && message.metadata?.humanAgent
+                                            ? "bg-green-500 text-white"
+                                            : "bg-blue-500 text-white"
+                                      }`}
+                                    >
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        {message.messageType === "user" && (
+                                          <User className="w-3 h-3" />
+                                        )}
+                                        {message.messageType ===
+                                          "assistant" && (
+                                          <Bot className="w-3 h-3" />
+                                        )}
+                                        {message.messageType ===
+                                          "agent" && message.metadata?.humanAgent && (
+                                          <UserCheck className="w-3 h-3" />
+                                        )}
+                                        <span className="text-xs opacity-75">
+                                          {message.messageType === "user"
+                                            ? "User"
+                                            : message.messageType ===
+                                                "agent"
+                                              ? `Agent Human - ${message.metadata?.humanAgentName || user?.firstName || user?.email || 'Human Agent'}`
+                                              : "AI Agent"}
+                                        </span>
                                       </div>
-                                    ) : message.metadata?.messageType === 'image' ? (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center space-x-2">
-                                          <ImageIcon className="w-4 h-4" />
-                                          <span className="text-sm font-semibold">รูปภาพ</span>
-                                        </div>
-                                        {message.metadata.originalContentUrl ? (
-                                          <a href={message.metadata.originalContentUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                                            <img
-                                              src={message.metadata.previewImageUrl || message.metadata.originalContentUrl}
-                                              alt="User sent image"
-                                              className="max-w-48 max-h-48 rounded-lg shadow-md object-cover cursor-pointer"
-                                              onError={(e) => { 
-                                                console.log('Image load error:', e.currentTarget.src);
-                                                e.currentTarget.style.display = 'none';
-                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                              }}
-                                            />
-                                            <div className="hidden bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-sm">
-                                              ไม่สามารถโหลดรูปภาพได้ - กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าถึง
-                                            </div>
-                                          </a>
-                                        ) : (
-                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                              <ImageIcon className="w-3 h-3" />
-                                              <span>รูปภาพจาก Line OA</span>
-                                            </div>
-                                            {message.metadata.messageId && (
-                                              <div className="text-gray-500">Message ID: {message.metadata.messageId}</div>
+                                      {/* Render message content based on type */}
+                                      {message.metadata?.messageType ===
+                                      "image_analysis" ? (
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                          <div className="flex items-center space-x-2 mb-2">
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                              การวิเคราะห์รูปภาพด้วย AI
+                                            </span>
+                                          </div>
+                                          <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+                                            {message.content.replace(
+                                              "[การวิเคราะห์รูปภาพ] ",
+                                              "",
                                             )}
-                                            <div className="text-xs text-gray-400">
-                                              (ไม่สามารถแสดงรูปภาพ - ต้องการ Line Content API)
-                                            </div>
+                                          </p>
+                                        </div>
+                                      ) : message.metadata?.messageType ===
+                                        "image" ? (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <ImageIcon className="w-4 h-4" />
+                                            <span className="text-sm font-semibold">
+                                              รูปภาพ
+                                            </span>
                                           </div>
-                                        )}
-                                        {message.metadata.imageAnalysis && (
-                                          <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                            <div className="flex items-center space-x-2 mb-2">
-                                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">การวิเคราะห์รูปภาพด้วย AI</span>
+                                          {message.metadata
+                                            .originalContentUrl ? (
+                                            <a
+                                              href={
+                                                message.metadata
+                                                  .originalContentUrl
+                                              }
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="block mt-2"
+                                            >
+                                              <img
+                                                src={
+                                                  message.metadata
+                                                    .previewImageUrl ||
+                                                  message.metadata
+                                                    .originalContentUrl
+                                                }
+                                                alt="User sent image"
+                                                className="max-w-48 max-h-48 rounded-lg shadow-md object-cover cursor-pointer"
+                                                onError={(e) => {
+                                                  console.log(
+                                                    "Image load error:",
+                                                    e.currentTarget.src,
+                                                  );
+                                                  e.currentTarget.style.display =
+                                                    "none";
+                                                  e.currentTarget.nextElementSibling?.classList.remove(
+                                                    "hidden",
+                                                  );
+                                                }}
+                                              />
+                                              <div className="hidden bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-sm">
+                                                ไม่สามารถโหลดรูปภาพได้ -
+                                                กรุณาตรวจสอบ URL
+                                                หรือสิทธิ์การเข้าถึง
+                                              </div>
+                                            </a>
+                                          ) : (
+                                            <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs space-y-1">
+                                              <div className="flex items-center space-x-2">
+                                                <ImageIcon className="w-3 h-3" />
+                                                <span>รูปภาพจาก Line OA</span>
+                                              </div>
+                                              {message.metadata.messageId && (
+                                                <div className="text-gray-500">
+                                                  Message ID:{" "}
+                                                  {message.metadata.messageId}
+                                                </div>
+                                              )}
+                                              <div className="text-xs text-gray-400">
+                                                (ไม่สามารถแสดงรูปภาพ - ต้องการ
+                                                Line Content API)
+                                              </div>
                                             </div>
-                                            <p className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{message.metadata.imageAnalysis}</p>
-                                          </div>
-                                        )}
-                                        {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}
-                                      </div>
-                                    ) : message.metadata?.messageType === 'sticker' ? (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center space-x-2">
+                                          )}
+                                          {message.metadata.imageAnalysis && (
+                                            <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                              <div className="flex items-center space-x-2 mb-2">
+                                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                                  การวิเคราะห์รูปภาพด้วย AI
+                                                </span>
+                                              </div>
+                                              <p className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+                                                {message.metadata.imageAnalysis}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {message.content && (
+                                            <p className="text-sm whitespace-pre-wrap mt-2">
+                                              {message.content}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ) : message.metadata?.messageType ===
+                                        "sticker" ? (
+                                        <div className="space-y-2">
+                                          {/* <div className="flex items-center space-x-2">
                                           <span className="text-lg">😀</span>
                                           <span className="text-sm font-semibold">สติ๊กเกอร์</span>
+                                        </div> */}
+                                          {message.metadata.packageId &&
+                                          message.metadata.stickerId ? (
+                                            <img
+                                              src={`https://stickershop.line-scdn.net/stickershop/v1/sticker/${message.metadata.stickerId}/android/sticker.png`}
+                                              alt="Line Sticker"
+                                              className="w-24 h-24 object-contain"
+                                              onError={(e) => {
+                                                e.currentTarget.src =
+                                                  "https://via.placeholder.com/100?text=Sticker+Error";
+                                              }}
+                                            />
+                                          ) : (
+                                            <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
+                                              Package:{" "}
+                                              {message.metadata.packageId}
+                                              <br />
+                                              Sticker:{" "}
+                                              {message.metadata.stickerId}
+                                            </div>
+                                          )}
+                                          {message.content && (
+                                            <p className="text-sm whitespace-pre-wrap mt-2">
+                                              {message.content}
+                                            </p>
+                                          )}
                                         </div>
-                                        {message.metadata.packageId && message.metadata.stickerId ? (
-                                          <img
-                                            src={`https://stickershop.line-scdn.net/stickershop/v1/sticker/${message.metadata.stickerId}/android/sticker.png`}
-                                            alt="Line Sticker"
-                                            className="w-24 h-24 object-contain"
-                                            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100?text=Sticker+Error'; }}
-                                          />
-                                        ) : (
-                                          <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs">
-                                            Package: {message.metadata.packageId}<br/>
-                                            Sticker: {message.metadata.stickerId}
+                                      ) : message.metadata?.messageType &&
+                                        message.metadata.messageType !==
+                                          "text" ? (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            <FileIcon className="w-4 h-4" />
+                                            <span className="text-sm font-semibold">
+                                              {message.metadata.messageType
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                                message.metadata.messageType.slice(
+                                                  1,
+                                                )}
+                                            </span>
                                           </div>
-                                        )}
-                                        {message.content && <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>}
-                                      </div>
-                                    ) : message.metadata?.messageType && message.metadata.messageType !== 'text' ? (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center space-x-2">
-                                          <FileIcon className="w-4 h-4" />
-                                          <span className="text-sm font-semibold">{message.metadata.messageType.charAt(0).toUpperCase() + message.metadata.messageType.slice(1)}</span>
+                                          {message.metadata
+                                            .originalContentUrl && (
+                                            <a
+                                              href={
+                                                message.metadata
+                                                  .originalContentUrl
+                                              }
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm text-blue-600 hover:underline"
+                                            >
+                                              เปิดไฟล์{" "}
+                                              {message.metadata.messageType}
+                                            </a>
+                                          )}
+                                          <p className="text-sm whitespace-pre-wrap mt-2">
+                                            {message.content}
+                                          </p>
                                         </div>
-                                        {message.metadata.originalContentUrl && (
-                                          <a href={message.metadata.originalContentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                                            เปิดไฟล์ {message.metadata.messageType}
-                                          </a>
+                                      ) : (
+                                        <p className="text-sm whitespace-pre-wrap">
+                                          {message.content}
+                                        </p>
+                                      )}
+                                      <p className="text-xs opacity-75 mt-1">
+                                        {safeFormatDate(
+                                          message.createdAt,
+                                          "HH:mm",
                                         )}
-                                        <p className="text-sm whitespace-pre-wrap mt-2">{message.content}</p>
-                                      </div>
-                                    ) : (
-                                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                    )}
-                                    <p className="text-xs opacity-75 mt-1">
-                                      {safeFormatDate(message.createdAt, "HH:mm")}
-                                    </p>
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                              ))
+                                ),
+                              )
                             )}
                             <div ref={messagesEndRef} />
                           </div>
@@ -691,14 +877,19 @@ export default function AgentConsole() {
                               <Textarea
                                 placeholder="Type your message..."
                                 value={messageInput}
-                                onChange={(e) => setMessageInput(e.target.value)}
+                                onChange={(e) =>
+                                  setMessageInput(e.target.value)
+                                }
                                 onKeyPress={handleKeyPress}
                                 className="flex-1 resize-none"
                                 rows={2}
                               />
                               <Button
                                 onClick={handleSendMessage}
-                                disabled={!messageInput.trim() || sendMessageMutation.isPending}
+                                disabled={
+                                  !messageInput.trim() ||
+                                  sendMessageMutation.isPending
+                                }
                               >
                                 <Send className="w-4 h-4" />
                               </Button>
@@ -724,29 +915,38 @@ export default function AgentConsole() {
                       <div className="space-y-6">
                         {/* User Profile */}
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-sm">Contact Information</h4>
+                          <h4 className="font-semibold text-sm">
+                            Contact Information
+                          </h4>
                           <div className="space-y-2">
                             <div className="flex items-center space-x-2">
                               <User className="w-4 h-4 text-gray-500" />
                               <span className="text-sm">
-                                {selectedUser.userProfile?.name || `User ${selectedUser.userId.slice(-4)}`}
+                                {selectedUser.userProfile?.name ||
+                                  `User ${selectedUser.userId.slice(-4)}`}
                               </span>
                             </div>
                             {selectedUser.userProfile?.email && (
                               <div className="flex items-center space-x-2">
                                 <Mail className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm">{selectedUser.userProfile.email}</span>
+                                <span className="text-sm">
+                                  {selectedUser.userProfile.email}
+                                </span>
                               </div>
                             )}
                             {selectedUser.userProfile?.phone && (
                               <div className="flex items-center space-x-2">
                                 <Phone className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm">{selectedUser.userProfile.phone}</span>
+                                <span className="text-sm">
+                                  {selectedUser.userProfile.phone}
+                                </span>
                               </div>
                             )}
                             <div className="flex items-center space-x-2">
                               <MessageSquare className="w-4 h-4 text-gray-500" />
-                              <span className="text-sm">ID: {selectedUser.userId}</span>
+                              <span className="text-sm">
+                                ID: {selectedUser.userId}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -754,40 +954,74 @@ export default function AgentConsole() {
                         {/* Conversation Summary */}
                         {conversationSummary && (
                           <div className="space-y-3">
-                            <h4 className="font-semibold text-sm">Conversation Summary</h4>
+                            <h4 className="font-semibold text-sm">
+                              Conversation Summary
+                            </h4>
                             <div className="space-y-2">
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Total Messages:</span>
-                                <span className="text-sm font-medium">{conversationSummary.totalMessages}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">First Contact:</span>
+                                <span className="text-sm text-gray-600">
+                                  Total Messages:
+                                </span>
                                 <span className="text-sm font-medium">
-                                  {safeFormatDate(conversationSummary?.firstContactAt, "MMM dd")}
+                                  {conversationSummary.totalMessages}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Last Active:</span>
+                                <span className="text-sm text-gray-600">
+                                  First Contact:
+                                </span>
                                 <span className="text-sm font-medium">
-                                  {safeFormatDate(conversationSummary?.lastActiveAt, "MMM dd, HH:mm")}
+                                  {safeFormatDate(
+                                    conversationSummary?.firstContactAt,
+                                    "MMM dd",
+                                  )}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Status:</span>
-                                <Badge variant={
-                                  conversationSummary.resolutionStatus === "resolved" ? "default" :
-                                  conversationSummary.resolutionStatus === "pending" ? "secondary" : "destructive"
-                                }>
+                                <span className="text-sm text-gray-600">
+                                  Last Active:
+                                </span>
+                                <span className="text-sm font-medium">
+                                  {safeFormatDate(
+                                    conversationSummary?.lastActiveAt,
+                                    "MMM dd, HH:mm",
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">
+                                  Status:
+                                </span>
+                                <Badge
+                                  variant={
+                                    conversationSummary.resolutionStatus ===
+                                    "resolved"
+                                      ? "default"
+                                      : conversationSummary.resolutionStatus ===
+                                          "pending"
+                                        ? "secondary"
+                                        : "destructive"
+                                  }
+                                >
                                   {conversationSummary.resolutionStatus}
                                 </Badge>
                               </div>
                               {conversationSummary.sentiment && (
                                 <div className="flex justify-between">
-                                  <span className="text-sm text-gray-600">Sentiment:</span>
-                                  <Badge variant={
-                                    conversationSummary.sentiment === "positive" ? "default" :
-                                    conversationSummary.sentiment === "neutral" ? "secondary" : "destructive"
-                                  }>
+                                  <span className="text-sm text-gray-600">
+                                    Sentiment:
+                                  </span>
+                                  <Badge
+                                    variant={
+                                      conversationSummary.sentiment ===
+                                      "positive"
+                                        ? "default"
+                                        : conversationSummary.sentiment ===
+                                            "neutral"
+                                          ? "secondary"
+                                          : "destructive"
+                                    }
+                                  >
                                     {conversationSummary.sentiment}
                                   </Badge>
                                 </div>
@@ -797,29 +1031,44 @@ export default function AgentConsole() {
                         )}
 
                         {/* Main Topics */}
-                        {conversationSummary?.mainTopics && conversationSummary.mainTopics.length > 0 && (
-                          <div className="space-y-3">
-                            <h4 className="font-semibold text-sm">Main Topics</h4>
-                            <div className="flex flex-wrap gap-1">
-                              {conversationSummary.mainTopics.map((topic, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {topic}
-                                </Badge>
-                              ))}
+                        {conversationSummary?.mainTopics &&
+                          conversationSummary.mainTopics.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-sm">
+                                Main Topics
+                              </h4>
+                              <div className="flex flex-wrap gap-1">
+                                {conversationSummary.mainTopics.map(
+                                  (topic, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {topic}
+                                    </Badge>
+                                  ),
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
                         {/* Agent Information */}
                         <div className="space-y-3">
-                          <h4 className="font-semibold text-sm">Agent Details</h4>
+                          <h4 className="font-semibold text-sm">
+                            Agent Details
+                          </h4>
                           <div className="space-y-2">
                             <div className="flex items-center space-x-2">
                               <Bot className="w-4 h-4 text-gray-500" />
-                              <span className="text-sm">{selectedUser.agentName}</span>
+                              <span className="text-sm">
+                                {selectedUser.agentName}
+                              </span>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(selectedUser.channelType)}`}>
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs rounded-full ${getChannelBadge(selectedUser.channelType)}`}
+                              >
                                 {selectedUser.channelType.toUpperCase()}
                               </span>
                             </div>

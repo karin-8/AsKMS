@@ -3591,13 +3591,33 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         channelType,
         channelId,
         agentId: parseInt(agentId),
-        messageType: messageType || 'human_agent',
+        messageType: messageType || 'agent',
         content: message,
         metadata: {
           sentBy: req.user.claims.sub,
-          humanAgent: true
+          humanAgent: true,
+          humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
         }
       });
+
+      // Broadcast new message to Agent Console via WebSocket
+      if (typeof (global as any).broadcastToAgentConsole === 'function') {
+        (global as any).broadcastToAgentConsole({
+          type: 'new_message',
+          data: {
+            userId: targetUserId,
+            channelType,
+            channelId,
+            agentId: parseInt(agentId),
+            userMessage: '',
+            aiResponse: message,
+            messageType: messageType || 'agent',
+            timestamp: new Date().toISOString(),
+            humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+          }
+        });
+        console.log('📡 Broadcasted human agent message to Agent Console');
+      }
       
       // Send the message via the appropriate channel
       if (channelType === 'lineoa') {
