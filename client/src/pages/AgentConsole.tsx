@@ -126,33 +126,34 @@ export default function AgentConsole() {
         channelId: selectedUser.channelId,
         agentId: selectedUser.agentId.toString(),
       });
-      console.log("🔍 Agent Console: Fetching conversation with params:", {
-        userId: selectedUser.userId,
-        channelType: selectedUser.channelType,
-        channelId: selectedUser.channelId,
-        agentId: selectedUser.agentId
-      });
-      const result = await apiRequest("GET", `/api/agent-console/conversation?${params}`);
-      console.log("📨 Agent Console: Conversation API response:", result);
-      console.log("📨 Agent Console: Is array?", Array.isArray(result));
-      return Array.isArray(result) ? result : [];
+      try {
+        const response = await apiRequest("GET", `/api/agent-console/conversation?${params}`);
+        const result = await response.json();
+        return Array.isArray(result) ? result : [];
+      } catch (error) {
+        console.error("❌ Agent Console: API error:", error);
+        return [];
+      }
     },
     enabled: isAuthenticated && !!selectedUser,
     refetchInterval: 2000, // Refresh every 2 seconds for real-time updates
     retry: false,
   });
 
-  // Debug logging for selectedUser and messages
-  console.log("🔧 Agent Console Debug:", {
-    isAuthenticated,
-    selectedUser: selectedUser ? {
-      userId: selectedUser.userId,
-      channelId: selectedUser.channelId,
-      agentId: selectedUser.agentId
-    } : null,
-    conversationMessages: conversationMessages?.length || 0,
-    isLoadingMessages
-  });
+  // Auto-select first user if none selected
+  useEffect(() => {
+    if (chatUsers.length > 0 && !selectedUser) {
+      console.log("🎯 Agent Console: Auto-selecting first user:", chatUsers[0]);
+      setSelectedUser(chatUsers[0]);
+    }
+  }, [chatUsers, selectedUser]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [conversationMessages]);
 
   // Query for conversation summary
   const { data: conversationSummary } = useQuery({
