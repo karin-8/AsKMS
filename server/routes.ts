@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
@@ -110,6 +111,20 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Serve uploaded files and Line images
+  const uploadsPath = path.join(process.cwd(), 'uploads');
+  const lineImagesPath = path.join(uploadsPath, 'line-images');
+  
+  // Ensure directories exist
+  if (!fsSync.existsSync(uploadsPath)) {
+    fsSync.mkdirSync(uploadsPath, { recursive: true });
+  }
+  if (!fsSync.existsSync(lineImagesPath)) {
+    fsSync.mkdirSync(lineImagesPath, { recursive: true });
+  }
+  
+  app.use('/uploads', express.static(uploadsPath));
 
   // Register public HR API routes (no authentication required)
   registerHrApiRoutes(app);

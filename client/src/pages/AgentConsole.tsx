@@ -522,8 +522,15 @@ export default function AgentConsole() {
                                               src={message.metadata.previewImageUrl || message.metadata.originalContentUrl}
                                               alt="User sent image"
                                               className="max-w-48 max-h-48 rounded-lg shadow-md object-cover cursor-pointer"
-                                              onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150?text=Image+Load+Error'; }}
+                                              onError={(e) => { 
+                                                console.log('Image load error:', e.currentTarget.src);
+                                                e.currentTarget.style.display = 'none';
+                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                              }}
                                             />
+                                            <div className="hidden bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-sm">
+                                              ไม่สามารถโหลดรูปภาพได้ - กรุณาตรวจสอบ URL หรือสิทธิ์การเข้าถึง
+                                            </div>
                                           </a>
                                         ) : (
                                           <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded text-xs space-y-1">

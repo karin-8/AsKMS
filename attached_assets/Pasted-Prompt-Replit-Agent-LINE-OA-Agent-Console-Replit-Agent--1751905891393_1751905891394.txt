@@ -1,0 +1,42 @@
+Prompt สำหรับ Replit Agent: การจัดการรูปภาพจาก LINE OA ใน Agent Console
+สวัสดี Replit Agent!
+
+เรากำลังพัฒนา Agent Console ที่ใช้รับส่งข้อความกับผู้ใช้งานจาก Social Media ต่างๆ ตอนนี้ฟังก์ชันการรับส่งข้อความทั่วไปทำงานได้ดี แต่เรามีปัญหาในการแสดง รูปภาพที่ผู้ใช้ส่งมาจาก LINE Official Account (LINE OA)
+
+จากโครงสร้าง Frontend ของเรา (ที่สร้างด้วย React/Next.js และใช้ TanStack Query) ได้มีการเตรียม ConversationMessage interface ที่มี metadata สำหรับเก็บข้อมูลเพิ่มเติมของข้อความไว้แล้ว และเราได้เตรียม UI สำหรับการแสดงรูปภาพไว้ โดยคาดหวังว่าจะมี originalContentUrl หรือ previewImageUrl อยู่ใน metadata
+
+ปัญหาคือ: เมื่อผู้ใช้ส่งรูปภาพผ่าน LINE OA, LINE Messaging API ไม่ได้ส่ง URL ของรูปภาพมาโดยตรง แต่จะส่งแค่ messageId ของรูปภาพนั้นมาให้ เราจึงไม่สามารถแสดงรูปภาพบน Agent Console ได้โดยตรง
+
+เป้าหมายของงานนี้:
+สร้างและปรับปรุง Backend Logic เพื่อให้ Agent Console สามารถแสดงรูปภาพที่ผู้ใช้ส่งมาจาก LINE OA ได้อย่างถูกต้อง
+
+ขั้นตอนการดำเนินงานที่ต้องการให้ Replit Agent ทำ:
+Backend: การเรียก Line Content API (Node.js/Express, หรือตามโครงสร้าง Backend ปัจจุบัน)
+ตรวจสอบ LINE Webhook Handler: ค้นหาหรือสร้างส่วนของโค้ดที่จัดการกับ webhook events จาก LINE Messaging API
+
+ระบุข้อความประเภทรูปภาพ: เมื่อได้รับ message event ที่มี message.type === 'image'
+
+เรียก Line Content API: ใช้ message.id ที่ได้รับจาก webhook เพื่อเรียก Get content API ของ LINE (GET https://api-data.line.me/v2/bot/message/{messageId}/content) เพื่อดาวน์โหลด binary data ของรูปภาพนั้นมา
+
+สำคัญ: ต้องมีการตั้งค่า Authorization Header ด้วย Channel access token ที่ถูกต้องในการเรียก API นี้
+
+Backend: การจัดเก็บรูปภาพและสร้าง Public URL
+บันทึกรูปภาพ: หลังจากดาวน์โหลด binary data ของรูปภาพจาก Line Content API มาแล้ว ให้บันทึกรูปภาพนั้นลงในระบบจัดเก็บไฟล์ของเรา
+
+คำแนะนำ: ควรเก็บรูปภาพไว้ใน Cloud Storage เช่น AWS S3, Google Cloud Storage, หรือบริการที่คล้ายกัน เพื่อประสิทธิภาพและความสามารถในการปรับขนาด (Scalability)
+
+หากยังไม่มีการตั้งค่า Cloud Storage ให้พิจารณาเก็บใน Local Storage ชั่วคราว หรือใช้บริการ CDN/Image Hosting ที่สามารถสร้าง Public URL ได้
+
+สร้าง Publicly Accessible URL: หลังจากบันทึกรูปภาพแล้ว ให้สร้าง URL สาธารณะที่สามารถเข้าถึงรูปภาพนั้นได้
+
+Backend: การอัปเดตข้อมูล ConversationMessage
+เก็บ URL ในฐานข้อมูล: เมื่อได้ Public URL ของรูปภาพแล้ว ให้บันทึก URL นี้ลงในฐานข้อมูลของเราสำหรับข้อความนั้นๆ
+
+อัปเดต metadata: ใน ConversationMessage object ที่จะส่งกลับไปยัง Frontend ผ่าน API /api/agent-console/conversation ให้เพิ่มหรืออัปเดต field metadata.originalContentUrl ด้วย Public URL ของรูปภาพที่เราได้สร้างขึ้น
+
+Testing และ Verification
+ทดสอบการส่งรูปภาพ: ส่งรูปภาพจาก LINE OA ไปยังระบบ
+
+ตรวจสอบ Backend Logs: ตรวจสอบ logs ของ Backend เพื่อยืนยันว่า Line Content API ถูกเรียกและรูปภาพถูกจัดเก็บอย่างถูกต้อง
+
+ตรวจสอบ Agent Console: เปิด Agent Console และตรวจสอบว่ารูปภาพที่ส่งมาจาก LINE OA แสดงผลได้อย่างถูกต้อง

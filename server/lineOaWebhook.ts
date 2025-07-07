@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
+import { LineImageService } from "./lineImageService";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -342,8 +343,9 @@ export async function handleLineWebhook(req: Request, res: Response) {
         }
         
         // Save user message with metadata
+        let chatHistoryId: number | null = null;
         try {
-          await storage.createChatHistory({
+          const savedChatHistory = await storage.createChatHistory({
             userId: lineIntegration.userId,
             channelType: 'lineoa',
             channelId: event.source.userId,
@@ -352,9 +354,29 @@ export async function handleLineWebhook(req: Request, res: Response) {
             content: userMessage,
             metadata: messageMetadata
           });
-          console.log('💾 Saved user message with metadata');
+          chatHistoryId = savedChatHistory.id;
+          console.log('💾 Saved user message with metadata, ID:', chatHistoryId);
         } catch (error) {
           console.error('⚠️ Error saving user message:', error);
+        }
+        
+        // Process image download if it's an image message
+        if (message.type === 'image' && chatHistoryId && lineIntegration.channelAccessToken) {
+          console.log('🖼️ Starting image processing...');
+          const imageService = LineImageService.getInstance();
+          
+          // Process image asynchronously (don't wait for completion)
+          imageService.processImageMessage(
+            message.id,
+            lineIntegration.channelAccessToken,
+            lineIntegration.userId,
+            'lineoa',
+            event.source.userId,
+            lineIntegration.agentId!,
+            chatHistoryId
+          ).catch(error => {
+            console.error('⚠️ Error processing image message:', error);
+          });
         }
         
         // Get AI response with chat history (only for text messages or provide context for multimedia)

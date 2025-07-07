@@ -1551,6 +1551,14 @@ export class DatabaseStorage implements IStorage {
     return chatHistoryRecord;
   }
 
+  async updateChatHistoryMetadata(chatHistoryId: number, metadata: any): Promise<void> {
+    const { chatHistory } = await import('@shared/schema');
+    await db
+      .update(chatHistory)
+      .set({ metadata: metadata })
+      .where(eq(chatHistory.id, chatHistoryId));
+  }
+
   async getChatHistory(userId: string, channelType: string, channelId: string, agentId: number, limit: number = 10): Promise<ChatHistory[]> {
     const { chatHistory } = await import('@shared/schema');
     const { desc, and, eq } = await import('drizzle-orm');
