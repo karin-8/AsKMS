@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { Users, Shield, UserCog, Settings } from "lucide-react";
 
 type User = {
@@ -19,11 +23,29 @@ type User = {
 };
 
 export default function RoleManagement() {
+  const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery({
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ["/api/admin/users"],
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   const updateRoleMutation = useMutation({
@@ -44,6 +66,18 @@ export default function RoleManagement() {
       });
     },
     onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
       toast({
         title: "Error",
         description: "Failed to update user role. Please try again.",
@@ -78,20 +112,36 @@ export default function RoleManagement() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2">
-          <Settings className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">Role Management</h1>
+      <div className="min-h-screen bg-slate-50">
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1">
+            <TopBar />
+            <main className="p-6">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-2">
+                  <Settings className="w-6 h-6" />
+                  <h1 className="text-2xl font-bold">Role Management</h1>
+                </div>
+                <div className="text-center py-8">Loading...</div>
+              </div>
+            </main>
+          </div>
         </div>
-        <div className="text-center py-8">Loading users...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1">
+          <TopBar />
+          <main className="p-6">
+            <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Settings className="w-6 h-6" />
@@ -209,6 +259,10 @@ export default function RoleManagement() {
           </div>
         </CardContent>
       </Card>
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }
