@@ -28,7 +28,7 @@ import {
   Hash,
   ExternalLink
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 
 interface ChatUser {
   userId: string;
@@ -63,6 +63,22 @@ interface ConversationSummary {
   mainTopics: string[];
   resolutionStatus: 'open' | 'resolved' | 'pending';
 }
+
+// Helper function to safely format dates
+const safeFormatDate = (dateStr: string | null | undefined, formatStr: string = "MMM dd, HH:mm"): string => {
+  if (!dateStr) return "N/A";
+  
+  try {
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : new Date(dateStr);
+    if (isValid(date)) {
+      return format(date, formatStr);
+    }
+  } catch (error) {
+    console.warn("Date formatting error:", error, dateStr);
+  }
+  
+  return "Invalid Date";
+};
 
 export default function AgentConsole() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -376,7 +392,7 @@ export default function AgentConsole() {
                                       {chatUser.lastMessage}
                                     </p>
                                     <span className="text-xs text-gray-400">
-                                      {format(new Date(chatUser.lastMessageAt), "HH:mm")}
+                                      {safeFormatDate(chatUser.lastMessageAt, "HH:mm")}
                                     </span>
                                   </div>
                                   <div className="flex items-center justify-between mt-2">
@@ -480,7 +496,7 @@ export default function AgentConsole() {
                                     </div>
                                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                                     <p className="text-xs opacity-75 mt-1">
-                                      {format(new Date(message.createdAt), "MMM dd, HH:mm")}
+                                      {safeFormatDate(message.createdAt, "HH:mm")}
                                     </p>
                                   </div>
                                 </div>
@@ -569,13 +585,13 @@ export default function AgentConsole() {
                               <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">First Contact:</span>
                                 <span className="text-sm font-medium">
-                                  {format(new Date(conversationSummary.firstContactAt), "MMM dd")}
+                                  {safeFormatDate(conversationSummary?.firstContactAt, "MMM dd")}
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">Last Active:</span>
                                 <span className="text-sm font-medium">
-                                  {format(new Date(conversationSummary.lastActiveAt), "MMM dd, HH:mm")}
+                                  {safeFormatDate(conversationSummary?.lastActiveAt, "MMM dd, HH:mm")}
                                 </span>
                               </div>
                               <div className="flex justify-between">
