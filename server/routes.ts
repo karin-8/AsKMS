@@ -2,15 +2,77 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import OpenAI from "openai";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { handleLineWebhook } from "./lineOaWebhook";
-import OpenAI from "openai";
-import { db, pool } from "./db";
 
-// Initialize OpenAI
+// Initialize OpenAI for CSAT analysis
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Function to calculate CSAT score using OpenAI
+async function calculateCSATScore(userId: string, channelType: string, channelId: string): Promise<number | undefined> {
+  try {
+    console.log("🎯 Calculating CSAT score for:", { userId, channelType, channelId });
+    
+    // Get recent chat history for analysis
+    const messages = await storage.getChatHistory(userId, channelType, channelId, undefined, 20);
+    
+    if (messages.length < 3) {
+      console.log("⚠️ Not enough messages for CSAT analysis");
+      return undefined;
+    }
+    
+    // Format conversation for OpenAI
+    const conversationText = messages.map(msg => {
+      const role = msg.messageType === 'user' ? 'Customer' : 
+                   msg.messageType === 'agent' ? 'Human Agent' : 'AI Agent';
+      return `${role}: ${msg.content}`;
+    }).join('\n\n');
+    
+    const prompt = `
+      ประเมิน Customer Satisfaction Score (CSAT) จากการสนทนาต่อไปนี้:
+      
+      ${conversationText}
+      
+      กรุณาวิเคราะห์ระดับความพึงพอใจของลูกค้าจากการสนทนานี้ โดยพิจารณาจาก:
+      1. ความเป็นมิตรและสุภาพของลูกค้า
+      2. การแสดงความพึงพอใจหรือไม่พึงพอใจ
+      3. การตอบสนองต่อการให้บริการ
+      4. ความเต็มใจในการใช้บริการต่อ
+      5. การแสดงความรู้สึกเชิงบวกหรือลบ
+      
+      ให้คะแนน CSAT เป็นตัวเลข 0-100 เท่านั้น โดยที่:
+      - 0-30: ลูกค้าไม่พอใจมาก (มีการแสดงความโกรธ ผิดหวัง หรือต้องการยกเลิก)
+      - 31-50: ลูกค้าไม่พอใจ (มีความกังวล ไม่แน่ใจ หรือต้องการความช่วยเหลือเพิ่มเติม)
+      - 51-70: ลูกค้าพอใจปานกลาง (ยอมรับคำตอบ แต่ไม่แสดงความกระตือรือร้น)
+      - 71-85: ลูกค้าพอใจ (แสดงความขอบคุณ พอใจกับการให้บริการ)
+      - 86-100: ลูกค้าพอใจมาก (แสดงความประทับใจ ชื่นชม หรือแนะนำให้คนอื่น)
+      
+      ตอบเป็นตัวเลขเท่านั้น ไม่ต้องมีคำอธิบาย:
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 10,
+      temperature: 0.1
+    });
+
+    const scoreText = response.choices[0].message.content?.trim();
+    const score = parseInt(scoreText || '0');
+    
+    console.log("🎯 CSAT Score calculated:", score);
+    
+    return isNaN(score) ? undefined : Math.max(0, Math.min(100, score));
+  } catch (error) {
+    console.error("❌ Error calculating CSAT score:", error);
+    return undefined;
+  }
+}
+
+import { db, pool } from "./db";
 import { eq, sql, and, gte, getTableColumns } from "drizzle-orm";
 import {
   insertCategorySchema,
@@ -3561,13 +3623,21 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       const result = await pool.query(query, [targetUserId, channelType, channelId]);
       const row = result.rows[0];
       
+      // Get CSAT score using OpenAI analysis
+      let csatScore = undefined;
+      try {
+        csatScore = await calculateCSATScore(targetUserId, channelType, channelId);
+      } catch (error) {
+        console.error("Error calculating CSAT score:", error);
+      }
+
       const summary = {
         totalMessages: parseInt(row.total_messages),
         firstContactAt: row.first_contact_at,
         lastActiveAt: row.last_active_at,
         sentiment: 'neutral', // Could be enhanced with AI sentiment analysis
         mainTopics: ['General Inquiry', 'Support'], // Could be enhanced with AI topic extraction
-        resolutionStatus: 'open' // Could be tracked in database
+        csatScore: csatScore
       };
       
       res.json(summary);

@@ -1016,21 +1016,32 @@ export default function AgentConsole() {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">
-                                  Status:
+                                  CSAT Score:
                                 </span>
-                                <Badge
-                                  variant={
-                                    conversationSummary.resolutionStatus ===
-                                    "resolved"
-                                      ? "default"
-                                      : conversationSummary.resolutionStatus ===
-                                          "pending"
-                                        ? "secondary"
-                                        : "destructive"
-                                  }
-                                >
-                                  {conversationSummary.resolutionStatus}
-                                </Badge>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium">
+                                    {conversationSummary.csatScore !== undefined 
+                                      ? `${conversationSummary.csatScore}/100` 
+                                      : 'Analyzing...'}
+                                  </span>
+                                  {conversationSummary.csatScore !== undefined && (
+                                    <Badge
+                                      variant={
+                                        conversationSummary.csatScore >= 80
+                                          ? "default"
+                                          : conversationSummary.csatScore >= 60
+                                            ? "secondary"
+                                            : "destructive"
+                                      }
+                                    >
+                                      {conversationSummary.csatScore >= 80
+                                        ? "Excellent"
+                                        : conversationSummary.csatScore >= 60
+                                          ? "Good"
+                                          : "Needs Improvement"}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                               {conversationSummary.sentiment && (
                                 <div className="flex justify-between">
