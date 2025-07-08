@@ -3621,8 +3621,19 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       
       // Send the message via the appropriate channel
       if (channelType === 'lineoa') {
-        // For Line, we would need to implement push message functionality
-        console.log('Would send Line message:', message);
+        try {
+          // Get Line channel access token from agent
+          const agent = await storage.getAgentChatbot(parseInt(agentId));
+          if (agent?.socialIntegrations?.lineOa?.channelAccessToken) {
+            const { sendLinePushMessage } = await import('./lineOaWebhook');
+            await sendLinePushMessage(channelId, message, agent.socialIntegrations.lineOa.channelAccessToken);
+            console.log('✅ Successfully sent Line message:', message);
+          } else {
+            console.log('⚠️ No Line Channel Access Token found for agent:', agentId);
+          }
+        } catch (error) {
+          console.error('❌ Error sending Line message:', error);
+        }
       }
       
       res.json({ 

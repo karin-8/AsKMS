@@ -77,6 +77,38 @@ async function sendLineReply(replyToken: string, message: string, channelAccessT
   }
 }
 
+// Send push message to Line user (for Human Agent messages)
+export async function sendLinePushMessage(userId: string, message: string, channelAccessToken: string) {
+  try {
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${channelAccessToken}`
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: [{
+          type: 'text',
+          text: message
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Line Push API Error:', errorText);
+      return false;
+    }
+
+    console.log('✅ Line push message sent successfully to:', userId);
+    return true;
+  } catch (error) {
+    console.error('💥 Error sending Line push message:', error);
+    return false;
+  }
+}
+
 // Get AI response using OpenAI with chat history
 /**
  * Detect if user message is asking about image content

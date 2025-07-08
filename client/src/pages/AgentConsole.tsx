@@ -612,9 +612,24 @@ export default function AgentConsole() {
                             </Button>
                           )}
                           {isHumanTakeover && (
-                            <Badge variant="default" className="bg-green-500">
-                              Agent Human - {user?.firstName || user?.email || 'Active'}
-                            </Badge>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="default" className="bg-green-500">
+                                Agent Human - {user?.firstName || user?.email || 'Active'}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsHumanTakeover(false);
+                                  toast({
+                                    title: "AI Agent Restored",
+                                    description: "AI chatbot will now handle responses automatically.",
+                                  });
+                                }}
+                              >
+                                Back to AI
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -873,6 +888,12 @@ export default function AgentConsole() {
                         {/* Message Input */}
                         {isHumanTakeover && (
                           <div className="border-t p-4">
+                            <div className="mb-2">
+                              <div className="flex items-center space-x-2 text-xs text-green-600">
+                                <UserCheck className="w-3 h-3" />
+                                <span>Human Agent Mode - Your message will be sent to the user</span>
+                              </div>
+                            </div>
                             <div className="flex space-x-2">
                               <Textarea
                                 placeholder="Type your message..."
@@ -890,8 +911,13 @@ export default function AgentConsole() {
                                   !messageInput.trim() ||
                                   sendMessageMutation.isPending
                                 }
+                                className="bg-green-500 hover:bg-green-600"
                               >
-                                <Send className="w-4 h-4" />
+                                {sendMessageMutation.isPending ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
