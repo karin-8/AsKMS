@@ -85,7 +85,31 @@ export default function AgentChatbots() {
     queryKey: ["/api/agent-chatbots"],
     enabled: isAuthenticated,
     retry: false,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true, // Refresh when user comes back to this page
+    refetchOnMount: true,
   }) as { data: AgentChatbot[]; isLoading: boolean };
+
+  // Add manual refresh functionality
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAuthenticated) {
+        // When user comes back to this page, refresh all agent document queries
+        queryClient.invalidateQueries({ 
+          predicate: (query) => {
+            return query.queryKey[0] === "/api/agent-chatbots" || 
+                   (typeof query.queryKey[0] === "string" && 
+                    query.queryKey[0].includes("/api/agent-chatbots") && 
+                    query.queryKey[0].includes("/documents"));
+          }
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAuthenticated, queryClient]);
 
   // Component to display agent document list
   const AgentDocumentList = ({ agentId }: { agentId: number }) => {
@@ -93,6 +117,11 @@ export default function AgentChatbots() {
       queryKey: [`/api/agent-chatbots/${agentId}/documents`],
       enabled: isAuthenticated && !!agentId,
       retry: false,
+      refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
+      refetchIntervalInBackground: true,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      staleTime: 0, // Always consider data stale for immediate refresh
     }) as { data: any[]; isLoading: boolean };
 
     // Also fetch document details
