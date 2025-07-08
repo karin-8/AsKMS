@@ -601,22 +601,24 @@ export async function handleLineWebhook(req: Request, res: Response) {
           console.error("⚠️ Error saving user message:", error);
         }
 
-        // Get AI response with chat history (only for text messages or provide context for multimedia)
-        if (lineIntegration.agentId) {
-          let contextMessage = userMessage;
-          let imageAnalysisResult = "";
+        // Handle image messages with immediate acknowledgment
+        if (message.type === "image" && lineIntegration.channelAccessToken) {
+          console.log("🖼️ Image message detected - sending immediate acknowledgment");
           
-          // Process image download and analysis SYNCHRONOUSLY if it's an image message
-          if (
-            message.type === "image" &&
-            chatHistoryId &&
+          // 1. Send immediate acknowledgment
+          await sendLineReply(
+            replyToken,
+            "ได้รับรูปภาพแล้ว ขอเวลาตรวจสอบสักครู่นะคะ",
             lineIntegration.channelAccessToken
-          ) {
-            console.log("🖼️ Starting synchronous image processing...");
+          );
+          
+          // 2. Process image and get analysis
+          if (chatHistoryId && lineIntegration.agentId) {
+            console.log("🖼️ Starting image processing...");
             const imageService = LineImageService.getInstance();
 
             try {
-              // Wait for image processing to complete before proceeding
+              // Wait for image processing to complete
               await imageService.processImageMessage(
                 message.id,
                 lineIntegration.channelAccessToken,
@@ -628,39 +630,105 @@ export async function handleLineWebhook(req: Request, res: Response) {
               );
               console.log("✅ Image processing completed successfully");
               
-              // Get the image analysis from the updated chat history
+              // Get the SPECIFIC image analysis for THIS message
               const updatedChatHistory = await storage.getChatHistory(
                 lineIntegration.userId,
                 "lineoa",
                 event.source.userId,
                 lineIntegration.agentId!,
-                5 // Get last 5 messages to find the image analysis
+                10 // Get more messages to find the right analysis
               );
               
-              // Find the most recent image analysis
+              // Find the image analysis that corresponds to THIS specific message
               const imageAnalysisMessage = updatedChatHistory.find(msg => 
                 msg.messageType === 'system' && 
-                msg.metadata?.messageType === 'image_analysis'
+                msg.metadata?.messageType === 'image_analysis' &&
+                msg.metadata?.relatedImageMessageId === message.id
               );
               
               if (imageAnalysisMessage) {
-                imageAnalysisResult = imageAnalysisMessage.content.replace('[การวิเคราะห์รูปภาพ] ', '');
-                console.log(`🔍 Found image analysis: ${imageAnalysisResult.substring(0, 100)}...`);
+                const imageAnalysisResult = imageAnalysisMessage.content.replace('[การวิเคราะห์รูปภาพ] ', '');
+                console.log(`🔍 Found specific image analysis for message ${message.id}: ${imageAnalysisResult.substring(0, 100)}...`);
                 
-                // Use image analysis as context for AI response
-                contextMessage = `ผู้ใช้ส่งรูปภาพมา นี่คือผลการวิเคราะห์รูปภาพ:
+                // 3. Generate AI response with image analysis
+                const contextMessage = `ผู้ใช้ส่งรูปภาพมา นี่คือผลการวิเคราะห์รูปภาพ:
 
 ${imageAnalysisResult}
 
-กรุณาตอบรับรูปภาพและให้ข้อมูลเกี่ยวกับสิ่งที่เห็นในรูป พร้อมถามว่ามีอะไรให้ช่วยเหลือ`;
+กรุณาให้ข้อมูลเกี่ยวกับสิ่งที่เห็นในรูป พร้อมถามว่ามีอะไรให้ช่วยเหลือ`;
+
+                const aiResponse = await getAiResponseDirectly(
+                  contextMessage,
+                  lineIntegration.agentId,
+                  lineIntegration.userId,
+                  "lineoa",
+                  event.source.userId,
+                );
+                
+                // 4. Send follow-up message with AI analysis
+                await sendLinePushMessage(
+                  event.source.userId,
+                  aiResponse,
+                  lineIntegration.channelAccessToken
+                );
+                
+                // Save the assistant response
+                await storage.createChatHistory({
+                  userId: lineIntegration.userId,
+                  channelType: "lineoa",
+                  channelId: event.source.userId,
+                  agentId: lineIntegration.agentId,
+                  messageType: "assistant",
+                  content: aiResponse,
+                  metadata: { relatedImageMessageId: message.id },
+                });
+                
+                console.log("✅ Image analysis response sent successfully");
+                
               } else {
-                contextMessage = "ผู้ใช้ส่งรูปภาพมา แต่ไม่สามารถวิเคราะห์รูปภาพได้ กรุณาตอบรับรูปภาพและสอบถามว่า user มีอะไรให้ช่วย";
+                console.log("⚠️ No specific image analysis found for this message");
+                await sendLinePushMessage(
+                  event.source.userId,
+                  "ขออภัย ไม่สามารถวิเคราะห์รูปภาพได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง",
+                  lineIntegration.channelAccessToken
+                );
               }
+              
             } catch (error) {
               console.error("⚠️ Error processing image message:", error);
-              contextMessage = "ผู้ใช้ส่งรูปภาพมา แต่เกิดข้อผิดพลาดในการประมวลผล กรุณาขออภัยและถามว่ามีอะไรให้ช่วย";
+              await sendLinePushMessage(
+                event.source.userId,
+                "ขออภัย เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง",
+                lineIntegration.channelAccessToken
+              );
             }
-          } else if (message.type === "sticker") {
+          }
+          
+          // Broadcast to WebSocket for real-time updates
+          if (typeof (global as any).broadcastToAgentConsole === "function") {
+            (global as any).broadcastToAgentConsole({
+              type: 'new_message',
+              data: {
+                userId: lineIntegration.userId,
+                channelType: "lineoa",
+                channelId: event.source.userId,
+                agentId: lineIntegration.agentId,
+                userMessage: userMessage,
+                aiResponse: "ได้รับรูปภาพแล้ว ขอเวลาตรวจสอบสักครู่นะคะ",
+                timestamp: new Date().toISOString()
+              }
+            });
+          }
+          
+          // Skip normal AI response processing for images
+          continue;
+        }
+
+        // Get AI response with chat history (only for text messages or provide context for multimedia)
+        if (lineIntegration.agentId) {
+          let contextMessage = userMessage;
+          
+          if (message.type === "sticker") {
             contextMessage = "ผู้ใช้ส่งสติ๊กเกอร์มา กรุณาตอบอย่างเป็นมิตรและถามว่ามีอะไรให้ช่วย";
           }
 
