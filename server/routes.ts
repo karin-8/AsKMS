@@ -14,13 +14,19 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Function to calculate CSAT score using OpenAI
 async function calculateCSATScore(userId: string, channelType: string, channelId: string): Promise<number | undefined> {
   try {
-    console.log("🎯 Calculating CSAT score for:", { userId, channelType, channelId });
+    console.log("🎯 Starting CSAT calculation for:", { 
+      userId, 
+      channelType, 
+      channelId: channelId.substring(0, 8) + '...' 
+    });
     
     // Get recent chat history for analysis
     const messages = await storage.getChatHistory(userId, channelType, channelId, undefined, 20);
     
+    console.log("📊 Retrieved messages for CSAT:", messages.length);
+    
     if (messages.length < 3) {
-      console.log("⚠️ Not enough messages for CSAT analysis");
+      console.log("⚠️ Not enough messages for CSAT analysis:", messages.length);
       return undefined;
     }
     
@@ -30,6 +36,8 @@ async function calculateCSATScore(userId: string, channelType: string, channelId
                    msg.messageType === 'agent' ? 'Human Agent' : 'AI Agent';
       return `${role}: ${msg.content}`;
     }).join('\n\n');
+    
+    console.log("💬 Conversation sample for CSAT:", conversationText.substring(0, 200) + '...');
     
     const prompt = `
       ประเมิน Customer Satisfaction Score (CSAT) จากการสนทนาต่อไปนี้:
@@ -53,6 +61,8 @@ async function calculateCSATScore(userId: string, channelType: string, channelId
       ตอบเป็นตัวเลขเท่านั้น ไม่ต้องมีคำอธิบาย:
     `;
 
+    console.log("🤖 Sending request to OpenAI for CSAT analysis...");
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [{ role: "user", content: prompt }],
@@ -63,7 +73,7 @@ async function calculateCSATScore(userId: string, channelType: string, channelId
     const scoreText = response.choices[0].message.content?.trim();
     const score = parseInt(scoreText || '0');
     
-    console.log("🎯 CSAT Score calculated:", score);
+    console.log("🎯 CSAT Score calculated:", { scoreText, score });
     
     return isNaN(score) ? undefined : Math.max(0, Math.min(100, score));
   } catch (error) {
@@ -3649,6 +3659,9 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           const actualChannelId = lineUserResult.rows[0].channel_id;
           console.log("🔍 Found actual channel ID:", actualChannelId.substring(0, 8) + '...');
           
+          // Update the channel ID for both summary and CSAT
+          actualChannelIdForCSAT = actualChannelId;
+          
           // Re-query with the actual channel ID
           result = await pool.query(query, [targetUserId, channelType, actualChannelId]);
           row = result.rows[0];
@@ -3660,33 +3673,36 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         }
       }
       
-      // Get CSAT score using OpenAI analysis (use the same channel ID logic)
+      // Get CSAT score using OpenAI analysis
       let csatScore = undefined;
       let actualChannelIdForCSAT = channelId;
       
-      // If we found a different channel ID above, use it for CSAT too
+      // If we have messages, calculate CSAT score
       if (parseInt(row.total_messages) > 0) {
         try {
-          // Check if we need to find the actual channel ID for CSAT
-          if (channelType === 'lineoa' && parseInt(row.total_messages) === 0) {
-            const lineUserQuery = `
-              SELECT DISTINCT channel_id, COUNT(*) as message_count
-              FROM chat_history 
-              WHERE user_id = $1 AND channel_type = $2
-              GROUP BY channel_id
-              ORDER BY message_count DESC
-              LIMIT 1
-            `;
-            const lineUserResult = await pool.query(lineUserQuery, [targetUserId, channelType]);
-            if (lineUserResult.rows.length > 0) {
-              actualChannelIdForCSAT = lineUserResult.rows[0].channel_id;
-            }
-          }
+          console.log("🎯 Starting CSAT calculation for:", { 
+            targetUserId, 
+            channelType, 
+            originalChannelId: channelId.substring(0, 8) + '...',
+            actualChannelId: actualChannelIdForCSAT.substring(0, 8) + '...',
+            totalMessages: row.total_messages 
+          });
           
-          csatScore = await calculateCSATScore(targetUserId, channelType, actualChannelIdForCSAT);
+          // Add timeout for CSAT calculation to prevent hanging
+          const csatPromise = calculateCSATScore(targetUserId, channelType, actualChannelIdForCSAT);
+          const timeoutPromise = new Promise<undefined>((_, reject) => 
+            setTimeout(() => reject(new Error('CSAT calculation timeout')), 15000)
+          );
+          
+          csatScore = await Promise.race([csatPromise, timeoutPromise]);
+          
+          console.log("🎯 CSAT calculation completed:", { csatScore });
         } catch (error) {
-          console.error("Error calculating CSAT score:", error);
+          console.error("❌ Error calculating CSAT score:", error);
+          csatScore = undefined;
         }
+      } else {
+        console.log("⚠️ No messages found for CSAT calculation");
       }
 
       const summary = {
