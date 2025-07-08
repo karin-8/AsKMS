@@ -3622,14 +3622,23 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       // Send the message via the appropriate channel
       if (channelType === 'lineoa') {
         try {
-          // Get Line channel access token from agent
-          const agent = await storage.getAgentChatbot(parseInt(agentId));
-          if (agent?.socialIntegrations?.lineOa?.channelAccessToken) {
-            const { sendLinePushMessage } = await import('./lineOaWebhook');
-            await sendLinePushMessage(channelId, message, agent.socialIntegrations.lineOa.channelAccessToken);
-            console.log('✅ Successfully sent Line message:', message);
+          // Get Line channel access token from agent using direct DB query since we need to bypass user check
+          const query = `SELECT lineoa_config FROM agent_chatbots WHERE id = $1`;
+          const result = await pool.query(query, [parseInt(agentId)]);
+          
+          if (result.rows.length > 0) {
+            const lineoaConfig = result.rows[0].lineoa_config;
+            console.log('🔍 Agent lineoa_config:', lineoaConfig);
+            
+            if (lineoaConfig?.accessToken) {
+              const { sendLinePushMessage } = await import('./lineOaWebhook');
+              await sendLinePushMessage(channelId, message, lineoaConfig.accessToken);
+              console.log('✅ Successfully sent Line message:', message);
+            } else {
+              console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
+            }
           } else {
-            console.log('⚠️ No Line Channel Access Token found for agent:', agentId);
+            console.log('⚠️ Agent not found:', agentId);
           }
         } catch (error) {
           console.error('❌ Error sending Line message:', error);
