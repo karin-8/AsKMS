@@ -246,13 +246,12 @@ async function getAiResponseDirectly(userMessage: string, agentId: number, userI
     const messages: any[] = [
       {
         role: "system",
-        content: `${agent.systemPrompt}${contextPrompt}${imageContext}
+        content: `${agent.systemPrompt}${contextPrompt}
 
 ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
 ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
 
-คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม
-${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี่ยวกับรูปภาพ กรุณาใช้ข้อมูลจากการวิเคราะห์รูปภาพข้างต้นในการตอบคำถาม' : ''}`
+คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม`
       }
     ];
 
@@ -268,10 +267,18 @@ ${isImageQuery ? '\n⚠️ ผู้ใช้กำลังถามเกี�
       });
     });
 
-    // Add current user message
+    // Add current user message with image context attached if available
+    let enhancedUserMessage = userMessage;
+    if (imageContext) {
+      enhancedUserMessage = `${userMessage}
+
+${imageContext}`;
+      console.log(`🖼️ Enhanced user message with image context (${imageContext.length} chars)`);
+    }
+
     messages.push({
       role: "user", 
-      content: userMessage
+      content: enhancedUserMessage
     });
 
     console.log(`🤖 Sending ${messages.length} messages to OpenAI (including ${chatHistory.length} history messages)`);
