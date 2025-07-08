@@ -348,7 +348,7 @@ export default function Sidebar({
             </nav>
 
             {/* AI Assistant */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
+            {/* <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
               <div className="flex items-center space-x-3 mb-2">
                 <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
@@ -364,7 +364,7 @@ export default function Sidebar({
               >
                 Start Chat
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
       </aside>

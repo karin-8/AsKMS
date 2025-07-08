@@ -168,7 +168,8 @@ async function getAiResponseDirectly(userMessage: string, agentId: number, userI
 
     // Check if this is an image-related query
     const isImageQuery = isImageRelatedQuery(userMessage);
-    console.log(`🔍 Is image-related query: ${isImageQuery}`);
+    console.log(`🖼️ Image-related query detected: ${isImageQuery}`);
+    console.log(`🔍 User message for analysis: "${userMessage}"`);
 
     // Get chat history if memory is enabled using new memory strategy
     let chatHistory: any[] = [];
@@ -229,11 +230,16 @@ async function getAiResponseDirectly(userMessage: string, agentId: number, userI
       }
     }
 
-    // Extract image analysis if this is an image-related query
+    // Always extract image analysis from recent chat history to maintain context
     let imageContext = "";
-    if (isImageQuery && chatHistory.length > 0) {
+    if (chatHistory.length > 0) {
       imageContext = extractImageAnalysis(chatHistory);
       console.log(`📸 Image context extracted: ${imageContext.length} characters`);
+      if (imageContext) {
+        console.log(`✅ Image analysis found: ${imageContext.substring(0, 100)}...`);
+      } else {
+        console.log(`ℹ️ No recent image analysis found in chat history`);
+      }
     }
 
     // Build conversation messages including history
