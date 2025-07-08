@@ -7,21 +7,39 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { registerHrApiRoutes } from "./hrApi";
 import { handleLineWebhook } from "./lineOaWebhook";
+import { pool, db } from "./db";
+import { agentChatbots } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Initialize OpenAI for CSAT analysis
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Function to calculate CSAT score using OpenAI
-async function calculateCSATScore(userId: string, channelType: string, channelId: string): Promise<number | undefined> {
+// Function to calculate CSAT score using OpenAI with agent memory limits
+async function calculateCSATScore(userId: string, channelType: string, channelId: string, agentId?: number): Promise<number | undefined> {
   try {
     console.log("🎯 Starting CSAT calculation for:", { 
       userId, 
       channelType, 
-      channelId: channelId.substring(0, 8) + '...' 
+      channelId: channelId.substring(0, 8) + '...',
+      agentId 
     });
     
-    // Get recent chat history for analysis
-    const messages = await storage.getChatHistory(userId, channelType, channelId, undefined, 20);
+    // Get agent memory limit if agentId is provided
+    let messageLimit = 20; // Default limit
+    if (agentId) {
+      try {
+        const [agent] = await db.select().from(agentChatbots).where(eq(agentChatbots.id, agentId));
+        if (agent && agent.memoryLimit) {
+          messageLimit = agent.memoryLimit;
+          console.log("📊 Using agent memory limit:", messageLimit);
+        }
+      } catch (error) {
+        console.log("⚠️ Could not fetch agent memory limit, using default:", messageLimit);
+      }
+    }
+    
+    // Get recent chat history for analysis using the same memory strategy as agent
+    const messages = await storage.getChatHistoryWithMemoryStrategy(userId, channelType, channelId, agentId, messageLimit);
     
     console.log("📊 Retrieved messages for CSAT:", messages.length);
     
@@ -30,12 +48,14 @@ async function calculateCSATScore(userId: string, channelType: string, channelId
       return undefined;
     }
     
-    // Format conversation for OpenAI
-    const conversationText = messages.map(msg => {
-      const role = msg.messageType === 'user' ? 'Customer' : 
-                   msg.messageType === 'agent' ? 'Human Agent' : 'AI Agent';
-      return `${role}: ${msg.content}`;
-    }).join('\n\n');
+    // Format conversation for OpenAI - only include user and agent messages for CSAT analysis
+    const conversationText = messages
+      .filter(msg => msg.messageType === 'user' || msg.messageType === 'agent' || msg.messageType === 'assistant')
+      .map(msg => {
+        const role = msg.messageType === 'user' ? 'Customer' : 
+                     msg.messageType === 'agent' ? 'Human Agent' : 'AI Agent';
+        return `${role}: ${msg.content}`;
+      }).join('\n\n');
     
     console.log("💬 Conversation sample for CSAT:", conversationText.substring(0, 200) + '...');
     
@@ -3678,20 +3698,49 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         }
       }
       
-      // Temporarily provide a test CSAT score to verify the endpoint works
+      // Get CSAT score using OpenAI analysis of actual conversation
       let csatScore = undefined;
       let actualChannelIdForCSAT = channelId;
       
-      // Simple test CSAT score based on message count
-      if (parseInt(row.total_messages) >= 20) {
-        csatScore = 75; // Good score for testing
-        console.log("🧪 Assigned test CSAT score:", csatScore, "for", row.total_messages, "messages");
-      } else if (parseInt(row.total_messages) >= 10) {
-        csatScore = 60; // Medium score
-        console.log("🧪 Assigned test CSAT score:", csatScore, "for", row.total_messages, "messages");
-      } else if (parseInt(row.total_messages) >= 3) {
-        csatScore = 50; // Lower score
-        console.log("🧪 Assigned test CSAT score:", csatScore, "for", row.total_messages, "messages");
+      // If we have enough messages, calculate CSAT score using OpenAI
+      if (parseInt(row.total_messages) >= 3) {
+        try {
+          console.log("🎯 Starting CSAT calculation for:", { 
+            targetUserId, 
+            channelType, 
+            originalChannelId: channelId.substring(0, 8) + '...',
+            actualChannelId: actualChannelIdForCSAT.substring(0, 8) + '...',
+            totalMessages: row.total_messages 
+          });
+          
+          // Get agent ID from first message to use correct memory limits
+          let agentId = undefined;
+          const firstMessageQuery = `
+            SELECT agent_id 
+            FROM chat_history 
+            WHERE user_id = $1 AND channel_type = $2 AND channel_id = $3 
+            ORDER BY created_at ASC 
+            LIMIT 1
+          `;
+          const firstMessageResult = await pool.query(firstMessageQuery, [targetUserId, channelType, actualChannelIdForCSAT]);
+          if (firstMessageResult.rows.length > 0) {
+            agentId = firstMessageResult.rows[0].agent_id;
+            console.log("📊 Found agent ID for CSAT:", agentId);
+          }
+          
+          // Add timeout for CSAT calculation to prevent hanging
+          const csatPromise = calculateCSATScore(targetUserId, channelType, actualChannelIdForCSAT, agentId);
+          const timeoutPromise = new Promise<undefined>((_, reject) => 
+            setTimeout(() => reject(new Error('CSAT calculation timeout')), 15000)
+          );
+          
+          csatScore = await Promise.race([csatPromise, timeoutPromise]);
+          
+          console.log("🎯 CSAT calculation completed:", { csatScore });
+        } catch (error) {
+          console.error("❌ Error calculating CSAT score:", error);
+          csatScore = undefined;
+        }
       } else {
         console.log("⚠️ Not enough messages for CSAT calculation:", row.total_messages);
       }
