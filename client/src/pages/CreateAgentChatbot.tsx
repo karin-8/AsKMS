@@ -228,7 +228,27 @@ export default function CreateAgentChatbot() {
       // Clear form and navigate back
       form.reset();
       setSelectedDocuments([]);
+      
+      // Invalidate multiple cache keys to ensure frontend updates
       queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
+      
+      // If editing, also invalidate the specific agent's documents cache
+      if (isEditing && editAgentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/agent-chatbots/${editAgentId}/documents`] 
+        });
+      }
+      
+      // Invalidate all agent documents cache to ensure AgentChatbots page updates
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          return query.queryKey[0] === "/api/agent-chatbots" || 
+                 (typeof query.queryKey[0] === "string" && 
+                  query.queryKey[0].includes("/api/agent-chatbots") && 
+                  query.queryKey[0].includes("/documents"));
+        }
+      });
+      
       window.history.back();
     },
     onError: (error) => {
@@ -260,7 +280,52 @@ export default function CreateAgentChatbot() {
     });
   };
 
+  // Document toggle mutations for real-time updates
+  const addDocumentMutation = useMutation({
+    mutationFn: async (documentId: number) => {
+      if (isEditing && editAgentId) {
+        return await apiRequest("POST", `/api/agent-chatbots/${editAgentId}/documents/${documentId}`);
+      }
+    },
+    onSuccess: () => {
+      if (isEditing && editAgentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/agent-chatbots/${editAgentId}/documents`] 
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
+      }
+    },
+  });
+
+  const removeDocumentMutation = useMutation({
+    mutationFn: async (documentId: number) => {
+      if (isEditing && editAgentId) {
+        return await apiRequest("DELETE", `/api/agent-chatbots/${editAgentId}/documents/${documentId}`);
+      }
+    },
+    onSuccess: () => {
+      if (isEditing && editAgentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/agent-chatbots/${editAgentId}/documents`] 
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
+      }
+    },
+  });
+
   const toggleDocument = (documentId: number) => {
+    const isSelected = selectedDocuments.includes(documentId);
+    
+    if (isEditing && editAgentId) {
+      // For editing mode, use API calls for real-time updates
+      if (isSelected) {
+        removeDocumentMutation.mutate(documentId);
+      } else {
+        addDocumentMutation.mutate(documentId);
+      }
+    }
+    
+    // Update local state immediately for UI responsiveness
     setSelectedDocuments((prev) =>
       prev.includes(documentId)
         ? prev.filter((id) => id !== documentId)
