@@ -3745,11 +3745,25 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         console.log("⚠️ Not enough messages for CSAT calculation:", row.total_messages);
       }
 
+      // Determine sentiment based on CSAT Score
+      let sentiment = 'neutral';
+      if (csatScore !== undefined) {
+        if (csatScore < 40) {
+          sentiment = 'bad';
+        } else if (csatScore >= 41 && csatScore <= 60) {
+          sentiment = 'neutral';
+        } else if (csatScore >= 61 && csatScore <= 80) {
+          sentiment = 'good';
+        } else if (csatScore > 80) {
+          sentiment = 'excellent';
+        }
+      }
+
       const summary = {
         totalMessages: parseInt(row.total_messages) || 0,
         firstContactAt: row.first_contact_at,
         lastActiveAt: row.last_active_at,
-        sentiment: 'neutral', // Could be enhanced with AI sentiment analysis
+        sentiment: sentiment,
         mainTopics: ['General Inquiry', 'Support'], // Could be enhanced with AI topic extraction
         csatScore: csatScore
       };

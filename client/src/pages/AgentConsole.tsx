@@ -73,9 +73,9 @@ interface ConversationSummary {
   totalMessages: number;
   firstContactAt: Date;
   lastActiveAt: Date;
-  sentiment: "positive" | "neutral" | "negative";
+  sentiment: "excellent" | "good" | "neutral" | "bad";
   mainTopics: string[];
-  resolutionStatus: "open" | "resolved" | "pending";
+  csatScore?: number;
 }
 
 // Helper function to safely format dates
@@ -252,13 +252,14 @@ export default function AgentConsole() {
     }
   }, [conversationMessages]);
 
-  // Query for conversation summary
-  const { data: conversationSummary, isLoading: conversationSummaryLoading } = useQuery({
+  // Query for conversation summary with refresh when conversation changes
+  const { data: conversationSummary, isLoading: conversationSummaryLoading, refetch: refetchSummary } = useQuery({
     queryKey: [
       "/api/agent-console/summary",
       selectedUser?.userId,
       selectedUser?.channelType,
       selectedUser?.channelId,
+      conversationMessages?.length, // Add message count to trigger refresh when new messages arrive
     ],
     queryFn: async () => {
       if (!selectedUser) return null;
@@ -271,6 +272,7 @@ export default function AgentConsole() {
         userId: selectedUser.userId,
         channelType: selectedUser.channelType,
         channelId: selectedUser.channelId,
+        messageCount: conversationMessages?.length,
       });
       const response = await apiRequest(
         "GET",
@@ -282,6 +284,8 @@ export default function AgentConsole() {
     },
     enabled: isAuthenticated && !!selectedUser,
     retry: false,
+    refetchInterval: wsConnected ? false : 30000, // Refresh every 30 seconds if WebSocket not connected
+    staleTime: 10000, // Consider data stale after 10 seconds to ensure fresh CSAT calculation
   });
 
   // Mutation for sending human agent message
@@ -300,6 +304,8 @@ export default function AgentConsole() {
     },
     onSuccess: () => {
       setMessageInput("");
+      
+      // Invalidate conversation messages
       queryClient.invalidateQueries({
         queryKey: [
           "/api/agent-console/conversation",
@@ -307,6 +313,16 @@ export default function AgentConsole() {
           selectedUser?.channelType,
           selectedUser?.channelId,
           selectedUser?.agentId,
+        ],
+      });
+      
+      // Also invalidate summary to refresh CSAT and sentiment after new message
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/summary",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
         ],
       });
     },
@@ -1062,16 +1078,31 @@ export default function AgentConsole() {
                                   </span>
                                   <Badge
                                     variant={
-                                      conversationSummary.sentiment ===
-                                      "positive"
+                                      conversationSummary.sentiment === "excellent"
                                         ? "default"
-                                        : conversationSummary.sentiment ===
-                                            "neutral"
-                                          ? "secondary"
-                                          : "destructive"
+                                        : conversationSummary.sentiment === "good"
+                                          ? "default"
+                                          : conversationSummary.sentiment === "neutral"
+                                            ? "secondary"
+                                            : "destructive"
+                                    }
+                                    className={
+                                      conversationSummary.sentiment === "excellent"
+                                        ? "bg-green-100 text-green-800 border-green-300"
+                                        : conversationSummary.sentiment === "good"
+                                          ? "bg-blue-100 text-blue-800 border-blue-300"
+                                          : conversationSummary.sentiment === "neutral"
+                                            ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                            : "bg-red-100 text-red-800 border-red-300"
                                     }
                                   >
-                                    {conversationSummary.sentiment}
+                                    {conversationSummary.sentiment === "excellent"
+                                      ? "Excellent"
+                                      : conversationSummary.sentiment === "good"
+                                        ? "Good"
+                                        : conversationSummary.sentiment === "neutral"
+                                          ? "Neutral"
+                                          : "Bad"}
                                   </Badge>
                                 </div>
                               )}
