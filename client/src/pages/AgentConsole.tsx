@@ -253,7 +253,7 @@ export default function AgentConsole() {
   }, [conversationMessages]);
 
   // Query for conversation summary
-  const { data: conversationSummary } = useQuery({
+  const { data: conversationSummary, isLoading: conversationSummaryLoading } = useQuery({
     queryKey: [
       "/api/agent-console/summary",
       selectedUser?.userId,
@@ -272,10 +272,11 @@ export default function AgentConsole() {
         channelType: selectedUser.channelType,
         channelId: selectedUser.channelId,
       });
-      const result = await apiRequest(
+      const response = await apiRequest(
         "GET",
         `/api/agent-console/summary?${params}`,
       );
+      const result = await response.json();
       console.log("📊 Agent Console: Summary API response:", result);
       return result;
     },
@@ -978,7 +979,14 @@ export default function AgentConsole() {
                         </div>
 
                         {/* Conversation Summary */}
-                        {conversationSummary && (
+                        {conversationSummaryLoading ? (
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-sm">
+                              Conversation Summary
+                            </h4>
+                            <div className="text-sm text-gray-500">Loading...</div>
+                          </div>
+                        ) : conversationSummary ? (
                           <div className="space-y-3">
                             <h4 className="font-semibold text-sm">
                               Conversation Summary
@@ -989,7 +997,7 @@ export default function AgentConsole() {
                                   Total Messages:
                                 </span>
                                 <span className="text-sm font-medium">
-                                  {conversationSummary.totalMessages}
+                                  {conversationSummary.totalMessages || 0}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -997,10 +1005,12 @@ export default function AgentConsole() {
                                   First Contact:
                                 </span>
                                 <span className="text-sm font-medium">
-                                  {safeFormatDate(
-                                    conversationSummary?.firstContactAt,
-                                    "MMM dd",
-                                  )}
+                                  {conversationSummary?.firstContactAt
+                                    ? safeFormatDate(
+                                        conversationSummary.firstContactAt,
+                                        "MMM dd, yyyy",
+                                      )
+                                    : "N/A"}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -1008,10 +1018,12 @@ export default function AgentConsole() {
                                   Last Active:
                                 </span>
                                 <span className="text-sm font-medium">
-                                  {safeFormatDate(
-                                    conversationSummary?.lastActiveAt,
-                                    "MMM dd, HH:mm",
-                                  )}
+                                  {conversationSummary?.lastActiveAt
+                                    ? safeFormatDate(
+                                        conversationSummary.lastActiveAt,
+                                        "MMM dd, HH:mm",
+                                      )
+                                    : "N/A"}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -1065,7 +1077,7 @@ export default function AgentConsole() {
                               )}
                             </div>
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Main Topics */}
                         {conversationSummary?.mainTopics &&

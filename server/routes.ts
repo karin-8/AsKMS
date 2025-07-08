@@ -3610,8 +3610,8 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         return res.status(400).json({ message: "Missing required parameters" });
       }
       
-      // Get conversation statistics
-      const query = `
+      // Get conversation statistics - try both channelId variants for Line OA
+      let query = `
         SELECT 
           COUNT(*) as total_messages,
           MIN(created_at) as first_contact_at,
@@ -3620,25 +3620,90 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         WHERE user_id = $1 AND channel_type = $2 AND channel_id = $3
       `;
       
-      const result = await pool.query(query, [targetUserId, channelType, channelId]);
-      const row = result.rows[0];
+      let result = await pool.query(query, [targetUserId, channelType, channelId]);
+      let row = result.rows[0];
       
-      // Get CSAT score using OpenAI analysis
+      console.log("📊 First query result for summary:", { 
+        targetUserId, 
+        channelType, 
+        channelId: channelId.substring(0, 8) + '...', 
+        totalMessages: row?.total_messages 
+      });
+      
+      // If no messages found and it's Line OA, try finding the actual Line user ID
+      if (parseInt(row.total_messages) === 0 && channelType === 'lineoa') {
+        console.log("🔍 No messages found, trying to find actual Line user ID");
+        
+        const lineUserQuery = `
+          SELECT DISTINCT channel_id, COUNT(*) as message_count
+          FROM chat_history 
+          WHERE user_id = $1 AND channel_type = $2
+          GROUP BY channel_id
+          ORDER BY message_count DESC
+          LIMIT 1
+        `;
+        
+        const lineUserResult = await pool.query(lineUserQuery, [targetUserId, channelType]);
+        
+        if (lineUserResult.rows.length > 0) {
+          const actualChannelId = lineUserResult.rows[0].channel_id;
+          console.log("🔍 Found actual channel ID:", actualChannelId.substring(0, 8) + '...');
+          
+          // Re-query with the actual channel ID
+          result = await pool.query(query, [targetUserId, channelType, actualChannelId]);
+          row = result.rows[0];
+          
+          console.log("📊 Second query result with actual channel ID:", { 
+            actualChannelId: actualChannelId.substring(0, 8) + '...', 
+            totalMessages: row?.total_messages 
+          });
+        }
+      }
+      
+      // Get CSAT score using OpenAI analysis (use the same channel ID logic)
       let csatScore = undefined;
-      try {
-        csatScore = await calculateCSATScore(targetUserId, channelType, channelId);
-      } catch (error) {
-        console.error("Error calculating CSAT score:", error);
+      let actualChannelIdForCSAT = channelId;
+      
+      // If we found a different channel ID above, use it for CSAT too
+      if (parseInt(row.total_messages) > 0) {
+        try {
+          // Check if we need to find the actual channel ID for CSAT
+          if (channelType === 'lineoa' && parseInt(row.total_messages) === 0) {
+            const lineUserQuery = `
+              SELECT DISTINCT channel_id, COUNT(*) as message_count
+              FROM chat_history 
+              WHERE user_id = $1 AND channel_type = $2
+              GROUP BY channel_id
+              ORDER BY message_count DESC
+              LIMIT 1
+            `;
+            const lineUserResult = await pool.query(lineUserQuery, [targetUserId, channelType]);
+            if (lineUserResult.rows.length > 0) {
+              actualChannelIdForCSAT = lineUserResult.rows[0].channel_id;
+            }
+          }
+          
+          csatScore = await calculateCSATScore(targetUserId, channelType, actualChannelIdForCSAT);
+        } catch (error) {
+          console.error("Error calculating CSAT score:", error);
+        }
       }
 
       const summary = {
-        totalMessages: parseInt(row.total_messages),
+        totalMessages: parseInt(row.total_messages) || 0,
         firstContactAt: row.first_contact_at,
         lastActiveAt: row.last_active_at,
         sentiment: 'neutral', // Could be enhanced with AI sentiment analysis
         mainTopics: ['General Inquiry', 'Support'], // Could be enhanced with AI topic extraction
         csatScore: csatScore
       };
+      
+      console.log("📊 Final summary response:", {
+        totalMessages: summary.totalMessages,
+        firstContactAt: summary.firstContactAt ? summary.firstContactAt.toISOString() : null,
+        lastActiveAt: summary.lastActiveAt ? summary.lastActiveAt.toISOString() : null,
+        csatScore: summary.csatScore
+      });
       
       res.json(summary);
     } catch (error) {
