@@ -320,10 +320,26 @@ async function getAiResponseDirectly(
       );
       if (imageContext) {
         console.log(
-          `✅ Image analysis found: ${imageContext.substring(0, 100)}...`,
+          `✅ Image analysis found: ${imageContext.substring(0, 200)}...`,
         );
+        
+        // Debug: Show all system messages for analysis
+        const systemMessages = chatHistory.filter(
+          (msg) => msg.messageType === "system" && msg.metadata?.messageType === "image_analysis"
+        );
+        console.log(`🔍 Found ${systemMessages.length} image analysis messages in chat history`);
+        systemMessages.forEach((msg, index) => {
+          console.log(`📋 Analysis ${index + 1}: ${msg.content.substring(0, 150)}... (ID: ${msg.metadata?.relatedImageMessageId})`);
+        });
       } else {
         console.log(`ℹ️ No recent image analysis found in chat history`);
+        
+        // Debug: Show what system messages we have
+        const allSystemMessages = chatHistory.filter((msg) => msg.messageType === "system");
+        console.log(`🔍 Total system messages in history: ${allSystemMessages.length}`);
+        allSystemMessages.forEach((msg, index) => {
+          console.log(`📝 System ${index + 1}: ${msg.content.substring(0, 100)}... (metadata: ${JSON.stringify(msg.metadata)})`);
+        });
       }
     }
 
@@ -332,6 +348,8 @@ async function getAiResponseDirectly(
       {
         role: "system",
         content: `${agent.systemPrompt}${contextPrompt}
+
+สำคัญ: เมื่อผู้ใช้ถามเกี่ยวกับรูปภาพหรือภาพที่ส่งมา และมีข้อมูลการวิเคราะห์รูปภาพในข้อความของผู้ใช้ ให้ใช้ข้อมูลนั้นในการตอบคำถาม อย่าบอกว่า "ไม่สามารถดูรูปภาพได้" หากมีข้อมูลการวิเคราะห์รูปภาพให้แล้ว
 
 ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
 ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
