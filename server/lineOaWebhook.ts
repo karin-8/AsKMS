@@ -202,12 +202,14 @@ export async function sendLineImagemapMessage(
     const host = process.env.REPLIT_DOMAINS || 'localhost:5000';
     const absoluteBaseUrl = baseUrl.startsWith('http') ? baseUrl : `${protocol}//${host}${baseUrl}`;
     
-    console.log('🖼️ Sending Line imagemap message:', {
+    console.log('🖼️ IMAGEMAP FUNCTION CALLED - Sending Line imagemap message:', {
       userId,
+      baseUrl,
       absoluteBaseUrl,
       linkUri,
       altText,
-      dimensions: `${width}x${height}`
+      dimensions: `${width}x${height}`,
+      accessToken: channelAccessToken ? 'Available' : 'Missing'
     });
 
     const message = {
@@ -246,11 +248,20 @@ export async function sendLineImagemapMessage(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ Line Push Imagemap API Error:", errorText);
+      console.error("❌ Line Push Imagemap API Error:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        requestData: {
+          userId,
+          absoluteBaseUrl,
+          linkUri
+        }
+      });
       return false;
     }
 
-    console.log("✅ Line imagemap message sent successfully to:", userId);
+    console.log("✅ IMAGEMAP SUCCESS - Line imagemap message sent successfully to:", userId);
     return true;
   } catch (error) {
     console.error("💥 Error sending Line imagemap message:", error);

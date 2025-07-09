@@ -4523,7 +4523,12 @@ Memory management: Keep track of conversation context within the last ${agentCon
       // Send the imagemap via Line OA if applicable
       if (channelType === 'lineoa') {
         try {
-          console.log('🔍 Looking for Line OA configuration for imagemap sending...');
+          console.log('🔍 IMAGEMAP ENDPOINT - Looking for Line OA configuration for imagemap sending...', {
+            channelType,
+            channelId,
+            agentId,
+            linkUri
+          });
           
           // Get Line channel access token from agent using direct DB query
           const query = `SELECT lineoa_config FROM agent_chatbots WHERE id = $1`;
@@ -4531,7 +4536,11 @@ Memory management: Keep track of conversation context within the last ${agentCon
           
           if (result.rows.length > 0) {
             const lineoaConfig = result.rows[0].lineoa_config;
-            console.log('🔍 Agent lineoa_config for imagemap:', lineoaConfig);
+            console.log('🔍 IMAGEMAP ENDPOINT - Agent lineoa_config found:', {
+              hasConfig: !!lineoaConfig,
+              hasAccessToken: !!(lineoaConfig?.accessToken),
+              configKeys: lineoaConfig ? Object.keys(lineoaConfig) : []
+            });
             
             if (lineoaConfig?.accessToken) {
               const { sendLineImagemapMessage } = await import('./lineOaWebhook');
@@ -4540,11 +4549,12 @@ Memory management: Keep track of conversation context within the last ${agentCon
               const fileNameWithoutExt = imageFile.filename.replace(/\.[^/.]+$/, "");
               const baseUrl = `/uploads/${fileNameWithoutExt}`;
               
-              console.log('📤 Sending Line imagemap message with:', {
-                userId: channelId, // channelId is the Line user ID
+              console.log('📤 IMAGEMAP ENDPOINT - About to call sendLineImagemapMessage with:', {
+                userId: channelId,
                 baseUrl,
                 linkUri,
-                accessToken: lineoaConfig.accessToken ? 'Available' : 'Missing'
+                altText: altText || 'ดูภาพเพิ่มเติม',
+                dimensions: '1040x1040'
               });
               
               const success = await sendLineImagemapMessage(
@@ -4558,19 +4568,21 @@ Memory management: Keep track of conversation context within the last ${agentCon
               );
               
               if (success) {
-                console.log('✅ Successfully sent Line imagemap message with link:', linkUri);
+                console.log('✅ IMAGEMAP ENDPOINT - Successfully sent Line imagemap message with link:', linkUri);
               } else {
-                console.error('❌ Failed to send Line imagemap message');
+                console.error('❌ IMAGEMAP ENDPOINT - Failed to send Line imagemap message');
               }
             } else {
-              console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
+              console.log('⚠️ IMAGEMAP ENDPOINT - No Line Channel Access Token found in lineoa_config for agent:', agentId);
             }
           } else {
-            console.log('⚠️ Agent not found for imagemap:', agentId);
+            console.log('⚠️ IMAGEMAP ENDPOINT - Agent not found for imagemap:', agentId);
           }
         } catch (lineError) {
-          console.error('❌ Error sending Line imagemap message:', lineError);
+          console.error('❌ IMAGEMAP ENDPOINT - Error sending Line imagemap message:', lineError);
         }
+      } else {
+        console.log('🔍 IMAGEMAP ENDPOINT - Not Line OA channel, skipping imagemap sending. Channel type:', channelType);
       }
       
       res.json({ 
