@@ -4549,6 +4549,50 @@ Memory management: Keep track of conversation context within the last ${agentCon
               const fileNameWithoutExt = imageFile.filename.replace(/\.[^/.]+$/, "");
               const baseUrl = `/uploads/${fileNameWithoutExt}`;
               
+              // Line Imagemap requires files to be accessible without extension
+              // Create copies of the file with different size suffixes that Line expects
+              const fs = require('fs');
+              const path = require('path');
+              
+              const originalFilePath = path.join('./uploads', imageFile.filename);
+              const baseFilePath = path.join('./uploads', fileNameWithoutExt);
+              
+              // Create size-specific versions for Line Imagemap API
+              const imageSizes = [240, 300, 460, 700, 1040];
+              
+              console.log('📁 Creating Line Imagemap size variants:', {
+                originalFile: originalFilePath,
+                baseFile: baseFilePath,
+                sizes: imageSizes
+              });
+              
+              try {
+                // Create base file without extension for Line API
+                if (fs.existsSync(originalFilePath)) {
+                  fs.copyFileSync(originalFilePath, baseFilePath);
+                  console.log('✅ Created base imagemap file:', baseFilePath);
+                  
+                  // Create size-specific variants
+                  for (const size of imageSizes) {
+                    const sizedFilePath = `${baseFilePath}/${size}`;
+                    const sizedDir = path.dirname(sizedFilePath);
+                    
+                    // Create directory if it doesn't exist
+                    if (!fs.existsSync(sizedDir)) {
+                      fs.mkdirSync(sizedDir, { recursive: true });
+                    }
+                    
+                    // Copy file to size-specific path
+                    fs.copyFileSync(originalFilePath, sizedFilePath);
+                    console.log(`✅ Created size variant ${size}:`, sizedFilePath);
+                  }
+                } else {
+                  console.error('❌ Original image file not found:', originalFilePath);
+                }
+              } catch (fileError) {
+                console.error('❌ Error creating imagemap size variants:', fileError);
+              }
+              
               console.log('📤 IMAGEMAP ENDPOINT - About to call sendLineImagemapMessage with:', {
                 userId: channelId,
                 baseUrl,

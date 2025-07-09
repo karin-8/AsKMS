@@ -211,6 +211,21 @@ export async function sendLineImagemapMessage(
       dimensions: `${width}x${height}`,
       accessToken: channelAccessToken ? 'Available' : 'Missing'
     });
+    
+    // Test image URL accessibility
+    try {
+      const testUrl = `${absoluteBaseUrl}/1040`;
+      console.log('🔍 Testing image URL accessibility:', testUrl);
+      
+      const testResponse = await fetch(testUrl, { method: 'HEAD' });
+      console.log('🔍 Image URL test result:', {
+        url: testUrl,
+        status: testResponse.status,
+        accessible: testResponse.ok
+      });
+    } catch (testError) {
+      console.error('❌ Image URL test failed:', testError);
+    }
 
     const message = {
       type: "imagemap",
