@@ -324,12 +324,14 @@ async function getAiResponseDirectly(
     // Get agent's documents for context with actual content
     const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
     let contextPrompt = "";
+    
+    // Initialize documentContents in the correct scope
+    const documentContents: string[] = [];
 
     if (agentDocs.length > 0) {
       console.log(`📚 Found ${agentDocs.length} documents for agent`);
 
       // Get actual document content for each linked document
-      const documentContents: string[] = [];
       for (const agentDoc of agentDocs) {
         try {
           const document = await storage.getDocument(
