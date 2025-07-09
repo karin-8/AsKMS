@@ -251,6 +251,97 @@ export default function CreateAgentChatbot() {
         blockedTopics: agent.blockedTopics || [],
         memoryEnabled: agent.memoryEnabled || false,
         memoryLimit: agent.memoryLimit || 10,
+        // Advanced Guardrails Configuration
+        guardrailsEnabled: (agent.guardrailsConfig !== null && agent.guardrailsConfig !== undefined),
+        guardrailsConfig: agent.guardrailsConfig ? {
+          contentFiltering: {
+            enabled: agent.guardrailsConfig.contentFiltering?.enabled ?? true,
+            blockProfanity: agent.guardrailsConfig.contentFiltering?.blockProfanity ?? true,
+            blockHateSpeech: agent.guardrailsConfig.contentFiltering?.blockHateSpeech ?? true,
+            blockSexualContent: agent.guardrailsConfig.contentFiltering?.blockSexualContent ?? true,
+            blockViolence: agent.guardrailsConfig.contentFiltering?.blockViolence ?? true,
+            customBlockedWords: agent.guardrailsConfig.contentFiltering?.customBlockedWords ?? [],
+          },
+          topicControl: {
+            enabled: agent.guardrailsConfig.topicControl?.enabled ?? false,
+            allowedTopics: agent.guardrailsConfig.topicControl?.allowedTopics ?? [],
+            blockedTopics: agent.guardrailsConfig.topicControl?.blockedTopics ?? [],
+            strictMode: agent.guardrailsConfig.topicControl?.strictMode ?? false,
+          },
+          privacyProtection: {
+            enabled: agent.guardrailsConfig.privacyProtection?.enabled ?? true,
+            blockPersonalInfo: agent.guardrailsConfig.privacyProtection?.blockPersonalInfo ?? true,
+            blockFinancialInfo: agent.guardrailsConfig.privacyProtection?.blockFinancialInfo ?? true,
+            blockHealthInfo: agent.guardrailsConfig.privacyProtection?.blockHealthInfo ?? true,
+            maskPhoneNumbers: agent.guardrailsConfig.privacyProtection?.maskPhoneNumbers ?? true,
+            maskEmails: agent.guardrailsConfig.privacyProtection?.maskEmails ?? true,
+          },
+          responseQuality: {
+            enabled: agent.guardrailsConfig.responseQuality?.enabled ?? true,
+            maxResponseLength: agent.guardrailsConfig.responseQuality?.maxResponseLength ?? 1000,
+            minResponseLength: agent.guardrailsConfig.responseQuality?.minResponseLength ?? 10,
+            requireSourceCitation: agent.guardrailsConfig.responseQuality?.requireSourceCitation ?? false,
+            preventHallucination: agent.guardrailsConfig.responseQuality?.preventHallucination ?? true,
+          },
+          toxicityPrevention: {
+            enabled: agent.guardrailsConfig.toxicityPrevention?.enabled ?? true,
+            toxicityThreshold: agent.guardrailsConfig.toxicityPrevention?.toxicityThreshold ?? 0.3,
+            blockSarcasm: agent.guardrailsConfig.toxicityPrevention?.blockSarcasm ?? false,
+            blockInsults: agent.guardrailsConfig.toxicityPrevention?.blockInsults ?? true,
+            blockAggressiveLanguage: agent.guardrailsConfig.toxicityPrevention?.blockAggressiveLanguage ?? true,
+          },
+          businessContext: {
+            enabled: agent.guardrailsConfig.businessContext?.enabled ?? false,
+            companyName: agent.guardrailsConfig.businessContext?.companyName ?? "",
+            brandVoice: agent.guardrailsConfig.businessContext?.brandVoice ?? "professional",
+            industryContext: agent.guardrailsConfig.businessContext?.industryContext ?? "",
+            complianceRequirements: agent.guardrailsConfig.businessContext?.complianceRequirements ?? [],
+          },
+        } : {
+          contentFiltering: {
+            enabled: true,
+            blockProfanity: true,
+            blockHateSpeech: true,
+            blockSexualContent: true,
+            blockViolence: true,
+            customBlockedWords: [],
+          },
+          topicControl: {
+            enabled: false,
+            allowedTopics: [],
+            blockedTopics: [],
+            strictMode: false,
+          },
+          privacyProtection: {
+            enabled: true,
+            blockPersonalInfo: true,
+            blockFinancialInfo: true,
+            blockHealthInfo: true,
+            maskPhoneNumbers: true,
+            maskEmails: true,
+          },
+          responseQuality: {
+            enabled: true,
+            maxResponseLength: 1000,
+            minResponseLength: 10,
+            requireSourceCitation: false,
+            preventHallucination: true,
+          },
+          toxicityPrevention: {
+            enabled: true,
+            toxicityThreshold: 0.3,
+            blockSarcasm: false,
+            blockInsults: true,
+            blockAggressiveLanguage: true,
+          },
+          businessContext: {
+            enabled: false,
+            companyName: "",
+            brandVoice: "professional",
+            industryContext: "",
+            complianceRequirements: [],
+          },
+        },
       });
 
       // Load selected documents
