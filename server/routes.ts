@@ -4422,6 +4422,156 @@ Memory management: Keep track of conversation context within the last ${agentCon
     });
   });
 
+  // Agent Console - Send Imagemap Message (clickable image with URL redirect)
+  app.post('/api/agent-console/send-imagemap', isAuthenticated, upload.single('image'), async (req: any, res) => {
+    try {
+      const { userId: targetUserId, channelType, channelId, agentId, linkUri, altText } = req.body;
+      const imageFile = req.file;
+      
+      if (!targetUserId || !channelType || !channelId || !agentId || !linkUri) {
+        return res.status(400).json({ message: "Missing required parameters (linkUri is required)" });
+      }
+      
+      if (!imageFile) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      console.log('🖼️ Agent Console: Processing imagemap upload:', {
+        targetUserId,
+        channelType, 
+        channelId,
+        agentId,
+        linkUri,
+        altText: altText || 'ดูภาพเพิ่มเติม',
+        fileName: imageFile.filename,
+        size: imageFile.size,
+        mimetype: imageFile.mimetype
+      });
+      
+      // Create image URL for serving
+      const imageUrl = `/uploads/${imageFile.filename}`;
+      
+      // Store imagemap message in chat history
+      const chatHistoryRecord = await storage.createChatHistory({
+        userId: targetUserId,
+        channelType,
+        channelId,
+        agentId: parseInt(agentId),
+        messageType: 'agent',
+        content: `[รูปภาพคลิกได้] ${altText || 'ดูภาพเพิ่มเติม'} → ${linkUri}`,
+        metadata: {
+          messageType: 'imagemap',
+          imageUrl: imageUrl,
+          linkUri: linkUri,
+          altText: altText || 'ดูภาพเพิ่มเติม',
+          fileName: imageFile.originalname,
+          fileSize: imageFile.size,
+          mimeType: imageFile.mimetype,
+          sentBy: req.user.claims.sub,
+          humanAgent: true,
+          humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+        }
+      });
+
+      // Create event tracking record
+      try {
+        const { eventTracking } = await import("@shared/schema");
+        
+        await db.insert(eventTracking).values({
+          eventType: 'imagemap_sent',
+          userId: req.user.claims.sub,
+          channelType,
+          channelId,
+          agentId: parseInt(agentId),
+          messageId: chatHistoryRecord.id,
+          targetUrl: linkUri,
+          userAgent: req.get('User-Agent'),
+          ipAddress: req.ip,
+          metadata: {
+            sentByAgent: true,
+            agentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent',
+            imageUrl: imageUrl,
+            altText: altText || 'ดูภาพเพิ่มเติม',
+            fileName: imageFile.originalname
+          }
+        });
+      } catch (trackingError) {
+        console.error("Error creating imagemap event tracking:", trackingError);
+      }
+
+      // Broadcast new message to Agent Console via WebSocket
+      if (typeof (global as any).broadcastToAgentConsole === 'function') {
+        (global as any).broadcastToAgentConsole({
+          type: 'new_message',
+          data: {
+            userId: targetUserId,
+            channelType,
+            channelId,
+            agentId: parseInt(agentId),
+            userMessage: '',
+            aiResponse: `[รูปภาพคลิกได้] ${altText || 'ดูภาพเพิ่มเติม'} → ${linkUri}`,
+            messageType: 'agent',
+            timestamp: new Date().toISOString(),
+            humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent',
+            imageUrl: imageUrl,
+            linkUri: linkUri
+          }
+        });
+        console.log('📡 Broadcasted human agent imagemap message to Agent Console');
+      }
+      
+      // Send the imagemap via Line OA if applicable
+      if (channelType === 'lineoa') {
+        try {
+          // Get Line channel access token from agent using direct DB query
+          const query = `SELECT lineoa_config FROM agent_chatbots WHERE id = $1`;
+          const result = await pool.query(query, [parseInt(agentId)]);
+          
+          if (result.rows.length > 0) {
+            const lineoaConfig = result.rows[0].lineoa_config;
+            console.log('🔍 Agent lineoa_config for imagemap:', lineoaConfig);
+            
+            if (lineoaConfig?.accessToken) {
+              const { sendLineImagemapMessage } = await import('./lineOaWebhook');
+              
+              // Generate base URL for Line Imagemap API (requires removal of file extension)
+              const fileNameWithoutExt = imageFile.filename.replace(/\.[^/.]+$/, "");
+              const baseUrl = `/uploads/${fileNameWithoutExt}`;
+              
+              await sendLineImagemapMessage(
+                targetUserId,
+                baseUrl,
+                linkUri,
+                lineoaConfig.accessToken,
+                altText || 'ดูภาพเพิ่มเติม',
+                1040, // Standard Line imagemap width
+                1040  // Standard Line imagemap height
+              );
+              console.log('✅ Successfully sent Line imagemap message with link:', linkUri);
+            } else {
+              console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
+            }
+          } else {
+            console.log('⚠️ Agent not found for imagemap:', agentId);
+          }
+        } catch (lineError) {
+          console.error('❌ Error sending Line imagemap message:', lineError);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Imagemap message sent successfully",
+        imageUrl: imageUrl,
+        linkUri: linkUri
+      });
+      
+    } catch (error) {
+      console.error('❌ Error in Agent Console imagemap sending:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Export function to broadcast messages to all connected clients
   (global as any).broadcastToAgentConsole = (message: any) => {
     console.log(`📡 Broadcasting to ${wsClients.size} connected clients:`, message);

@@ -122,8 +122,14 @@ export default function AgentConsole() {
   const [wsConnected, setWsConnected] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagemapUrl, setImagemapUrl] = useState("");
+  const [imagemapAltText, setImagemapAltText] = useState("");
+  const [uploadMode, setUploadMode] = useState<"regular" | "imagemap">("regular");
   const [redirectUrl, setRedirectUrl] = useState<string>("");
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [imageRedirectUrl, setImageRedirectUrl] = useState("");
+  const [imageAltText, setImageAltText] = useState("ดูภาพเพิ่มเติม");
+  const [showImageMapForm, setShowImageMapForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -403,6 +409,80 @@ export default function AgentConsole() {
     },
   });
 
+  // Mutation for sending imagemap messages
+  const sendImagemapMutation = useMutation({
+    mutationFn: async ({ image, linkUri, altText }: { image: File; linkUri: string; altText?: string }) => {
+      if (!selectedUser) throw new Error("No user selected");
+
+      const formData = new FormData();
+      formData.append('image', image);
+      formData.append('userId', selectedUser.userId);
+      formData.append('channelType', selectedUser.channelType);
+      formData.append('channelId', selectedUser.channelId);
+      formData.append('agentId', selectedUser.agentId.toString());
+      formData.append('linkUri', linkUri);
+      if (altText?.trim()) {
+        formData.append('altText', altText);
+      }
+
+      return await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
+    },
+    onSuccess: () => {
+      setMessageInput("");
+      setSelectedImage(null);
+      setImagePreview(null);
+      setImagemapUrl("");
+      setImagemapAltText("");
+      setUploadMode("regular");
+      
+      // Invalidate conversation messages
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/conversation",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+          selectedUser?.agentId,
+        ],
+      });
+      
+      // Also invalidate summary
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/summary",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+          selectedUser?.agentId,
+        ],
+      });
+
+      toast({
+        title: "Imagemap Sent",
+        description: "Clickable image message sent successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+
+      toast({
+        title: "Error",
+        description: "Failed to send imagemap. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation for uploading and sending image
   const sendImageMutation = useMutation({
     mutationFn: async ({ image, message }: { image: File; message?: string }) => {
@@ -425,6 +505,9 @@ export default function AgentConsole() {
       setMessageInput("");
       setSelectedImage(null);
       setImagePreview(null);
+      setImagemapUrl("");
+      setImagemapAltText("");
+      setUploadMode("regular");
       
       // Invalidate conversation messages
       queryClient.invalidateQueries({
@@ -480,8 +563,25 @@ export default function AgentConsole() {
 
   const handleSendMessage = () => {
     if (selectedImage) {
-      // Send image with optional text
-      sendImageMutation.mutate({ image: selectedImage, message: messageInput });
+      if (uploadMode === "imagemap") {
+        // Send imagemap with required URL
+        if (!imagemapUrl.trim()) {
+          toast({
+            title: "URL Required",
+            description: "Please enter a URL for the imagemap.",
+            variant: "destructive",
+          });
+          return;
+        }
+        sendImagemapMutation.mutate({ 
+          image: selectedImage, 
+          linkUri: imagemapUrl,
+          altText: imagemapAltText || 'ดูภาพเพิ่มเติม'
+        });
+      } else {
+        // Send regular image with optional text
+        sendImageMutation.mutate({ image: selectedImage, message: messageInput });
+      }
     } else if (messageInput.trim()) {
       // Send text message
       sendMessageMutation.mutate({ message: messageInput });
@@ -528,6 +628,9 @@ export default function AgentConsole() {
     setSelectedImage(null);
     setImagePreview(null);
     setRedirectUrl("");
+    setImagemapUrl("");
+    setImagemapAltText("");
+    setUploadMode("regular");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -1146,6 +1249,7 @@ export default function AgentConsole() {
                                         </p>
                                         <p className="text-xs text-gray-500">
                                           {selectedImage && (selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                                          {uploadMode === "imagemap" && " • Clickable Image"}
                                         </p>
                                       </div>
                                       <Button
@@ -1157,6 +1261,29 @@ export default function AgentConsole() {
                                         <X className="w-3 h-3" />
                                       </Button>
                                     </div>
+                                    
+                                    {/* Imagemap URL Configuration */}
+                                    {uploadMode === "imagemap" && (
+                                      <div className="mt-3 space-y-2">
+                                        <div className="bg-blue-50 p-2 rounded text-xs text-blue-700">
+                                          💡 This image will be clickable and redirect users to your specified URL
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Input
+                                            placeholder="Enter URL (e.g., https://example.com/product)"
+                                            value={imagemapUrl}
+                                            onChange={(e) => setImagemapUrl(e.target.value)}
+                                            className="text-sm"
+                                          />
+                                          <Input
+                                            placeholder="Alt text (optional, e.g., ดูรายละเอียดเพิ่มเติม)"
+                                            value={imagemapAltText}
+                                            onChange={(e) => setImagemapAltText(e.target.value)}
+                                            className="text-sm"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1188,11 +1315,24 @@ export default function AgentConsole() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                       <DropdownMenuItem
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onClick={() => {
+                                          setUploadMode("regular");
+                                          fileInputRef.current?.click();
+                                        }}
                                         className="flex items-center space-x-2"
                                       >
                                         <Camera className="w-4 h-4" />
                                         <span>Upload Image</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setUploadMode("imagemap");
+                                          fileInputRef.current?.click();
+                                        }}
+                                        className="flex items-center space-x-2"
+                                      >
+                                        <Camera className="w-4 h-4 text-blue-500" />
+                                        <span>Upload Clickable Image</span>
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() => setShowImageOptions(true)}
@@ -1208,11 +1348,12 @@ export default function AgentConsole() {
                                     disabled={
                                       (!messageInput.trim() && !selectedImage) ||
                                       sendMessageMutation.isPending ||
-                                      sendImageMutation.isPending
+                                      sendImageMutation.isPending ||
+                                      sendImagemapMutation.isPending
                                     }
                                     className="bg-green-500 hover:bg-green-600"
                                   >
-                                    {(sendMessageMutation.isPending || sendImageMutation.isPending) ? (
+                                    {(sendMessageMutation.isPending || sendImageMutation.isPending || sendImagemapMutation.isPending) ? (
                                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                     ) : (
                                       <Send className="w-4 h-4" />
@@ -1280,16 +1421,22 @@ export default function AgentConsole() {
                               
                               <div className="text-xs text-gray-500">
                                 {selectedImage ? (
-                                  <span className="text-blue-600">
-                                    📸 Image ready to send{messageInput.trim() ? " with message" : ""}
-                                  </span>
+                                  uploadMode === "imagemap" ? (
+                                    <span className="text-blue-600">
+                                      🖱️ Clickable image ready {imagemapUrl ? "to send" : "- please enter URL"}
+                                    </span>
+                                  ) : (
+                                    <span className="text-blue-600">
+                                      📸 Image ready to send{messageInput.trim() ? " with message" : ""}
+                                    </span>
+                                  )
                                 ) : showImageOptions ? (
                                   <span className="text-blue-600">
                                     🔗 Preparing URL redirect...
                                   </span>
                                 ) : (
                                   <span>
-                                    💡 Tip: Use the upload menu to send images or URL redirects to users
+                                    💡 Tip: Use the upload menu to send images, clickable images, or URL redirects
                                   </span>
                                 )}
                               </div>
