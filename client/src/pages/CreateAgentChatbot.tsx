@@ -219,8 +219,11 @@ export default function CreateAgentChatbot() {
     },
     onSuccess: (data) => {
       console.log("Test agent response received:", data);
+      console.log("Setting test response to:", data.response);
+      console.log("Current testResponse state:", testResponse);
       setTestResponse(data.response || "No response received");
       setIsTestingAgent(false);
+      console.log("After setting, testResponse should be:", data.response);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -1565,7 +1568,7 @@ export default function CreateAgentChatbot() {
 
                             {/* Test Response */}
                             <div className="space-y-2">
-                              <Label>Agent Response</Label>
+                              <Label>Agent Response (Debug: "{testResponse}")</Label>
                               {testResponse ? (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                   <div className="flex items-start space-x-3">
