@@ -438,8 +438,10 @@ export default function AgentConsole() {
       }
 
       console.log('🔥 FRONTEND - Making API request to /api/agent-console/send-imagemap');
-      const result = await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
-      console.log('🔥 FRONTEND - API request result:', result);
+      const response = await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
+      console.log('🔥 FRONTEND - Raw response received:', response);
+      const result = await response.json();
+      console.log('🔥 FRONTEND - Parsed result:', result);
       return result;
     },
     onSuccess: () => {
@@ -588,6 +590,11 @@ export default function AgentConsole() {
           });
           return;
         }
+        console.log('🔥 FRONTEND - Calling sendImagemapMutation.mutate with:', {
+          image: selectedImage.name,
+          linkUri: imagemapUrl,
+          altText: imagemapAltText || 'ดูภาพเพิ่มเติม'
+        });
         sendImagemapMutation.mutate({ 
           image: selectedImage, 
           linkUri: imagemapUrl,
