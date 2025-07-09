@@ -69,6 +69,34 @@ export class GuardrailsService {
     this.guardrailsApiKey = guardrailsApiKey;
   }
 
+  // Helper function to extract JSON from markdown-wrapped responses
+  private extractJsonFromResponse(content: string): any {
+    try {
+      // First try direct JSON parsing
+      return JSON.parse(content);
+    } catch (error) {
+      // If that fails, try to extract JSON from markdown code blocks
+      const jsonMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[1]);
+        } catch (innerError) {
+          console.error('Failed to parse JSON from markdown:', innerError);
+          throw innerError;
+        }
+      }
+      
+      // If no markdown blocks found, try to find JSON-like content
+      const cleanContent = content.replace(/```json\s*\n?|\n?\s*```/g, '').trim();
+      try {
+        return JSON.parse(cleanContent);
+      } catch (finalError) {
+        console.error('Failed to parse JSON after cleaning:', finalError);
+        throw finalError;
+      }
+    }
+  }
+
   async evaluateInput(userInput: string, context?: any): Promise<GuardrailResult> {
     console.log("\n🛡️ === GUARDRAILS INPUT EVALUATION ===");
     console.log("📝 User Input:", userInput.substring(0, 100) + (userInput.length > 100 ? "..." : ""));
@@ -256,7 +284,7 @@ export class GuardrailsService {
         temperature: 0.1
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = this.extractJsonFromResponse(response.choices[0].message.content || '{}');
       
       return {
         allowed: result.allowed,
@@ -384,7 +412,7 @@ export class GuardrailsService {
         temperature: 0.1
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = this.extractJsonFromResponse(response.choices[0].message.content || '{}');
       const threshold = this.config.toxicityPrevention?.toxicityThreshold || 0.6;
       const isToxic = result.toxicity_score > threshold;
 
@@ -509,7 +537,7 @@ export class GuardrailsService {
         temperature: 0.1
       });
 
-      const result = JSON.parse(response_analysis.choices[0].message.content || '{}');
+      const result = this.extractJsonFromResponse(response_analysis.choices[0].message.content || '{}');
 
       return {
         allowed: result.is_supported,
@@ -559,7 +587,7 @@ export class GuardrailsService {
         temperature: 0.1
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = this.extractJsonFromResponse(response.choices[0].message.content || '{}');
 
       return {
         allowed: result.is_professional,
