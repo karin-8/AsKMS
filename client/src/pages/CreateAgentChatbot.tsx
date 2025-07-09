@@ -210,15 +210,16 @@ export default function CreateAgentChatbot() {
   // Test agent mutation
   const testAgentMutation = useMutation({
     mutationFn: async (testData: { message: string; agentConfig: CreateAgentForm }) => {
-      return await apiRequest("POST", "/api/agent-chatbots/test", {
+      const response = await apiRequest("POST", "/api/agent-chatbots/test", {
         message: testData.message,
         agentConfig: testData.agentConfig,
         documentIds: selectedDocuments,
       });
+      return await response.json();
     },
-    onSuccess: (response) => {
-      console.log("Test agent response received:", response);
-      setTestResponse(response.response || "No response received");
+    onSuccess: (data) => {
+      console.log("Test agent response received:", data);
+      setTestResponse(data.response || "No response received");
       setIsTestingAgent(false);
     },
     onError: (error) => {
