@@ -70,57 +70,105 @@ export class GuardrailsService {
   }
 
   async evaluateInput(userInput: string, context?: any): Promise<GuardrailResult> {
+    console.log("\n🛡️ === GUARDRAILS INPUT EVALUATION ===");
+    console.log("📝 User Input:", userInput.substring(0, 100) + (userInput.length > 100 ? "..." : ""));
+    console.log("⚙️ Guardrails Config:", JSON.stringify(this.config, null, 2));
+    
     const results: GuardrailResult[] = [];
 
     // Content filtering
     if (this.config.contentFiltering?.enabled) {
+      console.log("🔍 Checking Content Filtering...");
       const contentResult = await this.checkContentFiltering(userInput);
+      console.log("📊 Content Filtering Result:", JSON.stringify(contentResult, null, 2));
       results.push(contentResult);
+    } else {
+      console.log("⏭️ Content Filtering: DISABLED");
     }
 
     // Topic control
     if (this.config.topicControl?.enabled) {
+      console.log("🎯 Checking Topic Control...");
       const topicResult = await this.checkTopicControl(userInput, context);
+      console.log("📊 Topic Control Result:", JSON.stringify(topicResult, null, 2));
       results.push(topicResult);
+    } else {
+      console.log("⏭️ Topic Control: DISABLED");
     }
 
     // Privacy protection
     if (this.config.privacyProtection?.enabled) {
+      console.log("🔒 Checking Privacy Protection...");
       const privacyResult = await this.checkPrivacyProtection(userInput);
+      console.log("📊 Privacy Protection Result:", JSON.stringify(privacyResult, null, 2));
       results.push(privacyResult);
+    } else {
+      console.log("⏭️ Privacy Protection: DISABLED");
     }
 
     // Toxicity prevention
     if (this.config.toxicityPrevention?.enabled) {
+      console.log("☢️ Checking Toxicity Prevention...");
       const toxicityResult = await this.checkToxicity(userInput);
+      console.log("📊 Toxicity Prevention Result:", JSON.stringify(toxicityResult, null, 2));
       results.push(toxicityResult);
+    } else {
+      console.log("⏭️ Toxicity Prevention: DISABLED");
     }
 
-    return this.combineResults(results);
+    const finalResult = this.combineResults(results);
+    console.log("🏁 Final Guardrails Result:", JSON.stringify(finalResult, null, 2));
+    console.log("🛡️ === END GUARDRAILS INPUT EVALUATION ===\n");
+    
+    return finalResult;
   }
 
   async evaluateOutput(aiResponse: string, context?: any): Promise<GuardrailResult> {
+    console.log("\n🛡️ === GUARDRAILS OUTPUT EVALUATION ===");
+    console.log("🤖 AI Response:", aiResponse.substring(0, 150) + (aiResponse.length > 150 ? "..." : ""));
+    console.log("⚙️ Output Guardrails Config:", JSON.stringify({
+      responseQuality: this.config.responseQuality,
+      businessContext: this.config.businessContext,
+      contentFiltering: this.config.contentFiltering
+    }, null, 2));
+    
     const results: GuardrailResult[] = [];
 
     // Response quality
     if (this.config.responseQuality?.enabled) {
+      console.log("📏 Checking Response Quality...");
       const qualityResult = await this.checkResponseQuality(aiResponse, context);
+      console.log("📊 Response Quality Result:", JSON.stringify(qualityResult, null, 2));
       results.push(qualityResult);
+    } else {
+      console.log("⏭️ Response Quality: DISABLED");
     }
 
     // Business context
     if (this.config.businessContext?.enabled) {
+      console.log("🏢 Checking Business Context...");
       const businessResult = await this.checkBusinessContext(aiResponse, context);
+      console.log("📊 Business Context Result:", JSON.stringify(businessResult, null, 2));
       results.push(businessResult);
+    } else {
+      console.log("⏭️ Business Context: DISABLED");
     }
 
     // Content filtering for output
     if (this.config.contentFiltering?.enabled) {
+      console.log("🔍 Checking Output Content Filtering...");
       const contentResult = await this.checkContentFiltering(aiResponse);
+      console.log("📊 Output Content Filtering Result:", JSON.stringify(contentResult, null, 2));
       results.push(contentResult);
+    } else {
+      console.log("⏭️ Output Content Filtering: DISABLED");
     }
 
-    return this.combineResults(results);
+    const finalResult = this.combineResults(results);
+    console.log("🏁 Final Output Guardrails Result:", JSON.stringify(finalResult, null, 2));
+    console.log("🛡️ === END GUARDRAILS OUTPUT EVALUATION ===\n");
+    
+    return finalResult;
   }
 
   private async checkContentFiltering(text: string): Promise<GuardrailResult> {

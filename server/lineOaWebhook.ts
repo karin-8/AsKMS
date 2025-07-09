@@ -456,30 +456,85 @@ ${imageContext}`;
     let guardrailsService: GuardrailsService | null = null;
     if (agent.guardrailsConfig) {
       guardrailsService = new GuardrailsService(agent.guardrailsConfig);
-      console.log(`🛡️ Guardrails enabled with config:`, agent.guardrailsConfig);
+      console.log(`🛡️ === GUARDRAILS SYSTEM ENABLED ===`);
+      console.log(`🛡️ Agent ID: ${agentId}, Agent Name: ${agent.name}`);
+      console.log(`🛡️ Guardrails Configuration:`, JSON.stringify(agent.guardrailsConfig, null, 2));
+      
+      // Show which guardrails features are enabled/disabled
+      const features = [];
+      if (agent.guardrailsConfig.contentFiltering?.enabled) {
+        const contentSettings = [];
+        if (agent.guardrailsConfig.contentFiltering.blockProfanity) contentSettings.push('Profanity');
+        if (agent.guardrailsConfig.contentFiltering.blockHateSpeech) contentSettings.push('Hate Speech');
+        if (agent.guardrailsConfig.contentFiltering.blockSexualContent) contentSettings.push('Sexual Content');
+        if (agent.guardrailsConfig.contentFiltering.blockViolence) contentSettings.push('Violence');
+        features.push(`Content Filtering: ${contentSettings.join(', ')}`);
+      }
+      if (agent.guardrailsConfig.privacyProtection?.enabled) {
+        const privacySettings = [];
+        if (agent.guardrailsConfig.privacyProtection.blockPersonalInfo) privacySettings.push('Personal Info');
+        if (agent.guardrailsConfig.privacyProtection.blockFinancialInfo) privacySettings.push('Financial Info');
+        if (agent.guardrailsConfig.privacyProtection.blockHealthInfo) privacySettings.push('Health Info');
+        if (agent.guardrailsConfig.privacyProtection.maskPhoneNumbers) privacySettings.push('Phone Masking');
+        if (agent.guardrailsConfig.privacyProtection.maskEmails) privacySettings.push('Email Masking');
+        features.push(`Privacy Protection: ${privacySettings.join(', ')}`);
+      }
+      if (agent.guardrailsConfig.toxicityPrevention?.enabled) {
+        features.push(`Toxicity Prevention: Threshold ${agent.guardrailsConfig.toxicityPrevention.toxicityThreshold}`);
+      }
+      if (agent.guardrailsConfig.responseQuality?.enabled) {
+        features.push(`Response Quality: ${agent.guardrailsConfig.responseQuality.minResponseLength}-${agent.guardrailsConfig.responseQuality.maxResponseLength} chars`);
+      }
+      if (agent.guardrailsConfig.topicControl?.enabled) {
+        features.push(`Topic Control: ${agent.guardrailsConfig.topicControl.strictMode ? 'Strict' : 'Lenient'} mode`);
+      }
+      if (agent.guardrailsConfig.businessContext?.enabled) {
+        features.push(`Business Context: Professional tone required`);
+      }
+      
+      console.log(`🛡️ Active Features: ${features.join(' | ')}`);
+      console.log(`🛡️ === END GUARDRAILS INITIALIZATION ===`);
+    } else {
+      console.log(`🛡️ Guardrails: DISABLED (no configuration found)`);
     }
 
     // Validate user input with guardrails
     if (guardrailsService) {
-      console.log(`🔍 Validating user input with guardrails...`);
+      console.log(`🔍 === STARTING INPUT VALIDATION ===`);
+      console.log(`📝 Original User Message: "${enhancedUserMessage}"`);
+      
       const inputValidation = await guardrailsService.evaluateInput(enhancedUserMessage, {
         documents: documentContents,
         agent: agent
       });
       
+      console.log(`📊 Input Validation Summary:`);
+      console.log(`   ✓ Allowed: ${inputValidation.allowed}`);
+      console.log(`   ✓ Confidence: ${inputValidation.confidence}`);
+      console.log(`   ✓ Triggered Rules: ${inputValidation.triggeredRules.join(', ') || 'None'}`);
+      console.log(`   ✓ Reason: ${inputValidation.reason || 'No issues found'}`);
+      
       if (!inputValidation.allowed) {
-        console.log(`🚫 User input blocked by guardrails: ${inputValidation.reason}`);
+        console.log(`🚫 === INPUT BLOCKED BY GUARDRAILS ===`);
+        console.log(`🚫 Blocking Reason: ${inputValidation.reason}`);
+        console.log(`🚫 Triggered Rules: ${inputValidation.triggeredRules.join(', ')}`);
         const suggestions = inputValidation.suggestions?.join(' ') || '';
-        return `ขออภัย ไม่สามารถประมวลผลคำถามนี้ได้ ${inputValidation.reason ? `(${inputValidation.reason})` : ''} ${suggestions}`;
+        const blockedMessage = `ขออภัย ไม่สามารถประมวลผลคำถามนี้ได้ ${inputValidation.reason ? `(${inputValidation.reason})` : ''} ${suggestions}`;
+        console.log(`🚫 Returning blocked message: "${blockedMessage}"`);
+        return blockedMessage;
       }
       
       // Use modified content if privacy protection applied masking
       if (inputValidation.modifiedContent) {
-        enhancedUserMessage = inputValidation.modifiedContent;
         console.log(`🔒 User input modified for privacy protection`);
+        console.log(`🔒 Original: "${enhancedUserMessage}"`);
+        console.log(`🔒 Modified: "${inputValidation.modifiedContent}"`);
+        enhancedUserMessage = inputValidation.modifiedContent;
       }
       
-      console.log(`✅ User input validation passed`);
+      console.log(`✅ INPUT VALIDATION PASSED - Proceeding to OpenAI`);
+    } else {
+      console.log(`⏭️ Skipping input validation - Guardrails disabled`);
     }
 
     // Debug: Log the complete system prompt for verification
@@ -510,23 +565,41 @@ ${imageContext}`;
 
     // Validate AI output with guardrails
     if (guardrailsService) {
-      console.log(`🔍 Validating AI output with guardrails...`);
+      console.log(`🔍 === STARTING OUTPUT VALIDATION ===`);
+      console.log(`🤖 Original AI Response: "${aiResponse}"`);
+      
       const outputValidation = await guardrailsService.evaluateOutput(aiResponse, {
         documents: documentContents,
         agent: agent,
         userQuery: userMessage
       });
       
+      console.log(`📊 Output Validation Summary:`);
+      console.log(`   ✓ Allowed: ${outputValidation.allowed}`);
+      console.log(`   ✓ Confidence: ${outputValidation.confidence}`);
+      console.log(`   ✓ Triggered Rules: ${outputValidation.triggeredRules.join(', ') || 'None'}`);
+      console.log(`   ✓ Reason: ${outputValidation.reason || 'No issues found'}`);
+      
       if (!outputValidation.allowed) {
-        console.log(`🚫 AI output blocked by guardrails: ${outputValidation.reason}`);
+        console.log(`🚫 === OUTPUT BLOCKED BY GUARDRAILS ===`);
+        console.log(`🚫 Blocking Reason: ${outputValidation.reason}`);
+        console.log(`🚫 Triggered Rules: ${outputValidation.triggeredRules.join(', ')}`);
         const suggestions = outputValidation.suggestions?.join(' ') || '';
-        aiResponse = `ขออภัย ไม่สามารถให้คำตอบนี้ได้ ${outputValidation.reason ? `(${outputValidation.reason})` : ''} ${suggestions}`;
+        const blockedMessage = `ขออภัย ไม่สามารถให้คำตอบนี้ได้ ${outputValidation.reason ? `(${outputValidation.reason})` : ''} ${suggestions}`;
+        console.log(`🚫 Original blocked response: "${aiResponse}"`);
+        console.log(`🚫 Returning blocked message: "${blockedMessage}"`);
+        aiResponse = blockedMessage;
       } else if (outputValidation.modifiedContent) {
-        aiResponse = outputValidation.modifiedContent;
         console.log(`🔒 AI output modified for compliance`);
+        console.log(`🔒 Original: "${aiResponse}"`);
+        console.log(`🔒 Modified: "${outputValidation.modifiedContent}"`);
+        aiResponse = outputValidation.modifiedContent;
       }
       
-      console.log(`✅ AI output validation passed`);
+      console.log(`✅ OUTPUT VALIDATION PASSED - Final response ready`);
+      console.log(`📝 Final AI Response: "${aiResponse}"`);
+    } else {
+      console.log(`⏭️ Skipping output validation - Guardrails disabled`);
     }
 
     // NOTE: Chat history saving is now handled by the calling function to prevent duplicates
