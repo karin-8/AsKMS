@@ -109,6 +109,7 @@ export default function CreateAgentChatbot() {
   const [testMessage, setTestMessage] = useState("");
   const [testResponse, setTestResponse] = useState("");
   const [isTestingAgent, setIsTestingAgent] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<"testing" | "published">("testing");
 
   // Check if we're editing an existing agent
   const urlParams = new URLSearchParams(window.location.search);
@@ -216,6 +217,7 @@ export default function CreateAgentChatbot() {
       });
     },
     onSuccess: (response) => {
+      console.log("Test agent response received:", response);
       setTestResponse(response.response || "No response received");
       setIsTestingAgent(false);
     },
@@ -340,6 +342,7 @@ export default function CreateAgentChatbot() {
       return;
     }
 
+    console.log("Starting test agent with:", { message: testMessage, config: currentFormData, documents: selectedDocuments });
     setIsTestingAgent(true);
     setTestResponse("");
     
@@ -1469,6 +1472,34 @@ export default function CreateAgentChatbot() {
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-4">
+                            {/* Agent Status Toggle */}
+                            <div className="flex items-center justify-between bg-slate-50 rounded-lg p-4">
+                              <div>
+                                <h4 className="font-medium text-slate-800">Agent Status</h4>
+                                <p className="text-sm text-slate-600">
+                                  {agentStatus === "testing" 
+                                    ? "Agent is in testing mode - responses are for preview only"
+                                    : "Agent is published and live - ready to receive real user messages"}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <Badge 
+                                  variant={agentStatus === "testing" ? "outline" : "default"}
+                                  className={agentStatus === "testing" ? "border-orange-300 text-orange-700" : "bg-green-600 text-white"}
+                                >
+                                  {agentStatus === "testing" ? "Testing" : "Published"}
+                                </Badge>
+                                <Button
+                                  type="button"
+                                  onClick={() => setAgentStatus(agentStatus === "testing" ? "published" : "testing")}
+                                  variant={agentStatus === "testing" ? "default" : "outline"}
+                                  size="sm"
+                                >
+                                  {agentStatus === "testing" ? "Publish Agent" : "Switch to Testing"}
+                                </Button>
+                              </div>
+                            </div>
+
                             {/* Current Configuration Summary */}
                             <div className="bg-slate-50 rounded-lg p-4 space-y-2">
                               <h4 className="font-medium text-slate-800">Current Configuration:</h4>
@@ -1532,9 +1563,9 @@ export default function CreateAgentChatbot() {
                             </Button>
 
                             {/* Test Response */}
-                            {testResponse && (
-                              <div className="space-y-2">
-                                <Label>Agent Response</Label>
+                            <div className="space-y-2">
+                              <Label>Agent Response</Label>
+                              {testResponse ? (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                   <div className="flex items-start space-x-3">
                                     <Bot className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -1543,8 +1574,17 @@ export default function CreateAgentChatbot() {
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
+                              ) : (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                  <div className="flex items-start space-x-3">
+                                    <Bot className="w-5 h-5 text-gray-400 mt-0.5" />
+                                    <div className="flex-1">
+                                      <p className="text-gray-500 italic">No response yet. Click "Test Agent Response" to see how your agent will respond.</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
 
                             {/* Test Tips */}
                             <Card className="border-amber-200 bg-amber-50">
