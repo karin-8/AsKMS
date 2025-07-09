@@ -261,6 +261,20 @@ export default function AgentChatbots() {
     toggleAgentMutation.mutate({ agentId, isActive: !currentStatus });
   };
 
+  // Function to handle edit button click with cache invalidation
+  const handleEditAgent = (agentId: number) => {
+    // Force refresh of the specific agent data before navigation
+    queryClient.invalidateQueries({ 
+      queryKey: [`/api/agent-chatbots/${agentId}`] 
+    });
+    queryClient.invalidateQueries({ 
+      queryKey: [`/api/agent-chatbots/${agentId}/documents`] 
+    });
+    
+    // Navigate to edit page
+    window.location.href = `/create-agent-chatbot?edit=${agentId}`;
+  };
+
   const getChannelBadges = (channels: string[]) => {
     const channelColors: Record<string, string> = {
       lineoa: "bg-green-100 text-green-800",
@@ -386,15 +400,14 @@ export default function AgentChatbots() {
                             <Power className="w-4 h-4 text-green-600" />
                           )}
                         </Button>
-                        <Link href={`/create-agent-chatbot?edit=${agent.id}`}>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="w-4 h-4 text-blue-500" />
-                          </Button>
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditAgent(agent.id)}
+                        >
+                          <Edit className="w-4 h-4 text-blue-500" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

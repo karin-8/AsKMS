@@ -219,6 +219,9 @@ export default function CreateAgentChatbot() {
     queryKey: [`/api/agent-chatbots/${editAgentId}`],
     enabled: isAuthenticated && isEditing,
     retry: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always fetch fresh data
   });
 
   // Fetch agent documents for editing
@@ -440,23 +443,24 @@ export default function CreateAgentChatbot() {
       form.reset();
       setSelectedDocuments([]);
       
-      // Invalidate multiple cache keys to ensure frontend updates
+      // Invalidate comprehensive cache keys to ensure frontend updates
       queryClient.invalidateQueries({ queryKey: ["/api/agent-chatbots"] });
       
-      // If editing, also invalidate the specific agent's documents cache
+      // If editing, also invalidate the specific agent's cache
       if (isEditing && editAgentId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/agent-chatbots/${editAgentId}`] 
+        });
         queryClient.invalidateQueries({ 
           queryKey: [`/api/agent-chatbots/${editAgentId}/documents`] 
         });
       }
       
-      // Invalidate all agent documents cache to ensure AgentChatbots page updates
+      // Invalidate all agent-related cache to ensure complete refresh
       queryClient.invalidateQueries({ 
         predicate: (query) => {
-          return query.queryKey[0] === "/api/agent-chatbots" || 
-                 (typeof query.queryKey[0] === "string" && 
-                  query.queryKey[0].includes("/api/agent-chatbots") && 
-                  query.queryKey[0].includes("/documents"));
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === "string" && queryKey.includes("/api/agent-chatbots");
         }
       });
       
