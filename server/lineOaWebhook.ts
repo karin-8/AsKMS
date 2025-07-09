@@ -134,8 +134,8 @@ export async function sendLineImageMessage(
 ) {
   try {
     // Convert relative URL to absolute URL for Line API
-    const protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
-    const host = process.env.REPLIT_DOMAINS || 'localhost:3000';
+    const protocol = 'https:';
+    const host = process.env.REPLIT_DOMAINS || 'localhost:5000';
     const absoluteImageUrl = `${protocol}//${host}${imageUrl}`;
     
     console.log('📸 Sending Line image message:', {

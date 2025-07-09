@@ -4112,8 +4112,12 @@ Memory management: Keep track of conversation context within the last ${agentCon
             
             if (lineoaConfig?.accessToken) {
               // Send image via Line Push Message API
-              await sendLineImageMessage(channelId, imageUrl, lineoaConfig.accessToken, message);
-              console.log('✅ Successfully sent Line image:', imageUrl);
+              const imageResult = await sendLineImageMessage(channelId, imageUrl, lineoaConfig.accessToken, message);
+              if (imageResult) {
+                console.log('✅ Successfully sent Line image:', imageUrl);
+              } else {
+                console.log('❌ Failed to send Line image:', imageUrl);
+              }
             } else {
               console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
             }
