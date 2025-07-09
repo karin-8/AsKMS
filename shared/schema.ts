@@ -578,6 +578,53 @@ export const agentChatbots = pgTable("agent_chatbots", {
   
   // Memory configuration for chat history
   memoryEnabled: boolean("memory_enabled").default(true),
+  
+  // Advanced guardrails configuration
+  guardrailsConfig: jsonb("guardrails_config").$type<{
+    contentFiltering?: {
+      enabled: boolean;
+      blockProfanity?: boolean;
+      blockHateSpeech?: boolean;
+      blockSexualContent?: boolean;
+      blockViolence?: boolean;
+      customBlockedWords?: string[];
+    };
+    topicControl?: {
+      enabled: boolean;
+      allowedTopics?: string[];
+      blockedTopics?: string[];
+      strictMode?: boolean;
+    };
+    privacyProtection?: {
+      enabled: boolean;
+      blockPersonalInfo?: boolean;
+      blockFinancialInfo?: boolean;
+      blockHealthInfo?: boolean;
+      maskPhoneNumbers?: boolean;
+      maskEmails?: boolean;
+    };
+    responseQuality?: {
+      enabled: boolean;
+      maxResponseLength?: number;
+      minResponseLength?: number;
+      requireSourceCitation?: boolean;
+      preventHallucination?: boolean;
+    };
+    toxicityPrevention?: {
+      enabled: boolean;
+      toxicityThreshold?: number;
+      blockSarcasm?: boolean;
+      blockInsults?: boolean;
+    };
+    businessContext?: {
+      enabled: boolean;
+      stayOnBrand?: boolean;
+      requireProfessionalTone?: boolean;
+      blockCompetitorMentions?: boolean;
+      companyName?: string;
+      brandGuidelines?: string;
+    };
+  }>(),
   memoryLimit: integer("memory_limit").default(10), // Number of previous messages to remember
   
   lineOaConfig: jsonb("lineoa_config").$type<{

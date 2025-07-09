@@ -5,6 +5,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
 import { LineImageService } from "./lineImageService";
+import { GuardrailsService, GuardrailConfig } from "./services/guardrails";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -451,6 +452,36 @@ ${imageContext}`;
       `🤖 Sending ${messages.length} messages to OpenAI (including ${chatHistory.length} history messages)`,
     );
 
+    // Initialize guardrails service if configured
+    let guardrailsService: GuardrailsService | null = null;
+    if (agent.guardrailsConfig) {
+      guardrailsService = new GuardrailsService(agent.guardrailsConfig);
+      console.log(`🛡️ Guardrails enabled with config:`, agent.guardrailsConfig);
+    }
+
+    // Validate user input with guardrails
+    if (guardrailsService) {
+      console.log(`🔍 Validating user input with guardrails...`);
+      const inputValidation = await guardrailsService.evaluateInput(enhancedUserMessage, {
+        documents: documentContents,
+        agent: agent
+      });
+      
+      if (!inputValidation.allowed) {
+        console.log(`🚫 User input blocked by guardrails: ${inputValidation.reason}`);
+        const suggestions = inputValidation.suggestions?.join(' ') || '';
+        return `ขออภัย ไม่สามารถประมวลผลคำถามนี้ได้ ${inputValidation.reason ? `(${inputValidation.reason})` : ''} ${suggestions}`;
+      }
+      
+      // Use modified content if privacy protection applied masking
+      if (inputValidation.modifiedContent) {
+        enhancedUserMessage = inputValidation.modifiedContent;
+        console.log(`🔒 User input modified for privacy protection`);
+      }
+      
+      console.log(`✅ User input validation passed`);
+    }
+
     // Debug: Log the complete system prompt for verification
     console.log("\n=== 🔍 DEBUG: Complete System Prompt ===");
     console.log(messages[0].content);
@@ -473,9 +504,30 @@ ${imageContext}`;
       temperature: 0.7,
     });
 
-    const aiResponse =
+    let aiResponse =
       response.choices[0].message.content ||
       "ขออภัย ไม่สามารถประมวลผลคำถามได้ในขณะนี้";
+
+    // Validate AI output with guardrails
+    if (guardrailsService) {
+      console.log(`🔍 Validating AI output with guardrails...`);
+      const outputValidation = await guardrailsService.evaluateOutput(aiResponse, {
+        documents: documentContents,
+        agent: agent,
+        userQuery: userMessage
+      });
+      
+      if (!outputValidation.allowed) {
+        console.log(`🚫 AI output blocked by guardrails: ${outputValidation.reason}`);
+        const suggestions = outputValidation.suggestions?.join(' ') || '';
+        aiResponse = `ขออภัย ไม่สามารถให้คำตอบนี้ได้ ${outputValidation.reason ? `(${outputValidation.reason})` : ''} ${suggestions}`;
+      } else if (outputValidation.modifiedContent) {
+        aiResponse = outputValidation.modifiedContent;
+        console.log(`🔒 AI output modified for compliance`);
+      }
+      
+      console.log(`✅ AI output validation passed`);
+    }
 
     // NOTE: Chat history saving is now handled by the calling function to prevent duplicates
     console.log(

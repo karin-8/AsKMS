@@ -75,7 +75,7 @@ const createAgentSchema = z.object({
   profession: z.string().min(1, "Profession is required"),
   responseStyle: z.string().min(1, "Response style is required"),
   specialSkills: z.array(z.string()).default([]),
-  // Guardrails
+  // Basic Guardrails (legacy support)
   contentFiltering: z.boolean().default(true),
   toxicityPrevention: z.boolean().default(true),
   privacyProtection: z.boolean().default(true),
@@ -83,6 +83,53 @@ const createAgentSchema = z.object({
   responseLength: z.enum(["short", "medium", "long"]).default("medium"),
   allowedTopics: z.array(z.string()).default([]),
   blockedTopics: z.array(z.string()).default([]),
+  // Advanced Guardrails Configuration
+  guardrailsEnabled: z.boolean().default(false),
+  guardrailsConfig: z.object({
+    contentFiltering: z.object({
+      enabled: z.boolean().default(true),
+      blockProfanity: z.boolean().default(true),
+      blockHateSpeech: z.boolean().default(true),
+      blockSexualContent: z.boolean().default(true),
+      blockViolence: z.boolean().default(true),
+      customBlockedWords: z.array(z.string()).default([]),
+    }).optional(),
+    topicControl: z.object({
+      enabled: z.boolean().default(false),
+      allowedTopics: z.array(z.string()).default([]),
+      blockedTopics: z.array(z.string()).default([]),
+      strictMode: z.boolean().default(false),
+    }).optional(),
+    privacyProtection: z.object({
+      enabled: z.boolean().default(true),
+      blockPersonalInfo: z.boolean().default(true),
+      blockFinancialInfo: z.boolean().default(true),
+      blockHealthInfo: z.boolean().default(true),
+      maskPhoneNumbers: z.boolean().default(true),
+      maskEmails: z.boolean().default(true),
+    }).optional(),
+    responseQuality: z.object({
+      enabled: z.boolean().default(true),
+      maxResponseLength: z.number().default(1000),
+      minResponseLength: z.number().default(10),
+      requireSourceCitation: z.boolean().default(false),
+      preventHallucination: z.boolean().default(true),
+    }).optional(),
+    toxicityPrevention: z.object({
+      enabled: z.boolean().default(true),
+      toxicityThreshold: z.number().min(0).max(1).default(0.3),
+      blockSarcasm: z.boolean().default(false),
+      blockInsults: z.boolean().default(true),
+    }).optional(),
+    businessContext: z.object({
+      enabled: z.boolean().default(false),
+      stayOnBrand: z.boolean().default(true),
+      requireProfessionalTone: z.boolean().default(true),
+      blockCompetitorMentions: z.boolean().default(false),
+      companyName: z.string().optional(),
+      brandGuidelines: z.string().optional(),
+    }).optional(),
+  }).optional(),
   // Memory Configuration
   memoryEnabled: z.boolean().default(false),
   memoryLimit: z.number().min(1).max(50).default(10),
@@ -344,9 +391,13 @@ export default function CreateAgentChatbot() {
   });
 
   const onSubmit = (data: CreateAgentForm) => {
+    // Build the guardrails configuration object
+    const guardrailsConfig = data.guardrailsEnabled ? data.guardrailsConfig : null;
+    
     saveAgentMutation.mutate({
       ...data,
       documentIds: selectedDocuments,
+      guardrailsConfig,
     });
   };
 
@@ -1479,6 +1530,342 @@ export default function CreateAgentChatbot() {
                                   </FormItem>
                                 )}
                               />
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Advanced Guardrails Configuration */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Settings className="h-5 w-5" />
+                              Advanced Guardrails Configuration
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-6">
+                            {/* Enable Guardrails */}
+                            <FormField
+                              control={form.control}
+                              name="guardrailsEnabled"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Enable Advanced Guardrails</FormLabel>
+                                    <FormDescription>
+                                      Activate OpenAI-powered guardrails for enhanced safety and content filtering
+                                    </FormDescription>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* Guardrails Configuration - Only show if enabled */}
+                            {form.watch("guardrailsEnabled") && (
+                              <div className="space-y-4 border-l-4 border-blue-500 pl-4">
+                                {/* Content Filtering */}
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-slate-800">Content Filtering</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.contentFiltering.blockProfanity"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Profanity</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.contentFiltering.blockHateSpeech"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Hate Speech</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.contentFiltering.blockSexualContent"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Sexual Content</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.contentFiltering.blockViolence"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Violence</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Privacy Protection */}
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-slate-800">Privacy Protection</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.privacyProtection.blockPersonalInfo"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Personal Info</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.privacyProtection.blockFinancialInfo"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Financial Info</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.privacyProtection.maskPhoneNumbers"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Mask Phone Numbers</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.privacyProtection.maskEmails"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Mask Emails</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Toxicity Prevention */}
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-slate-800">Toxicity Prevention</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.toxicityPrevention.blockSarcasm"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Sarcasm</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.toxicityPrevention.blockInsults"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Block Insults</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <FormField
+                                    control={form.control}
+                                    name="guardrailsConfig.toxicityPrevention.toxicityThreshold"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Toxicity Threshold</FormLabel>
+                                        <FormDescription>
+                                          Sensitivity level for toxicity detection (0.1 = very sensitive, 1.0 = less sensitive)
+                                        </FormDescription>
+                                        <FormControl>
+                                          <div className="space-y-2">
+                                            <div className="flex items-center space-x-2">
+                                              <span className="text-sm text-slate-500">0.1</span>
+                                              <Slider
+                                                value={[field.value || 0.5]}
+                                                onValueChange={(value) => field.onChange(value[0])}
+                                                max={1}
+                                                min={0.1}
+                                                step={0.1}
+                                                className="flex-1"
+                                              />
+                                              <span className="text-sm text-slate-500">1.0</span>
+                                            </div>
+                                            <div className="text-center">
+                                              <Badge variant="secondary">
+                                                {field.value || 0.5}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+
+                                {/* Response Quality */}
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-slate-800">Response Quality</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.responseQuality.requireSourceCitation"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Require Source Citations</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.responseQuality.preventHallucination"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Prevent Hallucination</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Business Context */}
+                                <div className="space-y-3">
+                                  <h4 className="font-medium text-slate-800">Business Context</h4>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.businessContext.stayOnBrand"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Stay On Brand</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="guardrailsConfig.businessContext.requireProfessionalTone"
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <FormLabel className="text-sm">Require Professional Tone</FormLabel>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <FormField
+                                    control={form.control}
+                                    name="guardrailsConfig.businessContext.companyName"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Company Name</FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            placeholder="Enter your company name"
+                                            {...field}
+                                          />
+                                        </FormControl>
+                                        <FormDescription>
+                                          Company name for brand consistency
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              </div>
                             )}
                           </CardContent>
                         </Card>
