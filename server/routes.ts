@@ -3329,7 +3329,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
 
         // Apply guardrails to input message if configured
         let processedMessage = message;
-        const guardrailsConfig = agentConfig.guardrails;
+        const guardrailsConfig = agentConfig.guardrailsConfig;
         
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
           console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);
@@ -3470,7 +3470,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
         // Apply guardrails to input message if configured
         let processedMessage = message;
-        const guardrailsConfig = agentConfig.guardrails;
+        const guardrailsConfig = agentConfig.guardrailsConfig;
         
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
           console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);

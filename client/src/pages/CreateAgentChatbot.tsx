@@ -532,7 +532,7 @@ export default function CreateAgentChatbot() {
     
     const testConfigData = {
       ...currentFormData,
-      guardrails: guardrailsConfig, // Include guardrails config for testing
+      guardrailsConfig: guardrailsConfig, // Include guardrails config for testing
     };
 
     console.log("Starting test agent with:", { message: testMessage, config: testConfigData, documents: selectedDocuments });
