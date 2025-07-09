@@ -217,6 +217,7 @@ export default function CreateAgentChatbot() {
     },
     onSuccess: (response) => {
       setTestResponse(response.response || "No response received");
+      setIsTestingAgent(false);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -236,6 +237,7 @@ export default function CreateAgentChatbot() {
         variant: "destructive",
       });
       setTestResponse("Error testing agent. Please try again.");
+      setIsTestingAgent(false);
     },
   });
 
@@ -345,8 +347,6 @@ export default function CreateAgentChatbot() {
       message: testMessage,
       agentConfig: currentFormData,
     });
-    
-    setIsTestingAgent(false);
   };
 
   // Document toggle mutations for real-time updates
@@ -1515,10 +1515,10 @@ export default function CreateAgentChatbot() {
                             {/* Test Button */}
                             <Button
                               onClick={handleTestAgent}
-                              disabled={testAgentMutation.isPending || !testMessage.trim()}
+                              disabled={isTestingAgent || testAgentMutation.isPending || !testMessage.trim()}
                               className="w-full bg-green-600 hover:bg-green-700"
                             >
-                              {testAgentMutation.isPending ? (
+                              {(isTestingAgent || testAgentMutation.isPending) ? (
                                 <>
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                                   Testing Agent...
