@@ -3170,6 +3170,10 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       // Extract documentIds from request body
       const { documentIds, ...agentData } = req.body;
 
+      console.log("PUT /api/agent-chatbots/:id - Request body:", JSON.stringify(req.body, null, 2));
+      console.log("Agent data to update:", JSON.stringify(agentData, null, 2));
+      console.log("Guardrails config in request:", agentData.guardrailsConfig);
+
       const agent = await storage.updateAgentChatbot(
         agentId,
         agentData,

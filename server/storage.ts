@@ -1176,15 +1176,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAgentChatbot(id: number, agent: Partial<InsertAgentChatbot>, userId: string): Promise<AgentChatbot> {
+    console.log("Storage updateAgentChatbot - Input data:", JSON.stringify(agent, null, 2));
+    console.log("Storage updateAgentChatbot - Guardrails config:", agent.guardrailsConfig);
+    
+    const updateData = { ...agent, updatedAt: new Date() };
+    console.log("Storage updateAgentChatbot - Final update data:", JSON.stringify(updateData, null, 2));
+    
     const [updated] = await db
       .update(agentChatbots)
-      .set({ ...agent, updatedAt: new Date() })
+      .set(updateData)
       .where(and(eq(agentChatbots.id, id), eq(agentChatbots.userId, userId)))
       .returning();
 
     if (!updated) {
       throw new Error("Agent not found");
     }
+    console.log("Storage updateAgentChatbot - Updated result:", JSON.stringify(updated, null, 2));
     return updated;
   }
 

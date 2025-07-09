@@ -485,11 +485,17 @@ export default function CreateAgentChatbot() {
     // Build the guardrails configuration object
     const guardrailsConfig = data.guardrailsEnabled ? data.guardrailsConfig : null;
     
-    saveAgentMutation.mutate({
+    const finalData = {
       ...data,
       documentIds: selectedDocuments,
       guardrailsConfig,
-    });
+    };
+    
+    console.log("Form submission data:", JSON.stringify(finalData, null, 2));
+    console.log("Guardrails enabled:", data.guardrailsEnabled);
+    console.log("Guardrails config:", data.guardrailsConfig);
+    
+    saveAgentMutation.mutate(finalData);
   };
 
   const handleTestAgent = () => {
