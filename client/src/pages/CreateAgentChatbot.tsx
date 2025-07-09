@@ -232,6 +232,9 @@ export default function CreateAgentChatbot() {
   useEffect(() => {
     if (isEditing && existingAgent) {
       const agent = existingAgent as any;
+      console.log("Loading existing agent data:", JSON.stringify(agent, null, 2));
+      console.log("Agent guardrails config from DB:", agent.guardrailsConfig);
+      
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
