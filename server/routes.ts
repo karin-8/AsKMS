@@ -225,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Audit & Monitoring routes
   app.get("/api/audit/logs", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
 
       // Check if user is admin - only admins can view audit logs
       const user = await storage.getUser(userId);
@@ -263,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/audit/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
 
       // Check if user is admin - only admins can view audit stats
       const user = await storage.getUser(userId);
@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export audit logs as CSV
   app.get("/api/audit/export", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
 
       // Check if user is admin - only admins can export audit logs
       const user = await storage.getUser(userId);
@@ -340,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get filter options for audit logs
   app.get("/api/audit/filters", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
 
       // Check if user is admin - only admins can access audit filters
       const user = await storage.getUser(userId);
@@ -417,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { users, departments } = await import("@shared/schema");
 
       // Fetch user with department information
@@ -477,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User stats
   app.get("/api/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const stats = await storage.getUserStats(userId);
       res.json(stats);
     } catch (error) {
@@ -489,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Category routes
   app.get("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const categories = await storage.getCategories(userId);
       res.json(categories);
     } catch (error) {
@@ -500,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/categories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const categoryData = insertCategorySchema.parse({ ...req.body, userId });
       const category = await storage.createCategory(categoryData);
       res.json(category);
@@ -524,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/categories/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
       await storage.deleteCategory(id, userId);
       res.json({ success: true });
@@ -537,7 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Category statistics endpoint
   app.get("/api/stats/categories", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { documents } = await import("@shared/schema");
       const { sql } = await import("drizzle-orm");
 
@@ -561,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tag statistics endpoint
   app.get("/api/stats/tags", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { documents } = await import("@shared/schema");
       const { sql } = await import("drizzle-orm");
 
@@ -687,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .values({
           name,
           description,
-          createdBy: req.user?.claims.sub,
+          createdBy: req.user.claims.sub,
         })
         .returning();
 
@@ -731,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { userId } = req.params;
         const { role } = req.body;
-        const adminUserId = req.user?.claims.sub;
+        const adminUserId = req.user.claims.sub;
 
         console.log(`Role update request from admin ${adminUserId}: userId=${userId}, newRole=${role}`);
         console.log("Request body:", req.body);
@@ -1098,7 +1098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { documentUserPermissions } = await import("@shared/schema");
         const documentId = parseInt(req.params.id);
         const { userId, permissionType = "read" } = req.body;
-        const grantedBy = req.user?.claims.sub;
+        const grantedBy = req.user.claims.sub;
 
         const [permission] = await db
           .insert(documentUserPermissions)
@@ -1123,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const documentId = parseInt(req.params.id);
         const { departmentId, permissionType = "read" } = req.body;
-        const grantedBy = req.user?.claims.sub;
+        const grantedBy = req.user.claims.sub;
 
         const [permission] = await db
           .insert(documentDepartmentPermissions)
@@ -1187,7 +1187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Document routes
   app.get("/api/documents", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const categoryId = req.query.categoryId
         ? parseInt(req.query.categoryId as string)
         : undefined;
@@ -1212,7 +1212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/documents/search", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const query = req.query.query as string;
       const searchType =
         (req.query.type as "keyword" | "semantic" | "hybrid") || "keyword";
@@ -1299,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
 
       // Get basic document first
@@ -1347,7 +1347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const id = parseInt(req.params.id);
         const document = await storage.getDocument(id, userId);
 
@@ -1376,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documentId = parseInt(req.params.id);
         const { targetLanguage } = req.body;
 
@@ -1488,7 +1488,7 @@ ${document.summary}`;
     upload.array("files", 10),
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const files = req.files as Express.Multer.File[];
 
         console.log("Upload request received:", {
@@ -1643,7 +1643,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const id = parseInt(req.params.id);
         const document = await storage.getDocument(id, userId);
 
@@ -1699,7 +1699,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const id = parseInt(req.params.id);
         const document = await storage.toggleDocumentFavorite(id, userId);
         res.json(document);
@@ -1715,7 +1715,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const id = parseInt(req.params.id);
         const document = await storage.getDocument(id, userId);
 
@@ -1756,7 +1756,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documents = await storage.getDocuments(userId);
 
         let vectorizedCount = 0;
@@ -1805,7 +1805,7 @@ ${document.summary}`;
 
   app.delete("/api/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const id = parseInt(req.params.id);
 
       console.log(`Delete request for document ${id} by user ${userId}`);
@@ -1867,7 +1867,7 @@ ${document.summary}`;
   // Chat routes
   app.get("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const conversations = await storage.getChatConversations(userId);
       res.json(conversations);
     } catch (error) {
@@ -1881,7 +1881,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const conversationData = insertChatConversationSchema.parse({
           ...req.body,
           userId,
@@ -1901,7 +1901,7 @@ ${document.summary}`;
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const conversationId = parseInt(req.params.id);
         const messages = await storage.getChatMessages(conversationId, userId);
         res.json(messages);
@@ -1914,7 +1914,7 @@ ${document.summary}`;
 
   app.post("/api/chat/messages", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { conversationId, content, documentId } = req.body;
 
       // Create user message
@@ -2044,7 +2044,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Vector database management routes
   app.get("/api/vector/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const userDocuments = await vectorService.getDocumentsByUser(userId);
       const totalDocuments = await vectorService.getDocumentCount();
       const chunkStats = await vectorService.getDocumentChunkStats(userId);
@@ -2086,7 +2086,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documents = await storage.getDocuments(userId);
 
         let processedCount = 0;
@@ -2159,7 +2159,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documentId = parseInt(req.params.id);
 
         const document = await storage.getDocument(documentId, userId);
@@ -2184,7 +2184,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Chat conversation endpoints
   app.get("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const conversations = await storage.getChatConversations(userId);
       res.json(conversations);
     } catch (error) {
@@ -2198,7 +2198,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const { title } = req.body;
 
         const conversation = await storage.createChatConversation({
@@ -2219,7 +2219,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const conversationId = parseInt(req.params.id);
 
         const messages = await storage.getChatMessages(conversationId, userId);
@@ -2236,7 +2236,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const conversationId = parseInt(req.params.id);
         const { content } = req.body;
 
@@ -2271,7 +2271,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Data connection management routes
   app.get("/api/data-connections", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const connections = await storage.getDataConnections(userId);
       res.json(connections);
     } catch (error) {
@@ -2282,7 +2282,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.post("/api/data-connections", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const connectionData = insertDataConnectionSchema.parse({
         ...req.body,
         userId,
@@ -2300,7 +2300,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const connectionId = parseInt(req.params.id);
         const connection = await storage.getDataConnection(
           connectionId,
@@ -2324,7 +2324,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const connectionId = parseInt(req.params.id);
         const connectionData = updateDataConnectionSchema.parse(req.body);
 
@@ -2346,7 +2346,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const connectionId = parseInt(req.params.id);
 
         await storage.deleteDataConnection(connectionId, userId);
@@ -2363,7 +2363,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const connectionId = parseInt(req.params.id);
         const connection = await storage.getDataConnection(
           connectionId,
@@ -2424,7 +2424,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     async (req: any, res) => {
       try {
         const connectionId = parseInt(req.params.id);
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const { query } = req.body;
 
         if (!query) {
@@ -2454,7 +2454,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     async (req: any, res) => {
       try {
         const connectionId = parseInt(req.params.id);
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
 
         const { databaseQueryService } = await import(
           "./services/databaseQueryService"
@@ -2478,7 +2478,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.post("/api/chat/database", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { message, connectionId } = req.body;
 
       if (!message || !connectionId) {
@@ -2597,7 +2597,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Chat Widget API endpoints
   app.get("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { chatWidgets } = await import("@shared/schema");
 
       const widgets = await db
@@ -2613,7 +2613,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.post("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { nanoid } = await import("nanoid");
       const { chatWidgets } = await import("@shared/schema");
       const {
@@ -2865,7 +2865,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Survey routes
   app.post("/api/survey/submit", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const { satisfaction, easeOfUse, improvements, suggestions } = req.body;
 
       // Store survey response (you can add this to schema if needed)
@@ -2929,7 +2929,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const insights = await storage.getDocumentAccessStats(userId);
         res.json(insights);
       } catch (error) {
@@ -2942,7 +2942,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // AI Assistant Feedback API
   app.post("/api/ai-feedback", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const feedback = await storage.createAiFeedback({
         ...req.body,
         userId,
@@ -2956,7 +2956,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.get("/api/ai-feedback/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const stats = await storage.getAiFeedbackStats(userId);
       res.json(stats);
     } catch (error) {
@@ -2967,7 +2967,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.get("/api/ai-feedback/export", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const feedbackData = await storage.exportAiFeedbackData(userId);
       res.json(feedbackData);
     } catch (error) {
@@ -2981,7 +2981,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documentId = parseInt(req.params.id);
         const feedbackData = await storage.getDocumentFeedback(
           documentId,
@@ -3001,7 +3001,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
         const offset = req.query.offset
           ? parseInt(req.query.offset)
@@ -3028,7 +3028,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const stats = await storage.getAiResponseAnalysisStats(userId);
         res.json(stats);
       } catch (error) {
@@ -3043,7 +3043,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const {
           userQuery,
           assistantResponse,
@@ -3100,7 +3100,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   // Agent Chatbot API routes
   app.get("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const agents = await storage.getAgentChatbots(userId);
       res.json(agents);
     } catch (error) {
@@ -3111,7 +3111,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.get("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const agent = await storage.getAgentChatbot(
         parseInt(req.params.id),
         userId,
@@ -3128,7 +3128,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.post("/api/agent-chatbots", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       console.log(
         "Creating agent chatbot with data:",
         JSON.stringify(req.body, null, 2),
@@ -3230,7 +3230,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
 
   app.put("/api/agent-chatbots/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const agentId = parseInt(req.params.id);
 
       // Extract documentIds from request body
@@ -3269,7 +3269,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         await storage.deleteAgentChatbot(parseInt(req.params.id), userId);
         res.status(204).send();
       } catch (error) {
@@ -3284,7 +3284,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const documents = await storage.getAgentChatbotDocuments(
           parseInt(req.params.id),
           userId,
@@ -3302,7 +3302,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const agentDocument = await storage.addDocumentToAgent(
           parseInt(req.params.agentId),
           parseInt(req.params.documentId),
@@ -3321,7 +3321,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         await storage.removeDocumentFromAgent(
           parseInt(req.params.agentId),
           parseInt(req.params.documentId),
@@ -3374,7 +3374,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
         let documentContext = '';
         if (documentIds && documentIds.length > 0) {
           try {
-            const userId = req.user?.claims.sub;
+            const userId = req.user.claims.sub;
             const documents = await storage.getDocumentsByIds(documentIds, userId);
             if (documents.length > 0) {
               documentContext = `\n\nRelevant documents:\n${documents.map(doc => 
@@ -3451,7 +3451,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         let documentContext = '';
         if (documentIds && documentIds.length > 0) {
           try {
-            const userId = req.user?.claims.sub;
+            const userId = req.user.claims.sub;
             const documents = await storage.getDocumentsByIds(documentIds, userId);
             if (documents.length > 0) {
               documentContext = `\n\nRelevant documents for context:\n${documents.map(doc => 
@@ -3511,7 +3511,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const integrations = await storage.getSocialIntegrations(userId);
         res.json(integrations);
       } catch (error) {
@@ -3528,7 +3528,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const integration = await storage.getSocialIntegration(
           parseInt(req.params.id),
           userId,
@@ -3549,7 +3549,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const {
           name,
           description,
@@ -3669,7 +3669,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const integrationId = parseInt(req.params.id);
         const updates = req.body;
 
@@ -3693,7 +3693,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
         const integrationId = parseInt(req.params.id);
 
         await storage.deleteSocialIntegration(integrationId, userId);
@@ -3715,7 +3715,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
       try {
         const integrationId = parseInt(req.params.id);
         const { accessToken } = req.body;
-        const userId = req.user?.claims.sub;
+        const userId = req.user.claims.sub;
 
         if (!accessToken) {
           return res.status(400).json({ message: "Access token is required" });
@@ -3746,7 +3746,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
   // Agent Console API endpoints
   app.get('/api/agent-console/users', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims.sub;
+      const userId = req.user.claims.sub;
       const channelFilter = req.query.channelFilter || 'all';
       
       // Get all unique users from chat history grouped by user, channel, and agent
@@ -4034,9 +4034,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
         messageType: messageType || 'agent',
         content: message,
         metadata: {
-          sentBy: req.user?.claims.sub,
+          sentBy: req.user.claims.sub,
           humanAgent: true,
-          humanAgentName: req.user?.claims.first_name || req.user?.claims.email || 'Human Agent'
+          humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
         }
       });
 
@@ -4053,7 +4053,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
             aiResponse: message,
             messageType: messageType || 'agent',
             timestamp: new Date().toISOString(),
-            humanAgentName: req.user?.claims.first_name || req.user?.claims.email || 'Human Agent'
+            humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
           }
         });
         console.log('📡 Broadcasted human agent message to Agent Console');
@@ -4100,7 +4100,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
   app.post("/api/agent-console/send-url-redirect", isAuthenticated, async (req: any, res) => {
     try {
       const { userId, channelType, channelId, agentId, targetUrl, message, messageType } = req.body;
-      const currentUser = req.user?.claims;
+      const currentUser = req.user.claims;
 
       if (!userId || !channelType || !channelId || !agentId || !targetUrl) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -4255,9 +4255,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
           fileName: imageFile.originalname,
           fileSize: imageFile.size,
           mimeType: imageFile.mimetype,
-          sentBy: req.user?.claims.sub,
+          sentBy: req.user.claims.sub,
           humanAgent: true,
-          humanAgentName: req.user?.claims.first_name || req.user?.claims.email || 'Human Agent'
+          humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
         }
       });
 
@@ -4274,7 +4274,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
             aiResponse: message || 'รูปภาพ',
             messageType: messageType || 'agent',
             timestamp: new Date().toISOString(),
-            humanAgentName: req.user?.claims.first_name || req.user?.claims.email || 'Human Agent',
+            humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent',
             imageUrl: imageUrl
           }
         });
@@ -4333,7 +4333,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
       
       // Log the takeover action
       await storage.createAuditLog({
-        userId: req.user?.claims.sub,
+        userId: req.user.claims.sub,
         action: 'human_takeover',
         resourceType: 'conversation',
         resourceId: `${targetUserId}-${channelType}-${channelId}`,
@@ -4358,7 +4358,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         metadata: {
           systemMessage: true,
           humanTakeover: true,
-          agentId: req.user?.claims.sub
+          agentId: req.user.claims.sub
         }
       });
       
@@ -4423,40 +4423,16 @@ Memory management: Keep track of conversation context within the last ${agentCon
   });
 
   // Agent Console - Send Imagemap Message (clickable image with URL redirect)
-  app.post('/api/agent-console/send-imagemap', upload.single('image'), async (req: any, res) => {
-    console.log('🔥 IMAGEMAP ENDPOINT HIT - Starting processing...');
-    console.log('🔥 User session:', req.session);
-    console.log('🔥 Request body keys:', Object.keys(req.body));
-    console.log('🔥 Request file:', req.file ? 'File present' : 'No file');
-    console.log('🔥 Request headers:', req.headers['content-type']);
-    
+  app.post('/api/agent-console/send-imagemap', isAuthenticated, upload.single('image'), async (req: any, res) => {
     try {
       const { userId: targetUserId, channelType, channelId, agentId, linkUri, altText } = req.body;
       const imageFile = req.file;
       
-      console.log('🔥 Parsed parameters:', {
-        targetUserId,
-        channelType,
-        channelId,
-        agentId,
-        linkUri,
-        altText,
-        hasFile: !!imageFile
-      });
-      
       if (!targetUserId || !channelType || !channelId || !agentId || !linkUri) {
-        console.log('❌ Missing required parameters:', {
-          targetUserId: !!targetUserId,
-          channelType: !!channelType,
-          channelId: !!channelId,
-          agentId: !!agentId,
-          linkUri: !!linkUri
-        });
         return res.status(400).json({ message: "Missing required parameters (linkUri is required)" });
       }
       
       if (!imageFile) {
-        console.log('❌ No image file provided');
         return res.status(400).json({ message: "No image file provided" });
       }
       
@@ -4491,9 +4467,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
           fileName: imageFile.originalname,
           fileSize: imageFile.size,
           mimeType: imageFile.mimetype,
-          sentBy: req.user?.claims?.sub || "test-agent",
+          sentBy: req.user.claims.sub,
           humanAgent: true,
-          humanAgentName: req.user?.claims?.first_name || req.user?.claims?.email || "Test Agent"
+          humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
         }
       });
 
@@ -4503,7 +4479,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         
         await db.insert(eventTracking).values({
           eventType: 'imagemap_sent',
-          userId: req.user?.claims?.sub || "test-agent",
+          userId: req.user.claims.sub,
           channelType,
           channelId,
           agentId: parseInt(agentId),
@@ -4513,7 +4489,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
           ipAddress: req.ip,
           metadata: {
             sentByAgent: true,
-            agentName: req.user?.claims?.first_name || req.user?.claims?.email || "Test Agent",
+            agentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent',
             imageUrl: imageUrl,
             altText: altText || 'ดูภาพเพิ่มเติม',
             fileName: imageFile.originalname
@@ -4536,7 +4512,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
             aiResponse: `[รูปภาพคลิกได้] ${altText || 'ดูภาพเพิ่มเติม'} → ${linkUri}`,
             messageType: 'agent',
             timestamp: new Date().toISOString(),
-            humanAgentName: req.user?.claims?.first_name || req.user?.claims?.email || "Test Agent",
+            humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent',
             imageUrl: imageUrl,
             linkUri: linkUri
           }
@@ -4572,8 +4548,6 @@ Memory management: Keep track of conversation context within the last ${agentCon
               // Generate base URL for Line Imagemap API (requires removal of file extension)
               const fileNameWithoutExt = imageFile.filename.replace(/\.[^/.]+$/, "");
               const baseUrl = `/uploads/${fileNameWithoutExt}`;
-              
-              // Simplified for immediate functionality - using full URL with extension for now
               
               console.log('📤 IMAGEMAP ENDPOINT - About to call sendLineImagemapMessage with:', {
                 userId: channelId,

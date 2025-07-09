@@ -412,19 +412,7 @@ export default function AgentConsole() {
   // Mutation for sending imagemap messages
   const sendImagemapMutation = useMutation({
     mutationFn: async ({ image, linkUri, altText }: { image: File; linkUri: string; altText?: string }) => {
-      console.log('🔥 FRONTEND - sendImagemapMutation triggered');
       if (!selectedUser) throw new Error("No user selected");
-
-      console.log('🔥 FRONTEND - Creating FormData with:', {
-        imageSize: image.size,
-        imageName: image.name,
-        userId: selectedUser.userId,
-        channelType: selectedUser.channelType,
-        channelId: selectedUser.channelId,
-        agentId: selectedUser.agentId,
-        linkUri: linkUri,
-        altText: altText
-      });
 
       const formData = new FormData();
       formData.append('image', image);
@@ -437,12 +425,7 @@ export default function AgentConsole() {
         formData.append('altText', altText);
       }
 
-      console.log('🔥 FRONTEND - Making API request to /api/agent-console/send-imagemap');
-      const response = await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
-      console.log('🔥 FRONTEND - Raw response received:', response);
-      const result = await response.json();
-      console.log('🔥 FRONTEND - Parsed result:', result);
-      return result;
+      return await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
     },
     onSuccess: () => {
       setMessageInput("");
@@ -480,7 +463,6 @@ export default function AgentConsole() {
       });
     },
     onError: (error) => {
-      console.log('🔥 FRONTEND - sendImagemapMutation ERROR:', error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -495,7 +477,7 @@ export default function AgentConsole() {
 
       toast({
         title: "Error",
-        description: `Failed to send imagemap: ${error.message}`,
+        description: "Failed to send imagemap. Please try again.",
         variant: "destructive",
       });
     },
@@ -591,15 +573,6 @@ export default function AgentConsole() {
           });
           return;
         }
-        console.log('🔥 FRONTEND - Calling sendImagemapMutation.mutate with:', {
-          image: selectedImage.name,
-          linkUri: imagemapUrl,
-          altText: imagemapAltText || 'ดูภาพเพิ่มเติม',
-          targetUserId: selectedUser?.userId,
-          channelType: selectedUser?.channelType,
-          channelId: selectedUser?.channelId,
-          agentId: selectedUser?.agentId
-        });
         sendImagemapMutation.mutate({ 
           image: selectedImage, 
           linkUri: imagemapUrl,
