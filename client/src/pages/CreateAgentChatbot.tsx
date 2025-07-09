@@ -527,7 +527,18 @@ export default function CreateAgentChatbot() {
       return;
     }
 
-    console.log("Starting test agent with:", { message: testMessage, config: currentFormData, documents: selectedDocuments });
+    // Build guardrails configuration for testing (same as deployment)
+    const guardrailsConfig = currentFormData.guardrailsEnabled ? currentFormData.guardrailsConfig : null;
+    
+    const testConfigData = {
+      ...currentFormData,
+      guardrails: guardrailsConfig, // Include guardrails config for testing
+    };
+
+    console.log("Starting test agent with:", { message: testMessage, config: testConfigData, documents: selectedDocuments });
+    console.log("Guardrails enabled for test:", currentFormData.guardrailsEnabled);
+    console.log("Guardrails config for test:", guardrailsConfig);
+    
     setIsTestingAgent(true);
     
     if (!isTestChatMode) {
@@ -543,7 +554,7 @@ export default function CreateAgentChatbot() {
     
     testAgentMutation.mutate({
       message: testMessage,
-      agentConfig: currentFormData,
+      agentConfig: testConfigData,
       chatHistory: isTestChatMode ? recentHistory : undefined,
     });
   };
