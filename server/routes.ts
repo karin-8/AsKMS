@@ -4423,8 +4423,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
   });
 
   // Agent Console - Send Imagemap Message (clickable image with URL redirect)
-  app.post('/api/agent-console/send-imagemap', isAuthenticated, upload.single('image'), async (req: any, res) => {
+  app.post('/api/agent-console/send-imagemap', upload.single('image'), async (req: any, res) => {
     console.log('🔥 IMAGEMAP ENDPOINT HIT - Starting processing...');
+    console.log('🔥 User session:', req.session);
     console.log('🔥 Request body keys:', Object.keys(req.body));
     console.log('🔥 Request file:', req.file ? 'File present' : 'No file');
     console.log('🔥 Request headers:', req.headers['content-type']);

@@ -480,6 +480,7 @@ export default function AgentConsole() {
       });
     },
     onError: (error) => {
+      console.log('🔥 FRONTEND - sendImagemapMutation ERROR:', error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -494,7 +495,7 @@ export default function AgentConsole() {
 
       toast({
         title: "Error",
-        description: "Failed to send imagemap. Please try again.",
+        description: `Failed to send imagemap: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -593,7 +594,11 @@ export default function AgentConsole() {
         console.log('🔥 FRONTEND - Calling sendImagemapMutation.mutate with:', {
           image: selectedImage.name,
           linkUri: imagemapUrl,
-          altText: imagemapAltText || 'ดูภาพเพิ่มเติม'
+          altText: imagemapAltText || 'ดูภาพเพิ่มเติม',
+          targetUserId: selectedUser?.userId,
+          channelType: selectedUser?.channelType,
+          channelId: selectedUser?.channelId,
+          agentId: selectedUser?.agentId
         });
         sendImagemapMutation.mutate({ 
           image: selectedImage, 
