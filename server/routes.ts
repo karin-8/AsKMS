@@ -3271,7 +3271,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     },
   );
 
-  // Test Agent endpoint
+  // Test Agent endpoint (single message)
   app.post(
     "/api/agent-chatbots/test",
     isAuthenticated,
@@ -3340,6 +3340,101 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
       } catch (error) {
         console.error("Error testing agent:", error);
         res.status(500).json({ message: "Failed to test agent" });
+      }
+    },
+  );
+
+  // Test Agent Chat endpoint (with conversation history)
+  app.post(
+    "/api/agent-chatbots/test-chat",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const { message, agentConfig, documentIds, chatHistory = [] } = req.body;
+        
+        if (!message || !agentConfig) {
+          return res.status(400).json({ message: "Message and agent configuration are required" });
+        }
+
+        console.log(`💬 Test chat request - Memory limit: ${agentConfig.memoryLimit || 10}, History length: ${chatHistory.length}`);
+
+        // Build comprehensive system prompt similar to deployed agents
+        const personality = agentConfig.personality ? `, with a ${agentConfig.personality} personality` : '';
+        const profession = agentConfig.profession ? ` as a ${agentConfig.profession}` : '';
+        const responseStyle = agentConfig.responseStyle ? ` in a ${agentConfig.responseStyle} style` : '';
+        
+        let systemPrompt = `${agentConfig.systemPrompt}
+
+You are ${agentConfig.name || 'an AI assistant'}${profession}${personality}. Respond ${responseStyle}.
+
+Additional skills: ${agentConfig.specialSkills?.join(', ') || 'General assistance'}
+
+Response guidelines:
+- Response length: ${agentConfig.responseLength || 'medium'}
+- Content filtering: ${agentConfig.contentFiltering ? 'enabled' : 'disabled'}
+- Toxicity prevention: ${agentConfig.toxicityPrevention ? 'enabled' : 'disabled'}
+- Privacy protection: ${agentConfig.privacyProtection ? 'enabled' : 'disabled'}
+- Factual accuracy: ${agentConfig.factualAccuracy ? 'prioritized' : 'standard'}
+
+${agentConfig.allowedTopics?.length > 0 ? `Allowed topics: ${agentConfig.allowedTopics.join(', ')}` : ''}
+${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blockedTopics.join(', ')}` : ''}
+
+Memory management: Keep track of conversation context within the last ${agentConfig.memoryLimit || 10} messages.`;
+
+        // Get document context if documents are selected
+        let documentContext = '';
+        if (documentIds && documentIds.length > 0) {
+          try {
+            const userId = req.user.claims.sub;
+            const documents = await storage.getDocumentsByIds(documentIds, userId);
+            if (documents.length > 0) {
+              documentContext = `\n\nRelevant documents for context:\n${documents.map(doc => 
+                `- ${doc.name}: ${doc.summary || doc.description || 'No summary available'}`
+              ).join('\n')}`;
+              
+              // Try to use actual document content for better context
+              for (const doc of documents) {
+                if (doc.content && doc.content.length > 0) {
+                  const contentSnippet = doc.content.substring(0, 500) + (doc.content.length > 500 ? '...' : '');
+                  documentContext += `\n\nContent from ${doc.name}:\n${contentSnippet}`;
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching documents for test:", error);
+          }
+        }
+
+        systemPrompt += documentContext;
+
+        // Prepare conversation messages respecting memory limit
+        const memoryLimit = Math.min(agentConfig.memoryLimit || 10, 20); // Cap at 20 for API limits
+        const recentHistory = chatHistory.slice(-memoryLimit);
+        
+        const messages = [
+          { role: "system", content: systemPrompt },
+          ...recentHistory,
+          { role: "user", content: message }
+        ];
+
+        console.log(`🔍 Calling OpenAI with ${messages.length} messages (${recentHistory.length} history + system + current)`);
+
+        // Call OpenAI to get response with conversation context
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: messages,
+          max_tokens: agentConfig.responseLength === 'short' ? 150 : 
+                     agentConfig.responseLength === 'long' ? 500 : 300,
+          temperature: 0.7
+        });
+
+        const agentResponse = response.choices[0].message.content || "No response generated";
+        console.log(`🤖 Generated response: ${agentResponse.substring(0, 100)}...`);
+
+        res.json({ response: agentResponse });
+      } catch (error) {
+        console.error("Error testing agent chat:", error);
+        res.status(500).json({ message: "Failed to test agent chat", error: error.message });
       }
     },
   );
