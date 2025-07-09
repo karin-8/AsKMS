@@ -10,6 +10,7 @@ import { handleLineWebhook, sendLineImageMessage } from "./lineOaWebhook";
 import { pool, db } from "./db";
 import { agentChatbots } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { GuardrailsService } from "./services/guardrails";
 
 // Initialize OpenAI for CSAT analysis
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -3333,7 +3334,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
           console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);
           
-          const { GuardrailsService } = require('./services/guardrails');
+          
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
           const inputValidation = await guardrailsService.validateInput(message);
@@ -3369,7 +3370,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
 
         // Apply guardrails to output response if configured
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
-          const { GuardrailsService } = require('./services/guardrails');
+          
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
           const outputValidation = await guardrailsService.validateOutput(agentResponse);
@@ -3474,7 +3475,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
           console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);
           
-          const { GuardrailsService } = require('./services/guardrails');
+          
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
           const inputValidation = await guardrailsService.validateInput(message);
@@ -3515,7 +3516,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
         // Apply guardrails to output response if configured
         if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
-          const { GuardrailsService } = require('./services/guardrails');
+          
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
           const outputValidation = await guardrailsService.validateOutput(agentResponse);
