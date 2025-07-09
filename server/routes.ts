@@ -4523,6 +4523,8 @@ Memory management: Keep track of conversation context within the last ${agentCon
       // Send the imagemap via Line OA if applicable
       if (channelType === 'lineoa') {
         try {
+          console.log('🔍 Looking for Line OA configuration for imagemap sending...');
+          
           // Get Line channel access token from agent using direct DB query
           const query = `SELECT lineoa_config FROM agent_chatbots WHERE id = $1`;
           const result = await pool.query(query, [parseInt(agentId)]);
@@ -4538,8 +4540,15 @@ Memory management: Keep track of conversation context within the last ${agentCon
               const fileNameWithoutExt = imageFile.filename.replace(/\.[^/.]+$/, "");
               const baseUrl = `/uploads/${fileNameWithoutExt}`;
               
-              await sendLineImagemapMessage(
-                targetUserId,
+              console.log('📤 Sending Line imagemap message with:', {
+                userId: channelId, // channelId is the Line user ID
+                baseUrl,
+                linkUri,
+                accessToken: lineoaConfig.accessToken ? 'Available' : 'Missing'
+              });
+              
+              const success = await sendLineImagemapMessage(
+                channelId, // Use channelId as Line user ID
                 baseUrl,
                 linkUri,
                 lineoaConfig.accessToken,
@@ -4547,7 +4556,12 @@ Memory management: Keep track of conversation context within the last ${agentCon
                 1040, // Standard Line imagemap width
                 1040  // Standard Line imagemap height
               );
-              console.log('✅ Successfully sent Line imagemap message with link:', linkUri);
+              
+              if (success) {
+                console.log('✅ Successfully sent Line imagemap message with link:', linkUri);
+              } else {
+                console.error('❌ Failed to send Line imagemap message');
+              }
             } else {
               console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
             }
