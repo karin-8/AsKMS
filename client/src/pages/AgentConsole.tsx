@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -25,6 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   MessageSquare,
   Send,
@@ -43,6 +50,8 @@ import {
   File as FileIcon,
   Upload,
   X,
+  Link,
+  Camera,
 } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 
@@ -113,6 +122,8 @@ export default function AgentConsole() {
   const [wsConnected, setWsConnected] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string>("");
+  const [showImageOptions, setShowImageOptions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -516,9 +527,91 @@ export default function AgentConsole() {
   const handleRemoveImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    setRedirectUrl("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Mutation for sending URL redirect
+  const sendUrlRedirectMutation = useMutation({
+    mutationFn: async ({ url, message }: { url: string; message?: string }) => {
+      if (!selectedUser) throw new Error("No user selected");
+
+      return await apiRequest("POST", "/api/agent-console/send-url-redirect", {
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId,
+        targetUrl: url,
+        message: message?.trim() || "",
+        messageType: 'agent'
+      });
+    },
+    onSuccess: () => {
+      setMessageInput("");
+      setRedirectUrl("");
+      setShowImageOptions(false);
+      
+      // Invalidate conversation messages
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/conversation",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+          selectedUser?.agentId,
+        ],
+      });
+      
+      // Also invalidate summary
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/summary",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+        ],
+      });
+
+      toast({
+        title: "URL Redirect Sent",
+        description: "URL redirect has been sent to the user successfully.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+
+      toast({
+        title: "Error",
+        description: "Failed to send URL redirect. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Function to handle sending URL redirect
+  const handleSendUrlRedirect = () => {
+    if (!redirectUrl.trim()) {
+      toast({
+        title: "URL Required",
+        description: "Please enter a valid URL to redirect users.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    sendUrlRedirectMutation.mutate({ url: redirectUrl, message: messageInput });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1082,15 +1175,34 @@ export default function AgentConsole() {
                                   rows={2}
                                 />
                                 <div className="flex flex-col space-y-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={sendMessageMutation.isPending || sendImageMutation.isPending}
-                                    className="bg-blue-50 hover:bg-blue-100 border-blue-200"
-                                  >
-                                    <Upload className="w-4 h-4" />
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={sendMessageMutation.isPending || sendImageMutation.isPending}
+                                        className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                      >
+                                        <Upload className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex items-center space-x-2"
+                                      >
+                                        <Camera className="w-4 h-4" />
+                                        <span>Upload Image</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => setShowImageOptions(true)}
+                                        className="flex items-center space-x-2"
+                                      >
+                                        <Link className="w-4 h-4" />
+                                        <span>Send URL Redirect</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                   <Button
                                     onClick={handleSendMessage}
                                     disabled={
@@ -1118,14 +1230,66 @@ export default function AgentConsole() {
                                 className="hidden"
                               />
                               
+                              {/* URL Redirect Dialog */}
+                              {showImageOptions && (
+                                <div className="mb-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-sm font-medium">Send URL Redirect</Label>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setShowImageOptions(false)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Input
+                                        placeholder="Enter URL to redirect user (e.g., https://example.com/product)"
+                                        value={redirectUrl}
+                                        onChange={(e) => setRedirectUrl(e.target.value)}
+                                        className="text-sm"
+                                      />
+                                      <div className="flex space-x-2">
+                                        <Button
+                                          size="sm"
+                                          onClick={handleSendUrlRedirect}
+                                          disabled={!redirectUrl.trim()}
+                                          className="bg-blue-500 hover:bg-blue-600 text-white"
+                                        >
+                                          <ExternalLink className="w-3 h-3 mr-1" />
+                                          Send Redirect
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setShowImageOptions(false);
+                                            setRedirectUrl("");
+                                          }}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
                               <div className="text-xs text-gray-500">
                                 {selectedImage ? (
                                   <span className="text-blue-600">
                                     📸 Image ready to send{messageInput.trim() ? " with message" : ""}
                                   </span>
+                                ) : showImageOptions ? (
+                                  <span className="text-blue-600">
+                                    🔗 Preparing URL redirect...
+                                  </span>
                                 ) : (
                                   <span>
-                                    💡 Tip: Click the upload button to send images to users
+                                    💡 Tip: Use the upload menu to send images or URL redirects to users
                                   </span>
                                 )}
                               </div>

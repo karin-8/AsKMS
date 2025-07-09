@@ -2528,6 +2528,72 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     }
   });
 
+  // Event Tracking API endpoints
+  app.get("/api/event-tracking", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventType, channelType } = req.query;
+      const { eventTracking, agentChatbots } = await import("@shared/schema");
+      const { and } = await import("drizzle-orm");
+
+      let query = db.select({
+        id: eventTracking.id,
+        eventType: eventTracking.eventType,
+        userId: eventTracking.userId,
+        channelType: eventTracking.channelType,
+        channelId: eventTracking.channelId,
+        agentId: eventTracking.agentId,
+        messageId: eventTracking.messageId,
+        targetUrl: eventTracking.targetUrl,
+        imageUrl: eventTracking.imageUrl,
+        userAgent: eventTracking.userAgent,
+        ipAddress: eventTracking.ipAddress,
+        referrer: eventTracking.referrer,
+        metadata: eventTracking.metadata,
+        createdAt: eventTracking.createdAt,
+        agentName: agentChatbots.name
+      })
+      .from(eventTracking)
+      .leftJoin(agentChatbots, eq(eventTracking.agentId, agentChatbots.id))
+      .orderBy(eventTracking.createdAt);
+
+      // Apply filters
+      const conditions = [];
+      if (eventType && eventType !== 'all') {
+        conditions.push(eq(eventTracking.eventType, eventType as any));
+      }
+      if (channelType && channelType !== 'all') {
+        conditions.push(eq(eventTracking.channelType, channelType as string));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const events = await query;
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching event tracking data:", error);
+      res.status(500).json({ message: "Failed to fetch event tracking data" });
+    }
+  });
+
+  app.post("/api/event-tracking", async (req: any, res) => {
+    try {
+      const { eventTracking, insertEventTrackingSchema } = await import("@shared/schema");
+      const eventData = insertEventTrackingSchema.parse(req.body);
+
+      const [event] = await db
+        .insert(eventTracking)
+        .values(eventData)
+        .returning();
+
+      res.json(event);
+    } catch (error) {
+      console.error("Error creating event tracking record:", error);
+      res.status(500).json({ message: "Failed to create event tracking record" });
+    }
+  });
+
   // Chat Widget API endpoints
   app.get("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
@@ -4027,6 +4093,122 @@ Memory management: Keep track of conversation context within the last ${agentCon
     } catch (error) {
       console.error("Error sending agent console message:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Agent Console: Send URL redirect
+  app.post("/api/agent-console/send-url-redirect", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, channelType, channelId, agentId, targetUrl, message, messageType } = req.body;
+      const currentUser = req.user.claims;
+
+      if (!userId || !channelType || !channelId || !agentId || !targetUrl) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Create URL redirect message content
+      const redirectMessage = message.trim() ? 
+        `${message}\n\n🔗 Click here: ${targetUrl}` : 
+        `🔗 Click here: ${targetUrl}`;
+
+      // Store the message in chat history
+      const { chatHistory } = await import("@shared/schema");
+      
+      const [savedMessage] = await db.insert(chatHistory).values({
+        userId,
+        channelType,
+        channelId,
+        agentId,
+        messageType: messageType || 'agent',
+        content: redirectMessage,
+        metadata: {
+          redirectUrl: targetUrl,
+          humanAgent: true,
+          humanAgentName: currentUser.firstName || currentUser.email,
+          isUrlRedirect: true
+        }
+      }).returning();
+
+      // Send the URL redirect via Line OA if it's a Line channel
+      if (channelType === 'lineoa') {
+        try {
+          const { sendLinePushMessage } = await import("./lineOaWebhook");
+          
+          // Get channel access token from agent configuration
+          const { socialIntegrations } = await import("@shared/schema");
+          const [integration] = await db
+            .select()
+            .from(socialIntegrations)
+            .where(eq(socialIntegrations.agentId, agentId));
+
+          if (integration && integration.channelAccessToken) {
+            await sendLinePushMessage(
+              integration.channelAccessToken,
+              userId,
+              redirectMessage
+            );
+          }
+        } catch (lineError) {
+          console.error("Error sending Line URL redirect:", lineError);
+        }
+      }
+
+      // Create event tracking record
+      try {
+        const { eventTracking } = await import("@shared/schema");
+        
+        await db.insert(eventTracking).values({
+          eventType: 'url_redirect',
+          userId,
+          channelType,
+          channelId,
+          agentId,
+          messageId: savedMessage.id,
+          targetUrl,
+          userAgent: req.get('User-Agent'),
+          ipAddress: req.ip,
+          metadata: {
+            sentByAgent: true,
+            agentName: currentUser.firstName || currentUser.email,
+            message: message
+          }
+        });
+      } catch (trackingError) {
+        console.error("Error creating event tracking:", trackingError);
+      }
+
+      // Broadcast via WebSocket
+      if (wss) {
+        const wsMessage = {
+          type: 'new_message',
+          userId,
+          channelType,
+          channelId,
+          agentId,
+          message: {
+            id: savedMessage.id,
+            messageType: savedMessage.messageType,
+            content: savedMessage.content,
+            createdAt: savedMessage.createdAt,
+            metadata: savedMessage.metadata
+          }
+        };
+        
+        wss.clients.forEach((client: WebSocket) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(wsMessage));
+          }
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: savedMessage,
+        redirectUrl: targetUrl 
+      });
+    } catch (error) {
+      console.error("Error sending URL redirect:", error);
+      res.status(500).json({ message: "Failed to send URL redirect" });
     }
   });
 

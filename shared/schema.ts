@@ -732,3 +732,40 @@ export const insertChatHistorySchema = createInsertSchema(chatHistory).omit({
 // Chat History types
 export type ChatHistory = typeof chatHistory.$inferSelect;
 export type InsertChatHistory = z.infer<typeof insertChatHistorySchema>;
+
+// Event Tracking table - tracks when users click on images/URLs sent by human agents
+export const eventTracking = pgTable("event_tracking", {
+  id: serial("id").primaryKey(),
+  eventType: varchar("event_type").notNull(), // 'image_click', 'url_redirect', 'message_open'
+  userId: varchar("user_id").notNull(), // External user ID (from Line/FB/etc)
+  channelType: varchar("channel_type").notNull(), // 'lineoa', 'facebook', 'tiktok', 'web'
+  channelId: varchar("channel_id").notNull(), // Channel/Bot ID
+  agentId: integer("agent_id").notNull().references(() => agentChatbots.id, { onDelete: "cascade" }),
+  messageId: integer("message_id").references(() => chatHistory.id, { onDelete: "cascade" }), // Reference to original message
+  
+  // Event details
+  targetUrl: text("target_url"), // URL that was clicked/redirected to
+  imageUrl: text("image_url"), // Image that was clicked
+  userAgent: text("user_agent"), // Browser/device info
+  ipAddress: varchar("ip_address"), // User's IP address
+  referrer: text("referrer"), // Where the click came from
+  
+  // Additional metadata
+  metadata: jsonb("metadata"), // Store additional info
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("event_tracking_user_channel_idx").on(table.userId, table.channelType, table.channelId),
+  index("event_tracking_agent_idx").on(table.agentId),
+  index("event_tracking_event_type_idx").on(table.eventType),
+  index("event_tracking_created_at_idx").on(table.createdAt),
+]);
+
+// Event Tracking schemas
+export const insertEventTrackingSchema = createInsertSchema(eventTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Event Tracking types
+export type EventTracking = typeof eventTracking.$inferSelect;
+export type InsertEventTracking = z.infer<typeof insertEventTrackingSchema>;
