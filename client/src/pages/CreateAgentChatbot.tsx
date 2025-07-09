@@ -106,6 +106,9 @@ export default function CreateAgentChatbot() {
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [testMessage, setTestMessage] = useState("");
+  const [testResponse, setTestResponse] = useState("");
+  const [isTestingAgent, setIsTestingAgent] = useState(false);
 
   // Check if we're editing an existing agent
   const urlParams = new URLSearchParams(window.location.search);
@@ -203,6 +206,39 @@ export default function CreateAgentChatbot() {
     }
   }, [existingAgent, agentDocuments, isEditing, form]);
 
+  // Test agent mutation
+  const testAgentMutation = useMutation({
+    mutationFn: async (testData: { message: string; agentConfig: CreateAgentForm }) => {
+      return await apiRequest("POST", "/api/agent-chatbots/test", {
+        message: testData.message,
+        agentConfig: testData.agentConfig,
+        documentIds: selectedDocuments,
+      });
+    },
+    onSuccess: (response) => {
+      setTestResponse(response.response || "No response received");
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to test agent",
+        variant: "destructive",
+      });
+      setTestResponse("Error testing agent. Please try again.");
+    },
+  });
+
   // Create/Update agent mutation
   const saveAgentMutation = useMutation({
     mutationFn: async (
@@ -278,6 +314,39 @@ export default function CreateAgentChatbot() {
       ...data,
       documentIds: selectedDocuments,
     });
+  };
+
+  const handleTestAgent = () => {
+    if (!testMessage.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a test message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentFormData = form.getValues();
+    
+    // Basic validation for required fields
+    if (!currentFormData.name || !currentFormData.personality || !currentFormData.profession || !currentFormData.responseStyle) {
+      toast({
+        title: "Error", 
+        description: "Please fill in all required fields in Overview tab before testing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingAgent(true);
+    setTestResponse("");
+    
+    testAgentMutation.mutate({
+      message: testMessage,
+      agentConfig: currentFormData,
+    });
+    
+    setIsTestingAgent(false);
   };
 
   // Document toggle mutations for real-time updates
@@ -517,7 +586,7 @@ export default function CreateAgentChatbot() {
         <TopBar />
 
         <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl ml-4">
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
               <Link href="/agent-chatbots">
@@ -564,6 +633,14 @@ export default function CreateAgentChatbot() {
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Guardrails
+                </Button>
+                <Button
+                  variant={activeTab === "test" ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab("test")}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Test your Agent
                 </Button>
               </div>
 
@@ -1373,6 +1450,119 @@ export default function CreateAgentChatbot() {
                                 </p>
                               </div>
                             </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {activeTab === "test" && (
+                      <div className="space-y-6">
+                        {/* Test Agent Interface */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <MessageSquare className="h-5 w-5" />
+                              Test your Agent
+                            </CardTitle>
+                            <CardDescription>
+                              Send test messages to see how your agent will respond based on current configuration
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {/* Current Configuration Summary */}
+                            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                              <h4 className="font-medium text-slate-800">Current Configuration:</h4>
+                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+                                <div>
+                                  <span className="text-slate-600">Name:</span>
+                                  <Badge variant="outline" className="ml-1">
+                                    {form.watch("name") || "Not set"}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-slate-600">Personality:</span>
+                                  <Badge variant="outline" className="ml-1">
+                                    {personalityOptions.find(p => p.id === form.watch("personality"))?.label || "Not set"}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-slate-600">Profession:</span>
+                                  <Badge variant="outline" className="ml-1">
+                                    {professionOptions.find(p => p.id === form.watch("profession"))?.label || "Not set"}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-slate-600">Documents:</span>
+                                  <Badge variant="outline" className="ml-1">
+                                    {selectedDocuments.length} selected
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Test Message Input */}
+                            <div className="space-y-2">
+                              <Label htmlFor="testMessage">Test Message</Label>
+                              <Textarea
+                                id="testMessage"
+                                placeholder="Enter a message to test how your agent will respond..."
+                                value={testMessage}
+                                onChange={(e) => setTestMessage(e.target.value)}
+                                className="min-h-[100px]"
+                              />
+                            </div>
+
+                            {/* Test Button */}
+                            <Button
+                              onClick={handleTestAgent}
+                              disabled={testAgentMutation.isPending || !testMessage.trim()}
+                              className="w-full bg-green-600 hover:bg-green-700"
+                            >
+                              {testAgentMutation.isPending ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Testing Agent...
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="w-4 h-4 mr-2" />
+                                  Test Agent Response
+                                </>
+                              )}
+                            </Button>
+
+                            {/* Test Response */}
+                            {testResponse && (
+                              <div className="space-y-2">
+                                <Label>Agent Response</Label>
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                  <div className="flex items-start space-x-3">
+                                    <Bot className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <div className="flex-1">
+                                      <p className="text-blue-900 whitespace-pre-wrap">{testResponse}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Test Tips */}
+                            <Card className="border-amber-200 bg-amber-50">
+                              <CardContent className="pt-6">
+                                <div className="flex items-start space-x-3">
+                                  <Lightbulb className="w-5 h-5 text-amber-600 mt-0.5" />
+                                  <div>
+                                    <h4 className="font-medium text-amber-900">Testing Tips</h4>
+                                    <ul className="text-sm text-amber-700 mt-1 list-disc list-inside space-y-1">
+                                      <li>Test different types of questions to see how your agent responds</li>
+                                      <li>Try questions related to your selected documents</li>
+                                      <li>Test edge cases and inappropriate content to verify guardrails</li>
+                                      <li>Make sure all required fields are filled before testing</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
                           </CardContent>
                         </Card>
                       </div>

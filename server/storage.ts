@@ -68,6 +68,7 @@ export interface IStorage {
   // Document operations
   getDocuments(userId: string, options?: { categoryId?: number; limit?: number; offset?: number }): Promise<Document[]>;
   getDocument(id: number, userId: string): Promise<Document | undefined>;
+  getDocumentsByIds(ids: number[], userId: string): Promise<Document[]>;
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: number, document: UpdateDocument, userId: string): Promise<Document>;
   deleteDocument(id: number, userId: string): Promise<void>;
@@ -412,6 +413,94 @@ export class DatabaseStorage implements IStorage {
     }
 
     return undefined;
+  }
+
+  async getDocumentsByIds(ids: number[], userId: string): Promise<Document[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    // Get documents that user owns
+    const ownedDocuments = await db
+      .select()
+      .from(documents)
+      .where(and(
+        inArray(documents.id, ids),
+        eq(documents.userId, userId)
+      ));
+
+    // Get documents shared directly with user
+    const userSharedDocuments = await db
+      .select({
+        id: documents.id,
+        name: documents.name,
+        description: documents.description,
+        fileName: documents.fileName,
+        filePath: documents.filePath,
+        fileSize: documents.fileSize,
+        mimeType: documents.mimeType,
+        content: documents.content,
+        summary: documents.summary,
+        tags: documents.tags,
+        categoryId: documents.categoryId,
+        userId: documents.userId,
+        createdAt: documents.createdAt,
+        updatedAt: documents.updatedAt,
+        processedAt: documents.processedAt,
+        aiCategory: documents.aiCategory,
+        aiCategoryColor: documents.aiCategoryColor,
+        isPublic: documents.isPublic
+      })
+      .from(documents)
+      .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
+      .where(and(
+        inArray(documents.id, ids),
+        eq(documentUserPermissions.userId, userId)
+      ));
+
+    // Get documents shared with user's department
+    const [currentUser] = await db.select({ departmentId: users.departmentId })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    let departmentSharedDocuments: any[] = [];
+    if (currentUser?.departmentId) {
+      departmentSharedDocuments = await db
+        .select({
+          id: documents.id,
+          name: documents.name,
+          description: documents.description,
+          fileName: documents.fileName,
+          filePath: documents.filePath,
+          fileSize: documents.fileSize,
+          mimeType: documents.mimeType,
+          content: documents.content,
+          summary: documents.summary,
+          tags: documents.tags,
+          categoryId: documents.categoryId,
+          userId: documents.userId,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+          processedAt: documents.processedAt,
+          aiCategory: documents.aiCategory,
+          aiCategoryColor: documents.aiCategoryColor,
+          isPublic: documents.isPublic
+        })
+        .from(documents)
+        .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
+        .where(and(
+          inArray(documents.id, ids),
+          eq(documentDepartmentPermissions.departmentId, currentUser.departmentId)
+        ));
+    }
+
+    // Combine all documents and remove duplicates
+    const allDocuments = [...ownedDocuments, ...userSharedDocuments, ...departmentSharedDocuments];
+    const uniqueDocuments = allDocuments.filter((doc, index, self) => 
+      index === self.findIndex(d => d.id === doc.id)
+    );
+
+    return uniqueDocuments;
   }
 
   async createDocument(document: InsertDocument): Promise<Document> {

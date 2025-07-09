@@ -3271,6 +3271,79 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     },
   );
 
+  // Test Agent endpoint
+  app.post(
+    "/api/agent-chatbots/test",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const { message, agentConfig, documentIds } = req.body;
+        
+        if (!message || !agentConfig) {
+          return res.status(400).json({ message: "Message and agent configuration are required" });
+        }
+
+        // Build system prompt from agent configuration
+        const personality = agentConfig.personality ? `, with a ${agentConfig.personality} personality` : '';
+        const profession = agentConfig.profession ? ` as a ${agentConfig.profession}` : '';
+        const responseStyle = agentConfig.responseStyle ? ` in a ${agentConfig.responseStyle} style` : '';
+        
+        const systemPrompt = `${agentConfig.systemPrompt}
+
+You are ${agentConfig.name || 'an AI assistant'}${profession}${personality}. Respond ${responseStyle}.
+
+Additional skills: ${agentConfig.specialSkills?.join(', ') || 'General assistance'}
+
+Response guidelines:
+- Response length: ${agentConfig.responseLength || 'medium'}
+- Content filtering: ${agentConfig.contentFiltering ? 'enabled' : 'disabled'}
+- Toxicity prevention: ${agentConfig.toxicityPrevention ? 'enabled' : 'disabled'}
+- Privacy protection: ${agentConfig.privacyProtection ? 'enabled' : 'disabled'}
+- Factual accuracy: ${agentConfig.factualAccuracy ? 'prioritized' : 'standard'}
+
+${agentConfig.allowedTopics?.length > 0 ? `Allowed topics: ${agentConfig.allowedTopics.join(', ')}` : ''}
+${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blockedTopics.join(', ')}` : ''}`;
+
+        // Get document context if documents are selected
+        let documentContext = '';
+        if (documentIds && documentIds.length > 0) {
+          try {
+            const userId = req.user.claims.sub;
+            const documents = await storage.getDocumentsByIds(documentIds, userId);
+            if (documents.length > 0) {
+              documentContext = `\n\nRelevant documents:\n${documents.map(doc => 
+                `- ${doc.name}: ${doc.summary || doc.description || 'No summary available'}`
+              ).join('\n')}`;
+            }
+          } catch (error) {
+            console.error("Error fetching documents for test:", error);
+          }
+        }
+
+        const fullPrompt = systemPrompt + documentContext;
+
+        // Call OpenAI to get response
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: fullPrompt },
+            { role: "user", content: message }
+          ],
+          max_tokens: agentConfig.responseLength === 'short' ? 150 : 
+                     agentConfig.responseLength === 'long' ? 500 : 300,
+          temperature: 0.7
+        });
+
+        const agentResponse = response.choices[0].message.content || "No response generated";
+
+        res.json({ response: agentResponse });
+      } catch (error) {
+        console.error("Error testing agent:", error);
+        res.status(500).json({ message: "Failed to test agent" });
+      }
+    },
+  );
+
   // Social Integrations routes
   app.get(
     "/api/social-integrations",
