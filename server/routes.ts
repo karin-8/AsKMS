@@ -3326,19 +3326,63 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
 
         const fullPrompt = systemPrompt + documentContext;
 
+        // Apply guardrails to input message if configured
+        let processedMessage = message;
+        const guardrailsConfig = agentConfig.guardrails;
+        
+        if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
+          console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);
+          
+          const { GuardrailsService } = require('./services/guardrails');
+          const guardrailsService = new GuardrailsService(guardrailsConfig);
+          
+          const inputValidation = await guardrailsService.validateInput(message);
+          console.log(`📝 Input validation result: ${JSON.stringify(inputValidation)}`);
+          
+          if (!inputValidation.allowed) {
+            console.log(`❌ Input blocked by guardrails: ${inputValidation.reason}`);
+            return res.json({ 
+              response: `ขออภัย ไม่สามารถประมวลผลคำถามนี้ได้ (${inputValidation.reason}) ${inputValidation.suggestions?.[0] || 'Please try rephrasing your message'}` 
+            });
+          }
+          
+          // Use modified content if available
+          if (inputValidation.modifiedContent) {
+            processedMessage = inputValidation.modifiedContent;
+            console.log(`🔄 Using modified input: ${processedMessage}`);
+          }
+        }
+
         // Call OpenAI to get response
         const response = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
             { role: "system", content: fullPrompt },
-            { role: "user", content: message }
+            { role: "user", content: processedMessage }
           ],
           max_tokens: agentConfig.responseLength === 'short' ? 150 : 
                      agentConfig.responseLength === 'long' ? 500 : 300,
           temperature: 0.7
         });
 
-        const agentResponse = response.choices[0].message.content || "No response generated";
+        let agentResponse = response.choices[0].message.content || "No response generated";
+
+        // Apply guardrails to output response if configured
+        if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
+          const { GuardrailsService } = require('./services/guardrails');
+          const guardrailsService = new GuardrailsService(guardrailsConfig);
+          
+          const outputValidation = await guardrailsService.validateOutput(agentResponse);
+          console.log(`📤 Output validation result: ${JSON.stringify(outputValidation)}`);
+          
+          if (!outputValidation.allowed) {
+            console.log(`❌ Output blocked by guardrails: ${outputValidation.reason}`);
+            agentResponse = `ขออภัย ไม่สามารถให้คำตอบนี้ได้ (${outputValidation.reason}) ${outputValidation.suggestions?.[0] || 'Please try asking in a different way'}`;
+          } else if (outputValidation.modifiedContent) {
+            agentResponse = outputValidation.modifiedContent;
+            console.log(`🔄 Using modified output: ${agentResponse.substring(0, 100)}...`);
+          }
+        }
 
         res.json({ response: agentResponse });
       } catch (error) {
@@ -3423,17 +3467,68 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
         console.log(`🔍 Calling OpenAI with ${messages.length} messages (${recentHistory.length} history + system + current)`);
 
+        // Apply guardrails to input message if configured
+        let processedMessage = message;
+        const guardrailsConfig = agentConfig.guardrails;
+        
+        if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
+          console.log(`🛡️ Applying guardrails to test input: ${JSON.stringify(guardrailsConfig)}`);
+          
+          const { GuardrailsService } = require('./services/guardrails');
+          const guardrailsService = new GuardrailsService(guardrailsConfig);
+          
+          const inputValidation = await guardrailsService.validateInput(message);
+          console.log(`📝 Input validation result: ${JSON.stringify(inputValidation)}`);
+          
+          if (!inputValidation.allowed) {
+            console.log(`❌ Input blocked by guardrails: ${inputValidation.reason}`);
+            return res.json({ 
+              response: `ขออภัย ไม่สามารถประมวลผลคำถามนี้ได้ (${inputValidation.reason}) ${inputValidation.suggestions?.[0] || 'Please try rephrasing your message'}` 
+            });
+          }
+          
+          // Use modified content if available
+          if (inputValidation.modifiedContent) {
+            processedMessage = inputValidation.modifiedContent;
+            console.log(`🔄 Using modified input: ${processedMessage}`);
+          }
+        }
+
+        // Update messages with processed message
+        const finalMessages = [
+          { role: "system", content: systemPrompt },
+          ...recentHistory,
+          { role: "user", content: processedMessage }
+        ];
+
         // Call OpenAI to get response with conversation context
         const response = await openai.chat.completions.create({
           model: "gpt-4o",
-          messages: messages,
+          messages: finalMessages,
           max_tokens: agentConfig.responseLength === 'short' ? 150 : 
                      agentConfig.responseLength === 'long' ? 500 : 300,
           temperature: 0.7
         });
 
-        const agentResponse = response.choices[0].message.content || "No response generated";
+        let agentResponse = response.choices[0].message.content || "No response generated";
         console.log(`🤖 Generated response: ${agentResponse.substring(0, 100)}...`);
+
+        // Apply guardrails to output response if configured
+        if (guardrailsConfig && Object.keys(guardrailsConfig).length > 0) {
+          const { GuardrailsService } = require('./services/guardrails');
+          const guardrailsService = new GuardrailsService(guardrailsConfig);
+          
+          const outputValidation = await guardrailsService.validateOutput(agentResponse);
+          console.log(`📤 Output validation result: ${JSON.stringify(outputValidation)}`);
+          
+          if (!outputValidation.allowed) {
+            console.log(`❌ Output blocked by guardrails: ${outputValidation.reason}`);
+            agentResponse = `ขออภัย ไม่สามารถให้คำตอบนี้ได้ (${outputValidation.reason}) ${outputValidation.suggestions?.[0] || 'Please try asking in a different way'}`;
+          } else if (outputValidation.modifiedContent) {
+            agentResponse = outputValidation.modifiedContent;
+            console.log(`🔄 Using modified output: ${agentResponse.substring(0, 100)}...`);
+          }
+        }
 
         res.json({ response: agentResponse });
       } catch (error) {
