@@ -412,7 +412,19 @@ export default function AgentConsole() {
   // Mutation for sending imagemap messages
   const sendImagemapMutation = useMutation({
     mutationFn: async ({ image, linkUri, altText }: { image: File; linkUri: string; altText?: string }) => {
+      console.log('🔥 FRONTEND - sendImagemapMutation triggered');
       if (!selectedUser) throw new Error("No user selected");
+
+      console.log('🔥 FRONTEND - Creating FormData with:', {
+        imageSize: image.size,
+        imageName: image.name,
+        userId: selectedUser.userId,
+        channelType: selectedUser.channelType,
+        channelId: selectedUser.channelId,
+        agentId: selectedUser.agentId,
+        linkUri: linkUri,
+        altText: altText
+      });
 
       const formData = new FormData();
       formData.append('image', image);
@@ -425,7 +437,10 @@ export default function AgentConsole() {
         formData.append('altText', altText);
       }
 
-      return await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
+      console.log('🔥 FRONTEND - Making API request to /api/agent-console/send-imagemap');
+      const result = await apiRequest("POST", "/api/agent-console/send-imagemap", formData);
+      console.log('🔥 FRONTEND - API request result:', result);
+      return result;
     },
     onSuccess: () => {
       setMessageInput("");

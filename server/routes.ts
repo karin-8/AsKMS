@@ -4424,15 +4424,38 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
   // Agent Console - Send Imagemap Message (clickable image with URL redirect)
   app.post('/api/agent-console/send-imagemap', isAuthenticated, upload.single('image'), async (req: any, res) => {
+    console.log('🔥 IMAGEMAP ENDPOINT HIT - Starting processing...');
+    console.log('🔥 Request body keys:', Object.keys(req.body));
+    console.log('🔥 Request file:', req.file ? 'File present' : 'No file');
+    console.log('🔥 Request headers:', req.headers['content-type']);
+    
     try {
       const { userId: targetUserId, channelType, channelId, agentId, linkUri, altText } = req.body;
       const imageFile = req.file;
       
+      console.log('🔥 Parsed parameters:', {
+        targetUserId,
+        channelType,
+        channelId,
+        agentId,
+        linkUri,
+        altText,
+        hasFile: !!imageFile
+      });
+      
       if (!targetUserId || !channelType || !channelId || !agentId || !linkUri) {
+        console.log('❌ Missing required parameters:', {
+          targetUserId: !!targetUserId,
+          channelType: !!channelType,
+          channelId: !!channelId,
+          agentId: !!agentId,
+          linkUri: !!linkUri
+        });
         return res.status(400).json({ message: "Missing required parameters (linkUri is required)" });
       }
       
       if (!imageFile) {
+        console.log('❌ No image file provided');
         return res.status(400).json({ message: "No image file provided" });
       }
       
