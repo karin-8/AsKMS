@@ -41,6 +41,8 @@ import {
   ExternalLink,
   Image as ImageIcon,
   File as FileIcon,
+  Upload,
+  X,
 } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 
@@ -109,8 +111,11 @@ export default function AgentConsole() {
   const [messageInput, setMessageInput] = useState("");
   const [isHumanTakeover, setIsHumanTakeover] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // WebSocket connection setup
   useEffect(() => {
@@ -387,14 +392,133 @@ export default function AgentConsole() {
     },
   });
 
+  // Mutation for uploading and sending image
+  const sendImageMutation = useMutation({
+    mutationFn: async ({ image, message }: { image: File; message?: string }) => {
+      if (!selectedUser) throw new Error("No user selected");
+
+      const formData = new FormData();
+      formData.append('image', image);
+      formData.append('userId', selectedUser.userId);
+      formData.append('channelType', selectedUser.channelType);
+      formData.append('channelId', selectedUser.channelId);
+      formData.append('agentId', selectedUser.agentId.toString());
+      if (message?.trim()) {
+        formData.append('message', message);
+      }
+      formData.append('messageType', 'agent');
+
+      return await apiRequest("POST", "/api/agent-console/send-image", formData);
+    },
+    onSuccess: () => {
+      setMessageInput("");
+      setSelectedImage(null);
+      setImagePreview(null);
+      
+      // Invalidate conversation messages
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/conversation",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+          selectedUser?.agentId,
+        ],
+      });
+      
+      // Also invalidate summary
+      queryClient.invalidateQueries({
+        queryKey: [
+          "/api/agent-console/summary",
+          selectedUser?.userId,
+          selectedUser?.channelType,
+          selectedUser?.channelId,
+        ],
+      });
+
+      toast({
+        title: "Image Sent",
+        description: "Your image has been sent to the user successfully.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+
+      toast({
+        title: "Error",
+        description: "Failed to send image. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationMessages]);
 
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedUser) return;
-    sendMessageMutation.mutate({ message: messageInput });
+    if (selectedImage) {
+      // Send image with optional text
+      sendImageMutation.mutate({ image: selectedImage, message: messageInput });
+    } else if (messageInput.trim()) {
+      // Send text message
+      sendMessageMutation.mutate({ message: messageInput });
+    }
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select a valid image file (JPEG, PNG, GIF, WebP).",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "File Too Large",
+          description: "Please select an image smaller than 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -911,31 +1035,100 @@ export default function AgentConsole() {
                                 <span>Human Agent Mode - Your message will be sent to the user</span>
                               </div>
                             </div>
-                            <div className="flex space-x-2">
-                              <Textarea
-                                placeholder="Type your message..."
-                                value={messageInput}
-                                onChange={(e) =>
-                                  setMessageInput(e.target.value)
-                                }
-                                onKeyPress={handleKeyPress}
-                                className="flex-1 resize-none"
-                                rows={2}
+                            
+                            {/* Image Preview */}
+                            {imagePreview && (
+                              <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <div className="flex items-start space-x-3">
+                                  <img 
+                                    src={imagePreview} 
+                                    alt="Selected image" 
+                                    className="w-20 h-20 object-cover rounded-lg"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm font-medium text-gray-800">
+                                          {selectedImage?.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {selectedImage && (selectedImage.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleRemoveImage}
+                                        className="ml-2"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                              <div className="flex space-x-2">
+                                <Textarea
+                                  placeholder={selectedImage ? "Add a message with your image (optional)..." : "Type your message..."}
+                                  value={messageInput}
+                                  onChange={(e) =>
+                                    setMessageInput(e.target.value)
+                                  }
+                                  onKeyPress={handleKeyPress}
+                                  className="flex-1 resize-none"
+                                  rows={2}
+                                />
+                                <div className="flex flex-col space-y-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={sendMessageMutation.isPending || sendImageMutation.isPending}
+                                    className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                  >
+                                    <Upload className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    onClick={handleSendMessage}
+                                    disabled={
+                                      (!messageInput.trim() && !selectedImage) ||
+                                      sendMessageMutation.isPending ||
+                                      sendImageMutation.isPending
+                                    }
+                                    className="bg-green-500 hover:bg-green-600"
+                                  >
+                                    {(sendMessageMutation.isPending || sendImageMutation.isPending) ? (
+                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <Send className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {/* Hidden File Input */}
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onChange={handleImageSelect}
+                                className="hidden"
                               />
-                              <Button
-                                onClick={handleSendMessage}
-                                disabled={
-                                  !messageInput.trim() ||
-                                  sendMessageMutation.isPending
-                                }
-                                className="bg-green-500 hover:bg-green-600"
-                              >
-                                {sendMessageMutation.isPending ? (
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              
+                              <div className="text-xs text-gray-500">
+                                {selectedImage ? (
+                                  <span className="text-blue-600">
+                                    📸 Image ready to send{messageInput.trim() ? " with message" : ""}
+                                  </span>
                                 ) : (
-                                  <Send className="w-4 h-4" />
+                                  <span>
+                                    💡 Tip: Click the upload button to send images to users
+                                  </span>
                                 )}
-                              </Button>
+                              </div>
                             </div>
                           </div>
                         )}

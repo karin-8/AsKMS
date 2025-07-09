@@ -125,6 +125,67 @@ export async function sendLinePushMessage(
   }
 }
 
+// Send image message to Line user (for Human Agent images)
+export async function sendLineImageMessage(
+  userId: string,
+  imageUrl: string,
+  channelAccessToken: string,
+  captionText?: string,
+) {
+  try {
+    // Convert relative URL to absolute URL for Line API
+    const protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
+    const host = process.env.REPLIT_DOMAINS || 'localhost:3000';
+    const absoluteImageUrl = `${protocol}//${host}${imageUrl}`;
+    
+    console.log('📸 Sending Line image message:', {
+      userId,
+      absoluteImageUrl,
+      captionText
+    });
+
+    const messages: any[] = [
+      {
+        type: "image",
+        originalContentUrl: absoluteImageUrl,
+        previewImageUrl: absoluteImageUrl,
+      }
+    ];
+
+    // Add caption text as separate message if provided
+    if (captionText && captionText.trim()) {
+      messages.push({
+        type: "text",
+        text: captionText,
+      });
+    }
+
+    const response = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${channelAccessToken}`,
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Line Push Image API Error:", errorText);
+      return false;
+    }
+
+    console.log("✅ Line image message sent successfully to:", userId);
+    return true;
+  } catch (error) {
+    console.error("💥 Error sending Line image message:", error);
+    return false;
+  }
+}
+
 // Get AI response using OpenAI with chat history
 /**
  * Detect if user message is asking about image content
