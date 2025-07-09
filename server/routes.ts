@@ -3337,7 +3337,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
           
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
-          const inputValidation = await guardrailsService.validateInput(message);
+          const inputValidation = await guardrailsService.evaluateInput(message);
           console.log(`📝 Input validation result: ${JSON.stringify(inputValidation)}`);
           
           if (!inputValidation.allowed) {
@@ -3373,7 +3373,7 @@ ${agentConfig.blockedTopics?.length > 0 ? `Blocked topics: ${agentConfig.blocked
           
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
-          const outputValidation = await guardrailsService.validateOutput(agentResponse);
+          const outputValidation = await guardrailsService.evaluateOutput(agentResponse);
           console.log(`📤 Output validation result: ${JSON.stringify(outputValidation)}`);
           
           if (!outputValidation.allowed) {
@@ -3478,7 +3478,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
           
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
-          const inputValidation = await guardrailsService.validateInput(message);
+          const inputValidation = await guardrailsService.evaluateInput(message);
           console.log(`📝 Input validation result: ${JSON.stringify(inputValidation)}`);
           
           if (!inputValidation.allowed) {
@@ -3519,7 +3519,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
           
           const guardrailsService = new GuardrailsService(guardrailsConfig);
           
-          const outputValidation = await guardrailsService.validateOutput(agentResponse);
+          const outputValidation = await guardrailsService.evaluateOutput(agentResponse);
           console.log(`📤 Output validation result: ${JSON.stringify(outputValidation)}`);
           
           if (!outputValidation.allowed) {
