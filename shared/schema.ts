@@ -71,6 +71,12 @@ export const documents = pgTable("documents", {
   isPublic: boolean("is_public").default(false),
   isFavorite: boolean("is_favorite").default(false),
   processedAt: timestamp("processed_at"),
+  // Endorsement fields
+  isEndorsed: boolean("is_endorsed").default(false),
+  endorsedBy: varchar("endorsed_by").references(() => users.id),
+  endorsedAt: timestamp("endorsed_at"),
+  effectiveStartDate: date("effective_start_date"),
+  effectiveEndDate: date("effective_end_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

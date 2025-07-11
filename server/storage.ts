@@ -73,6 +73,7 @@ export interface IStorage {
   updateDocument(id: number, document: UpdateDocument, userId: string): Promise<Document>;
   deleteDocument(id: number, userId: string): Promise<void>;
   searchDocuments(userId: string, query: string): Promise<Document[]>;
+  endorseDocument(id: number, userId: string, effectiveStartDate: string, effectiveEndDate?: string): Promise<Document>;
   toggleDocumentFavorite(id: number, userId: string): Promise<Document>;
 
   // Stats operations
@@ -515,6 +516,22 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(documents.id, id), eq(documents.userId, userId)))
       .returning();
     return updated;
+  }
+
+  async endorseDocument(id: number, userId: string, effectiveStartDate: string, effectiveEndDate?: string): Promise<Document> {
+    const [endorsed] = await db
+      .update(documents)
+      .set({ 
+        isEndorsed: true,
+        endorsedBy: userId,
+        endorsedAt: new Date(),
+        effectiveStartDate: effectiveStartDate,
+        effectiveEndDate: effectiveEndDate || null,
+        updatedAt: new Date()
+      })
+      .where(eq(documents.id, id))
+      .returning();
+    return endorsed;
   }
 
   async deleteDocument(id: number, userId: string): Promise<void> {

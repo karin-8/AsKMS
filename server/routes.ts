@@ -1804,6 +1804,82 @@ ${document.summary}`;
     },
   );
 
+  // Document endorsement endpoint
+  app.post("/api/documents/:id/endorse", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const documentId = parseInt(req.params.id);
+      const { effectiveStartDate, effectiveEndDate } = req.body;
+
+      // Validate input
+      if (!effectiveStartDate) {
+        return res.status(400).json({ message: "Effective start date is required" });
+      }
+
+      // Validate date format and logic
+      const startDate = new Date(effectiveStartDate);
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({ message: "Invalid effective start date format" });
+      }
+
+      if (effectiveEndDate) {
+        const endDate = new Date(effectiveEndDate);
+        if (isNaN(endDate.getTime())) {
+          return res.status(400).json({ message: "Invalid effective end date format" });
+        }
+        if (endDate <= startDate) {
+          return res.status(400).json({ message: "End date must be after start date" });
+        }
+      }
+
+      // Verify the document exists and user has access
+      const document = await storage.getDocument(documentId, userId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Endorse the document
+      const endorsedDocument = await storage.endorseDocument(
+        documentId,
+        userId,
+        effectiveStartDate,
+        effectiveEndDate
+      );
+
+      // Log endorsement action for audit
+      try {
+        await storage.createAuditLog({
+          userId,
+          action: "endorse",
+          resourceType: "document",
+          resourceId: documentId.toString(),
+          ipAddress: req.ip || req.connection.remoteAddress || "unknown",
+          userAgent: req.headers["user-agent"] || "unknown",
+          success: true,
+          details: {
+            documentName: document.name,
+            effectiveStartDate,
+            effectiveEndDate: effectiveEndDate || null,
+          },
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for endorsement:", auditError);
+      }
+
+      res.json({
+        success: true,
+        message: "Document endorsed successfully",
+        document: endorsedDocument,
+      });
+    } catch (error) {
+      console.error("Error endorsing document:", error);
+      res.status(500).json({
+        message: "Failed to endorse document",
+        error: error.message,
+      });
+    }
+  });
+
   app.delete("/api/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
   Eye, Trash2, MoreHorizontal, Calendar, HardDrive, Hash, Star, StarOff,
-  BookOpen, Database, Plus, MessageSquare, ThumbsUp
+  BookOpen, Database, Plus, MessageSquare, ThumbsUp, Shield
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import DocumentChatModal from "./Chat/DocumentChatModal";
 import ContentSummaryModal from "./ContentSummaryModal";
 import ShareDocumentDialog from "./ShareDocumentDialog";
+import DocumentEndorsementDialog from "./DocumentEndorsementDialog";
 
 interface DocumentCardProps {
   document: {
@@ -46,6 +47,10 @@ interface DocumentCardProps {
     aiCategoryColor?: string;
     isInVectorDb?: boolean;
     isFavorite?: boolean;
+    isEndorsed?: boolean;
+    endorsedAt?: string;
+    effectiveStartDate?: string;
+    effectiveEndDate?: string;
     tags?: string[];
     summary?: string;
   };
@@ -60,6 +65,7 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
   const [showDetails, setShowDetails] = useState(false);
   const [showChatWithDocument, setShowChatWithDocument] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showEndorsementDialog, setShowEndorsementDialog] = useState(false);
   
   // Use doc.isFavorite directly instead of local state to prevent sync issues
   const isFavorite = doc.isFavorite || false;
@@ -412,6 +418,12 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                   {isFavorite ? <StarOff className="mr-2 h-4 w-4" /> : <Star className="mr-2 h-4 w-4" />}
                   {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
+                {!doc.isEndorsed && (
+                  <DropdownMenuItem onClick={() => setShowEndorsementDialog(true)}>
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Endorse Document
+                  </DropdownMenuItem>
+                )}
                 {!doc.isInVectorDb && doc.status === 'processed' && (
                   <DropdownMenuItem 
                     onClick={() => addToVectorMutation.mutate()}
@@ -517,6 +529,13 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
                 <Badge variant="outline" className="text-xs">
                   <Database className="w-3 h-3 mr-1" />
                   Vector DB
+                </Badge>
+              )}
+              
+              {doc.isEndorsed && (
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Endorsed
                 </Badge>
               )}
             </div>
@@ -726,6 +745,14 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
       <ShareDocumentDialog
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
+        documentId={doc.id}
+        documentName={doc.name || doc.originalName || ""}
+      />
+
+      {/* Document Endorsement Dialog */}
+      <DocumentEndorsementDialog
+        isOpen={showEndorsementDialog}
+        onClose={() => setShowEndorsementDialog(false)}
         documentId={doc.id}
         documentName={doc.name || doc.originalName || ""}
       />
