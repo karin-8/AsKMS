@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   FileText, FileImage, FileVideo, FileSpreadsheet, FilePen, Download, Share, 
   Eye, Trash2, MoreHorizontal, Calendar, HardDrive, Hash, Star, StarOff,
-  BookOpen, Database, Plus, MessageSquare, ThumbsUp, Shield
+  BookOpen, Database, Plus, MessageSquare, ThumbsUp, Shield, Trophy
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -29,6 +35,24 @@ import DocumentChatModal from "./Chat/DocumentChatModal";
 import ContentSummaryModal from "./ContentSummaryModal";
 import ShareDocumentDialog from "./ShareDocumentDialog";
 import DocumentEndorsementDialog from "./DocumentEndorsementDialog";
+
+// Helper function to format effective date range
+const formatEffectiveDateRange = (startDate?: string, endDate?: string) => {
+  if (!startDate && !endDate) return null;
+  
+  const start = startDate ? format(new Date(startDate), 'MMM d, yyyy') : null;
+  const end = endDate ? format(new Date(endDate), 'MMM d, yyyy') : null;
+  
+  if (start && end) {
+    return `Effective: ${start} – ${end}`;
+  } else if (start) {
+    return `Effective from: ${start}`;
+  } else if (end) {
+    return `Effective until: ${end}`;
+  }
+  
+  return null;
+};
 
 interface DocumentCardProps {
   document: {
@@ -231,9 +255,28 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-900 truncate">
-              {doc.name || doc.originalName}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-gray-900 truncate flex-1">
+                {doc.name || doc.originalName}
+              </h3>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {doc.isEndorsed && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Trophy className="w-4 h-4 text-yellow-600 fill-yellow-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{formatEffectiveDateRange(doc.effectiveStartDate, doc.effectiveEndDate) || "Endorsed Document"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {isFavorite && (
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+                )}
+              </div>
+            </div>
             <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
               <span className="flex items-center">
                 <Calendar className="w-3 h-3 mr-1" />
@@ -450,9 +493,23 @@ export default function DocumentCard({ document: doc, viewMode = "grid", categor
               <h3 className="font-medium text-sm text-gray-900 line-clamp-2 leading-tight flex-1">
                 {doc.name || doc.originalName}
               </h3>
-              {isFavorite && (
-                <Star className="w-4 h-4 text-yellow-500 fill-yellow-400 flex-shrink-0" />
-              )}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {doc.isEndorsed && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Trophy className="w-4 h-4 text-yellow-600 fill-yellow-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{formatEffectiveDateRange(doc.effectiveStartDate, doc.effectiveEndDate) || "Endorsed Document"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {isFavorite && (
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+                )}
+              </div>
             </div>
             
             <div className="flex items-center justify-between text-xs text-gray-500">
