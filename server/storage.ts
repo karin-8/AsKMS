@@ -265,7 +265,11 @@ export class DatabaseStorage implements IStorage {
         processedAt: documents.processedAt,
         aiCategory: documents.aiCategory,
         aiCategoryColor: documents.aiCategoryColor,
-        isPublic: documents.isPublic
+        isPublic: documents.isPublic,
+        isEndorsed: documents.isEndorsed,
+        endorsedAt: documents.endorsedAt,
+        effectiveStartDate: documents.effectiveStartDate,
+        effectiveEndDate: documents.effectiveEndDate
       })
       .from(documents)
       .leftJoin(userFavorites, and(
@@ -304,7 +308,11 @@ export class DatabaseStorage implements IStorage {
         processedAt: documents.processedAt,
         aiCategory: documents.aiCategory,
         aiCategoryColor: documents.aiCategoryColor,
-        isPublic: documents.isPublic
+        isPublic: documents.isPublic,
+        isEndorsed: documents.isEndorsed,
+        endorsedAt: documents.endorsedAt,
+        effectiveStartDate: documents.effectiveStartDate,
+        effectiveEndDate: documents.effectiveEndDate
       })
       .from(documents)
       .innerJoin(documentUserPermissions, eq(documents.id, documentUserPermissions.documentId))
@@ -343,7 +351,11 @@ export class DatabaseStorage implements IStorage {
           processedAt: documents.processedAt,
           aiCategory: documents.aiCategory,
           aiCategoryColor: documents.aiCategoryColor,
-          isPublic: documents.isPublic
+          isPublic: documents.isPublic,
+          isEndorsed: documents.isEndorsed,
+          endorsedAt: documents.endorsedAt,
+          effectiveStartDate: documents.effectiveStartDate,
+          effectiveEndDate: documents.effectiveEndDate
         })
         .from(documents)
         .innerJoin(documentDepartmentPermissions, eq(documents.id, documentDepartmentPermissions.documentId))
