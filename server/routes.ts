@@ -1491,12 +1491,23 @@ ${document.summary}`;
       try {
         const userId = req.user.claims.sub;
         const files = req.files as Express.Multer.File[];
+        
+        // Parse metadata if provided
+        let metadataArray: any[] = [];
+        try {
+          if (req.body.metadata) {
+            metadataArray = JSON.parse(req.body.metadata);
+          }
+        } catch (error) {
+          console.warn("Failed to parse metadata:", error);
+        }
 
         console.log("Upload request received:", {
           userId,
           filesCount: files?.length || 0,
           bodyKeys: Object.keys(req.body || {}),
           hasFiles: !!files,
+          hasMetadata: metadataArray.length > 0,
         });
 
         if (!files || files.length === 0) {
@@ -1528,12 +1539,15 @@ ${document.summary}`;
               // Keep original filename if encoding fix fails
             }
 
+            // Find metadata for this file
+            const fileMetadata = metadataArray.find(meta => meta.fileName === file.originalname);
+            
             // Process the document with enhanced AI classification
             const { content, summary, tags, category, categoryColor } =
               await processDocument(file.path, file.mimetype);
 
             const documentData = {
-              name: correctedFileName,
+              name: fileMetadata?.name || correctedFileName,
               fileName: file.filename,
               filePath: file.path,
               fileSize: file.size,
@@ -1545,6 +1559,8 @@ ${document.summary}`;
               aiCategoryColor: categoryColor,
               userId,
               processedAt: new Date(),
+              effectiveStartDate: fileMetadata?.effectiveStartDate ? new Date(fileMetadata.effectiveStartDate) : null,
+              effectiveEndDate: fileMetadata?.effectiveEndDate ? new Date(fileMetadata.effectiveEndDate) : null,
             };
 
             const document = await storage.createDocument(documentData);
