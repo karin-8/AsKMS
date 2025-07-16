@@ -243,7 +243,8 @@
     chatWindow.style.display = isWidgetOpen ? "flex" : "none";
   }
 
-  function addMessage(role, content, isTyping = false) {
+  function addMessage(role, content, metadata = {}) {
+    const isTyping = metadata.isTyping || false;
     const messagesContainer = document.getElementById("ai-kms-chat-messages");
     const messageDiv = document.createElement("div");
 
@@ -254,17 +255,24 @@
     `;
 
     const messageBubble = document.createElement("div");
+    
+    // Special styling for human agent messages
+    let bubbleStyles = "";
+    if (role === "user") {
+      bubbleStyles = "background: #2563eb; color: white; margin-left: auto;";
+    } else if (metadata.isHumanAgent) {
+      bubbleStyles = "background: #10b981; color: white; border: 1px solid #10b981;";
+    } else {
+      bubbleStyles = "background: white; color: #374151; border: 1px solid #e5e7eb;";
+    }
+    
     messageBubble.style.cssText = `
       max-width: 80%;
       padding: 8px 12px;
       border-radius: 12px;
       font-size: 14px;
       line-height: 1.4;
-      ${
-        role === "user"
-          ? "background: #2563eb; color: white; margin-left: auto;"
-          : "background: white; color: #374151; border: 1px solid #e5e7eb;"
-      }
+      ${bubbleStyles}
     `;
 
     if (isTyping) {
@@ -276,16 +284,25 @@
         </div>
       `;
     } else {
-      if (role === "assistant") {
-        // Parse markdown for assistant messages
-        console.log("🔄 Processing AI message:", content);
+      if (role === "assistant" || role === "agent") {
+        // Parse markdown for assistant and agent messages
+        console.log("🔄 Processing AI/Agent message:", content);
+        
+        let messageContent = '';
+        
+        // Add human agent name if provided
+        if (metadata.isHumanAgent && metadata.humanAgentName) {
+          messageContent = `<div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">👤 ${metadata.humanAgentName}</div>`;
+        }
         
         // Direct markdown processing
         const parsed = parseMarkdown(content);
-        console.log("✅ Final parsed result:", parsed);
+        messageContent += parsed;
+        
+        console.log("✅ Final parsed result:", messageContent);
         
         // Set both innerHTML AND add visual debugging
-        messageBubble.innerHTML = parsed;
+        messageBubble.innerHTML = messageContent;
         
         // Optional: Add debug indicator in development
         if (window.location.hostname === 'localhost' && content.includes('**') && !parsed.includes('**')) {
@@ -316,7 +333,7 @@
     messageInput.value = "";
 
     // Show typing indicator
-    const typingDiv = addMessage("assistant", "", true);
+    const typingDiv = addMessage("assistant", "", { isTyping: true });
 
     try {
       const response = await fetch(`${baseUrl}/api/widget/${widgetKey}/chat`, {
@@ -381,10 +398,62 @@
     }
   }
 
+  // WebSocket connection for human agent messages
+  let ws = null;
+  
+  function initWebSocket() {
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('🔗 Widget WebSocket connected');
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          // Handle human agent messages for this widget
+          if (data.type === 'human_agent_message' && 
+              data.channelType === 'web' && 
+              data.userId === sessionId) {
+            
+            const message = data.message;
+            if (message.humanAgent) {
+              // Add human agent message with special styling
+              addMessage("agent", message.content, {
+                isHumanAgent: true,
+                humanAgentName: message.humanAgentName
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 Widget WebSocket disconnected');
+        // Try to reconnect after 5 seconds
+        setTimeout(initWebSocket, 5000);
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (error) {
+      console.error('Failed to initialize WebSocket:', error);
+    }
+  }
+
   // Initialize widget with config loading
   async function initWidget() {
     await loadWidgetConfig();
     createWidget();
+    initWebSocket();
   }
 
   // Initialize widget when DOM is ready

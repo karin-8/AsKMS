@@ -83,14 +83,16 @@ export class WidgetChatService {
       }
 
       // Build conversation messages
-      const messages: any[] = [
-        {
-          role: "system",
-          content: `${agent.systemPrompt}${contextPrompt}
+      const systemPrompt = `${agent.systemPrompt}${contextPrompt}
 
 สำคัญ: ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้จะสื่อสารเป็นภาษาอื่น
 ตอบอย่างเป็นมิตรและช่วยเหลือ ให้ข้อมูลที่ถูกต้องและเป็นประโยชน์
-คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม`
+คุณสามารถอ้างอิงบทสนทนาก่อนหน้านี้เพื่อให้คำตอบที่ต่อเนื่องและเหมาะสม`;
+
+      const messages: any[] = [
+        {
+          role: "system",
+          content: systemPrompt
         }
       ];
 
@@ -112,6 +114,72 @@ export class WidgetChatService {
         role: "user",
         content: userMessage
       });
+
+      // === COMPREHENSIVE DEBUG OUTPUT ===
+      console.log(`\n🔍 === WIDGET CHAT DEBUG SESSION ${sessionId} ===`);
+      console.log(`🎯 Agent: ${agent.name} (ID: ${agentId})`);
+      console.log(`👤 User: ${userId}`);
+      console.log(`📝 User Message: ${userMessage}`);
+      console.log(`📚 Documents Found: ${agentDocs.length}`);
+      console.log(`💾 Memory Limit: ${memoryLimit}`);
+      console.log(`📜 Total Conversation History: ${conversationHistory.length} messages`);
+      console.log(`📤 Messages to OpenAI: ${messages.length}`);
+      
+      // Document content analysis
+      if (documentContents.length > 0) {
+        console.log(`\n📋 DOCUMENT CONTENT ANALYSIS:`);
+        documentContents.forEach((content, index) => {
+          const fullLength = content.length;
+          const truncated = content.includes("...");
+          console.log(`  📄 Document ${index + 1}: ${fullLength} chars${truncated ? ' (TRUNCATED at 2000 chars)' : ''}`);
+        });
+        console.log(`📊 Total Document Context: ${contextPrompt.length} chars`);
+      } else {
+        console.log(`\n📋 NO DOCUMENTS LINKED TO AGENT`);
+      }
+      
+      // System prompt analysis
+      console.log(`\n🧠 SYSTEM PROMPT ANALYSIS:`);
+      console.log(`  Base System Prompt: ${agent.systemPrompt?.length || 0} chars`);
+      console.log(`  Document Context: ${contextPrompt.length} chars`);
+      console.log(`  Total System Prompt: ${systemPrompt.length} chars`);
+      
+      // Conversation history analysis
+      console.log(`\n💬 CONVERSATION HISTORY ANALYSIS:`);
+      console.log(`  Raw History: ${conversationHistory.length} messages`);
+      console.log(`  Filtered History: ${recentHistory.length} messages (user/assistant only)`);
+      console.log(`  Applied Memory Limit: ${memoryLimit} messages`);
+      
+      if (recentHistory.length > 0) {
+        console.log(`  Recent History Details:`);
+        recentHistory.forEach((msg, index) => {
+          const preview = msg.content.substring(0, 100);
+          console.log(`    ${index + 1}. ${msg.role}: ${preview}${msg.content.length > 100 ? '...' : ''} (${msg.content.length} chars)`);
+        });
+      }
+      
+      // Final OpenAI request analysis
+      console.log(`\n📨 FINAL OPENAI REQUEST ANALYSIS:`);
+      console.log(`  Total Messages: ${messages.length}`);
+      console.log(`  System Message: ${messages[0].content.length} chars`);
+      console.log(`  History Messages: ${messages.length - 2} messages`);
+      console.log(`  User Message: ${userMessage.length} chars`);
+      
+      // Token estimation
+      const totalContent = messages.map(m => m.content).join('');
+      const estimatedTokens = Math.ceil(totalContent.length / 4);
+      console.log(`  Estimated Total Tokens: ~${estimatedTokens}`);
+      
+      // Check for potential issues
+      if (estimatedTokens > 8000) {
+        console.log(`  ⚠️  WARNING: High token count, may hit limits`);
+      }
+      if (documentContents.length > 0 && documentContents.every(doc => doc.includes("..."))) {
+        console.log(`  ⚠️  WARNING: All documents truncated at 2000 chars`);
+      }
+      
+      console.log(`\n📤 SENDING REQUEST TO OPENAI...`);
+      console.log(`=== END DEBUG ===\n`);
 
       console.log(`🤖 Widget Chat: Sending ${messages.length} messages to OpenAI`);
 

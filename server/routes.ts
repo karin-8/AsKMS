@@ -2865,12 +2865,53 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           .returning();
       }
 
-      // Add user message
+      // Add user message to widget chat messages
       await db.insert(widgetChatMessages).values({
         sessionId: session.sessionId,
         role: "user",
         content: message,
       });
+
+      // Store user message in chat_history for Agent Console integration
+      if (widget.agentId) {
+        const { chatHistory } = await import("@shared/schema");
+        await db.insert(chatHistory).values({
+          userId: session.sessionId, // Use session ID as user ID for widget conversations
+          channelType: "web",
+          channelId: widget.widgetKey,
+          agentId: widget.agentId,
+          messageType: "user",
+          content: message,
+          metadata: {
+            sessionId: session.sessionId,
+            widgetId: widget.id,
+            widgetName: widget.name,
+            visitorInfo: visitorInfo || {}
+          }
+        });
+
+        // Broadcast user message to WebSocket for real-time updates in Agent Console
+        if (global.wsClients && global.wsClients.size > 0) {
+          const wsMessage = {
+            type: 'new_message',
+            channelType: 'web',
+            channelId: widget.widgetKey,
+            agentId: widget.agentId,
+            message: {
+              messageType: 'user',
+              content: message,
+              sessionId: session.sessionId,
+              timestamp: new Date().toISOString()
+            }
+          };
+          
+          global.wsClients.forEach(client => {
+            if (client.readyState === 1) { // WebSocket.OPEN
+              client.send(JSON.stringify(wsMessage));
+            }
+          });
+        }
+      }
 
       // Generate AI response based on widget configuration
       let response = widget.welcomeMessage || "Thank you for your message. How can I help you today?";
@@ -2965,7 +3006,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         }
       }
 
-      // Add assistant response
+      // Add assistant response to widget chat messages
       await db.insert(widgetChatMessages).values({
         sessionId: session.sessionId,
         role: "assistant",
@@ -2973,6 +3014,49 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         messageType,
         metadata,
       });
+
+      // Store assistant response in chat_history for Agent Console integration
+      if (widget.agentId) {
+        const { chatHistory } = await import("@shared/schema");
+        await db.insert(chatHistory).values({
+          userId: session.sessionId, // Use session ID as user ID for widget conversations
+          channelType: "web",
+          channelId: widget.widgetKey,
+          agentId: widget.agentId,
+          messageType: "assistant",
+          content: response,
+          metadata: {
+            sessionId: session.sessionId,
+            widgetId: widget.id,
+            widgetName: widget.name,
+            originalMessageType: messageType,
+            originalMetadata: metadata,
+            visitorInfo: visitorInfo || {}
+          }
+        });
+
+        // Broadcast to WebSocket for real-time updates in Agent Console
+        if (global.wsClients && global.wsClients.size > 0) {
+          const wsMessage = {
+            type: 'new_message',
+            channelType: 'web',
+            channelId: widget.widgetKey,
+            agentId: widget.agentId,
+            message: {
+              messageType: 'assistant',
+              content: response,
+              sessionId: session.sessionId,
+              timestamp: new Date().toISOString()
+            }
+          };
+          
+          global.wsClients.forEach(client => {
+            if (client.readyState === 1) { // WebSocket.OPEN
+              client.send(JSON.stringify(wsMessage));
+            }
+          });
+        }
+      }
 
       res.json({
         sessionId: session.sessionId,
@@ -4061,7 +4145,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         FROM chat_history ch
         JOIN agent_chatbots ac ON ch.agent_id = ac.id
         WHERE ac.user_id = $1
-        AND ch.channel_id LIKE 'U%'
+        AND (ch.channel_id LIKE 'U%' OR ch.channel_type = 'web')
         ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
         ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
       `;
@@ -4080,7 +4164,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
         messageCount: parseInt(row.message_count),
         isOnline: Math.random() > 0.7, // Simplified online status
         userProfile: {
-          name: `User ${row.channel_id.slice(-4)}`, // Use Line user ID for display
+          name: row.channel_type === 'web' ? 
+            `Web User ${row.user_id.slice(-4)}` : 
+            `User ${row.channel_id.slice(-4)}`, // Use Line user ID for display
           // Add more profile fields as needed
         }
       }));
@@ -4380,6 +4466,32 @@ Memory management: Keep track of conversation context within the last ${agentCon
           }
         } catch (error) {
           console.error('❌ Error sending Line message:', error);
+        }
+      } else if (channelType === 'web') {
+        // For web channel, we need to notify the widget through WebSocket
+        // The widget will be listening for messages from human agents
+        if (global.wsClients && global.wsClients.size > 0) {
+          const wsMessage = {
+            type: 'human_agent_message',
+            channelType: 'web',
+            channelId: channelId,
+            agentId: parseInt(agentId),
+            userId: targetUserId,
+            message: {
+              messageType: 'agent',
+              content: message,
+              timestamp: new Date().toISOString(),
+              humanAgent: true,
+              humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+            }
+          };
+          
+          global.wsClients.forEach(client => {
+            if (client.readyState === 1) { // WebSocket.OPEN
+              client.send(JSON.stringify(wsMessage));
+            }
+          });
+          console.log('✅ Successfully sent web channel message via WebSocket');
         }
       }
       
