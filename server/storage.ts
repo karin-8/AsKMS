@@ -429,6 +429,14 @@ export class DatabaseStorage implements IStorage {
     return undefined;
   }
 
+  async getDocumentForWidget(id: number): Promise<Document | undefined> {
+    const [doc] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
+    return doc;
+  }
+
   async getDocumentsByIds(ids: number[], userId: string): Promise<Document[]> {
     if (ids.length === 0) {
       return [];
@@ -1197,6 +1205,14 @@ export class DatabaseStorage implements IStorage {
     return agent;
   }
 
+  async getAgentChatbotForWidget(id: number): Promise<AgentChatbot | undefined> {
+    const [agent] = await db
+      .select()
+      .from(agentChatbots)
+      .where(eq(agentChatbots.id, id));
+    return agent;
+  }
+
   async createAgentChatbot(agent: InsertAgentChatbot): Promise<AgentChatbot> {
     const [newAgent] = await db
       .insert(agentChatbots)
@@ -1238,6 +1254,13 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Agent not found");
     }
 
+    return await db
+      .select()
+      .from(agentChatbotDocuments)
+      .where(eq(agentChatbotDocuments.agentId, agentId));
+  }
+
+  async getAgentChatbotDocumentsForWidget(agentId: number): Promise<AgentChatbotDocument[]> {
     return await db
       .select()
       .from(agentChatbotDocuments)

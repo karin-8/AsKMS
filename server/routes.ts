@@ -2896,7 +2896,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           const aiResult = await WidgetChatService.generateAgentResponse(
             message,
             widget.agentId,
-            widget.userId,
+            null, // Widget chat doesn't need userId - using widget-specific methods
             session.sessionId,
             conversationHistory
           );

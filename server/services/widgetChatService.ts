@@ -22,7 +22,7 @@ export class WidgetChatService {
       console.log(`🤖 Widget Chat: Getting agent ${agentId} for user ${userId}`);
 
       // Get agent configuration
-      const agent = await storage.getAgentChatbot(agentId, userId);
+      const agent = await storage.getAgentChatbotForWidget(agentId);
       if (!agent) {
         console.log(`❌ Widget Chat: Agent ${agentId} not found`);
         return {
@@ -34,7 +34,7 @@ export class WidgetChatService {
       console.log(`✅ Widget Chat: Found agent: ${agent.name}`);
 
       // Get agent's documents for context
-      const agentDocs = await storage.getAgentChatbotDocuments(agentId, userId);
+      const agentDocs = await storage.getAgentChatbotDocumentsForWidget(agentId);
       const documentContents: string[] = [];
 
       if (agentDocs.length > 0) {
@@ -42,7 +42,7 @@ export class WidgetChatService {
 
         for (const agentDoc of agentDocs) {
           try {
-            const document = await storage.getDocument(agentDoc.documentId, userId);
+            const document = await storage.getDocumentForWidget(agentDoc.documentId);
             if (document && document.content) {
               const truncatedContent = document.content.length > 2000
                 ? document.content.substring(0, 2000) + "..."
