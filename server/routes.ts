@@ -4126,10 +4126,114 @@ Memory management: Keep track of conversation context within the last ${agentCon
   );
 
   // Agent Console API endpoints
+  
+  // Get channel integrations for hierarchical filtering
+  app.get('/api/agent-console/channels', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const query = `
+        SELECT 
+          si.id,
+          si.name,
+          si.type as channel_type,
+          si.channel_id,
+          ac.name as agent_name,
+          ac.id as agent_id
+        FROM social_integrations si
+        JOIN agent_chatbots ac ON si.agent_id = ac.id
+        WHERE si.is_verified = true 
+        AND ac.user_id = $1
+        ORDER BY si.type, si.name
+      `;
+      
+      const result = await pool.query(query, [userId]);
+      
+      // Group by channel type
+      const channelGroups = {
+        lineoa: [],
+        facebook: [],
+        tiktok: [],
+        web: []
+      };
+      
+      result.rows.forEach(row => {
+        if (channelGroups[row.channel_type]) {
+          channelGroups[row.channel_type].push({
+            id: row.id,
+            name: row.name,
+            channelId: row.channel_id,
+            agentName: row.agent_name,
+            agentId: row.agent_id
+          });
+        }
+      });
+      
+      // Add web widgets
+      const webWidgetsQuery = `
+        SELECT 
+          cw.id,
+          cw.name,
+          cw.widget_key as channel_id,
+          ac.name as agent_name,
+          ac.id as agent_id
+        FROM chat_widgets cw
+        JOIN agent_chatbots ac ON cw.agent_id = ac.id
+        WHERE cw.is_active = true
+        AND cw.user_id = $1
+        ORDER BY cw.name
+      `;
+      
+      const webResult = await pool.query(webWidgetsQuery, [userId]);
+      webResult.rows.forEach(row => {
+        channelGroups.web.push({
+          id: row.id,
+          name: row.name,
+          channelId: row.channel_id,
+          agentName: row.agent_name,
+          agentId: row.agent_id
+        });
+      });
+      
+      res.json(channelGroups);
+    } catch (error) {
+      console.error("Error fetching channel integrations:", error);
+      res.status(500).json({ message: "Failed to fetch channels" });
+    }
+  });
+
   app.get('/api/agent-console/users', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const channelFilter = req.query.channelFilter || 'all';
+      const subChannelFilter = req.query.subChannelFilter || 'all';
+      
+      // Build WHERE conditions for sub-channel filtering
+      let whereConditions = 'ac.user_id = $1 AND (ch.channel_id LIKE \'U%\' OR ch.channel_type = \'web\')';
+      const params = [userId];
+      let paramIndex = 2;
+      
+      if (channelFilter !== 'all') {
+        whereConditions += ` AND ch.channel_type = $${paramIndex}`;
+        params.push(channelFilter);
+        paramIndex++;
+      }
+      
+      if (subChannelFilter !== 'all') {
+        if (channelFilter === 'web') {
+          // For web widgets, filter by widget_key
+          whereConditions += ` AND ch.channel_id = $${paramIndex}`;
+          params.push(subChannelFilter);
+        } else if (channelFilter === 'lineoa') {
+          // For Line OA, filter by specific channel integration
+          whereConditions += ` AND EXISTS (
+            SELECT 1 FROM social_integrations si 
+            WHERE si.channel_id = $${paramIndex} 
+            AND si.agent_id = ch.agent_id
+          )`;
+          params.push(subChannelFilter);
+        }
+      }
       
       // Get all unique users from chat history grouped by user, channel, and agent
       // Fixed query to properly sort by last message time
@@ -4146,16 +4250,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
             COUNT(*) OVER (PARTITION BY ch.channel_id, ch.channel_type, ch.agent_id) as message_count
           FROM chat_history ch
           JOIN agent_chatbots ac ON ch.agent_id = ac.id
-          WHERE ac.user_id = $1
-          AND (ch.channel_id LIKE 'U%' OR ch.channel_type = 'web')
-          ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
+          WHERE ${whereConditions}
           ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
         )
         SELECT * FROM latest_messages
         ORDER BY last_message_at DESC
       `;
       
-      const params = channelFilter !== 'all' ? [userId, channelFilter] : [userId];
       const result = await pool.query(query, params);
       
       const chatUsers = result.rows.map(row => ({
@@ -4709,6 +4810,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
   // Store connected WebSocket clients
   const wsClients = new Set<WebSocket>();
+  
+  // Also store global reference for widget message broadcasting
+  (global as any).wsClients = wsClients;
 
   wss.on('connection', (ws) => {
     console.log('🔌 WebSocket client connected');

@@ -415,12 +415,21 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📨 Widget WebSocket received:', data);
+          console.log('🔍 Widget matching:', { 
+            sessionId, 
+            widgetKey, 
+            dataUserId: data.userId, 
+            dataChannelId: data.channelId, 
+            dataType: data.type 
+          });
           
           // Handle human agent messages for this widget
           if (data.type === 'human_agent_message' && 
               data.channelType === 'web' && 
-              data.userId === sessionId) {
+              (data.userId === sessionId || data.channelId === widgetKey)) {
             
+            console.log('✅ Widget message match found!');
             const message = data.message;
             if (message.humanAgent) {
               // Add human agent message with special styling

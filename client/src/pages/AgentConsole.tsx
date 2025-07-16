@@ -108,6 +108,7 @@ export default function AgentConsole() {
   // State management
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [subChannelFilter, setSubChannelFilter] = useState<string>("all");
   const [messageInput, setMessageInput] = useState("");
   const [isHumanTakeover, setIsHumanTakeover] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
@@ -155,6 +156,9 @@ export default function AgentConsole() {
           queryClient.invalidateQueries({
             queryKey: ["/api/agent-console/conversation"],
           });
+          
+          // Also refetch users to ensure immediate sorting update
+          refetchUsers();
 
           toast({
             title: "New Message",
@@ -199,9 +203,28 @@ export default function AgentConsole() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  // Query for channel integrations (for hierarchical filtering)
+  const { data: channelIntegrations = {}, isLoading: isLoadingChannels } = useQuery({
+    queryKey: ["/api/agent-console/channels"],
+    enabled: isAuthenticated,
+    refetchInterval: 60000, // Refresh every minute
+    retry: false,
+  });
+
   // Query for active chat users (reduced refresh frequency with WebSocket)
-  const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["/api/agent-console/users", channelFilter],
+  const { data: chatUsers = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery({
+    queryKey: ["/api/agent-console/users", channelFilter, subChannelFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (channelFilter !== "all") params.append("channelFilter", channelFilter);
+      if (subChannelFilter !== "all") params.append("subChannelFilter", subChannelFilter);
+      
+      const response = await apiRequest("GET", `/api/agent-console/users?${params}`);
+      const users = await response.json();
+      
+      // Sort users by latest message time (newest first)
+      return users.sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+    },
     enabled: isAuthenticated,
     refetchInterval: wsConnected ? 30000 : 5000, // 30s if WebSocket connected, 5s if not
     retry: false,
@@ -609,10 +632,13 @@ export default function AgentConsole() {
                       <CardTitle className="text-lg">Select Channel</CardTitle>
                       <Filter className="w-4 h-4 text-gray-500" />
                     </div>
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-2">
                       <Select
                         value={channelFilter}
-                        onValueChange={setChannelFilter}
+                        onValueChange={(value) => {
+                          setChannelFilter(value);
+                          setSubChannelFilter("all"); // Reset sub-channel when main channel changes
+                        }}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Filter by channel" />
@@ -625,6 +651,26 @@ export default function AgentConsole() {
                           <SelectItem value="web">🌐 Web Widget</SelectItem>
                         </SelectContent>
                       </Select>
+                      
+                      {/* Sub-channel filter */}
+                      {channelFilter !== "all" && (
+                        <Select
+                          value={subChannelFilter}
+                          onValueChange={setSubChannelFilter}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select specific channel" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All {channelFilter.toUpperCase()} Channels</SelectItem>
+                            {channelIntegrations[channelFilter]?.map((integration) => (
+                              <SelectItem key={integration.id} value={integration.channelId}>
+                                {integration.name} ({integration.agentName})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
