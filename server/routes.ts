@@ -4511,11 +4511,23 @@ Memory management: Keep track of conversation context within the last ${agentCon
     try {
       const { userId: targetUserId, channelType, channelId, agentId, message, messageType } = req.body;
       
+      console.log('📤 Agent Console send-message endpoint called:', {
+        targetUserId,
+        channelType,
+        channelId,
+        agentId,
+        messageLength: message?.length || 0,
+        messageType,
+        humanAgent: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+      });
+      
       if (!targetUserId || !channelType || !channelId || !agentId || !message) {
+        console.log('❌ Missing required parameters:', { targetUserId, channelType, channelId, agentId, hasMessage: !!message });
         return res.status(400).json({ message: "Missing required parameters" });
       }
       
       // Store the human agent message in chat history
+      console.log('💾 Storing human agent message in chat history...');
       const chatHistoryRecord = await storage.createChatHistory({
         userId: targetUserId,
         channelType,
@@ -4529,10 +4541,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
           humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
         }
       });
+      
+      console.log('✅ Chat history stored with ID:', chatHistoryRecord.id);
 
       // Broadcast new message to Agent Console via WebSocket
+      console.log('📡 Preparing to broadcast to Agent Console...');
       if (typeof (global as any).broadcastToAgentConsole === 'function') {
-        (global as any).broadcastToAgentConsole({
+        const broadcastData = {
           type: 'new_message',
           data: {
             userId: targetUserId,
@@ -4545,8 +4560,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
             timestamp: new Date().toISOString(),
             humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
           }
-        });
-        console.log('📡 Broadcasted human agent message to Agent Console');
+        };
+        
+        console.log('📡 Broadcasting to Agent Console:', broadcastData);
+        (global as any).broadcastToAgentConsole(broadcastData);
+        console.log('✅ Broadcasted human agent message to Agent Console');
+      } else {
+        console.log('⚠️ broadcastToAgentConsole function not available');
       }
       
       // Send the message via the appropriate channel
@@ -4588,11 +4608,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
       } else if (channelType === 'web') {
         // For web channel, we need to notify the widget through WebSocket
         // The widget will be listening for messages from human agents
-        console.log('🌐 Sending web channel message:', {
+        console.log('🌐 Processing web channel message:', {
           targetUserId,
           channelId,
           agentId: parseInt(agentId),
-          wsClientsCount: global.wsClients ? global.wsClients.size : 0
+          wsClientsCount: global.wsClients ? global.wsClients.size : 0,
+          globalWsClientsExists: !!(global.wsClients),
+          messageContent: message.substring(0, 50) + '...'
         });
         
         if (global.wsClients && global.wsClients.size > 0) {
@@ -4611,19 +4633,31 @@ Memory management: Keep track of conversation context within the last ${agentCon
             }
           };
           
-          console.log('📡 Broadcasting web widget message:', wsMessage);
+          console.log('📡 Broadcasting web widget message:', JSON.stringify(wsMessage, null, 2));
           
           let sentCount = 0;
-          global.wsClients.forEach(client => {
+          let openConnections = 0;
+          global.wsClients.forEach((client, index) => {
+            console.log(`🔍 WebSocket client ${index + 1} readyState:`, client.readyState);
             if (client.readyState === 1) { // WebSocket.OPEN
-              client.send(JSON.stringify(wsMessage));
-              sentCount++;
+              openConnections++;
+              try {
+                client.send(JSON.stringify(wsMessage));
+                sentCount++;
+                console.log(`✅ Sent message to WebSocket client ${index + 1}`);
+              } catch (error) {
+                console.log(`❌ Error sending to WebSocket client ${index + 1}:`, error);
+              }
             }
           });
           
-          console.log(`✅ Successfully sent web channel message to ${sentCount} WebSocket clients`);
+          console.log(`📊 WebSocket summary - Total clients: ${global.wsClients.size}, Open: ${openConnections}, Sent: ${sentCount}`);
         } else {
           console.log('⚠️ No WebSocket clients connected for web channel message');
+          console.log('🔍 Global WebSocket debugging:', {
+            globalWsClientsExists: !!(global.wsClients),
+            wsClientsSize: global.wsClients ? global.wsClients.size : 'undefined'
+          });
         }
       }
       
@@ -4840,9 +4874,16 @@ Memory management: Keep track of conversation context within the last ${agentCon
   // Also store global reference for widget message broadcasting
   (global as any).wsClients = wsClients;
 
-  wss.on('connection', (ws) => {
-    console.log('🔌 WebSocket client connected');
+  wss.on('connection', (ws, req) => {
+    console.log('🔌 WebSocket client connected:', {
+      url: req.url,
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']?.substring(0, 50) + '...',
+      totalClients: wsClients.size + 1
+    });
+    
     wsClients.add(ws);
+    console.log('📊 WebSocket clients count:', wsClients.size);
 
     // Send initial connection confirmation
     if (ws.readyState === WebSocket.OPEN) {
@@ -4871,11 +4912,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
     ws.on('close', () => {
       console.log('🔌 WebSocket client disconnected');
       wsClients.delete(ws);
+      console.log('📊 Remaining WebSocket clients:', wsClients.size);
     });
 
     ws.on('error', (error) => {
       console.error('❌ WebSocket error:', error);
       wsClients.delete(ws);
+      console.log('📊 Remaining WebSocket clients after error:', wsClients.size);
     });
   });
 

@@ -416,31 +416,62 @@
         try {
           const data = JSON.parse(event.data);
           console.log('📨 Widget WebSocket received:', data);
-          console.log('🔍 Widget matching:', { 
+          console.log('🔍 Widget session info:', { 
             sessionId, 
             widgetKey, 
+            baseUrl: window.location.origin
+          });
+          console.log('🔍 Message data:', { 
             dataUserId: data.userId, 
             dataChannelId: data.channelId, 
-            dataType: data.type 
+            dataType: data.type,
+            dataChannelType: data.channelType,
+            messageContent: data.message?.content?.substring(0, 50) + '...' || 'No content'
           });
           
           // Handle human agent messages for this widget
           if (data.type === 'human_agent_message' && 
-              data.channelType === 'web' && 
-              (data.userId === sessionId || data.channelId === widgetKey)) {
+              data.channelType === 'web') {
             
-            console.log('✅ Widget message match found!');
-            const message = data.message;
-            if (message.humanAgent) {
-              // Add human agent message with special styling
-              addMessage("agent", message.content, {
-                isHumanAgent: true,
-                humanAgentName: message.humanAgentName
-              });
+            console.log('🎯 Human agent message detected for web channel');
+            console.log('🔍 Matching check:', {
+              userIdMatch: data.userId === sessionId,
+              channelIdMatch: data.channelId === widgetKey,
+              sessionId: sessionId,
+              widgetKey: widgetKey,
+              dataUserId: data.userId,
+              dataChannelId: data.channelId
+            });
+            
+            if (data.userId === sessionId || data.channelId === widgetKey) {
+              console.log('✅ Widget message match found!');
+              const message = data.message;
+              console.log('💬 Processing message:', message);
+              
+              if (message.humanAgent) {
+                console.log('👤 Adding human agent message to chat');
+                // Add human agent message with special styling
+                addMessage("agent", message.content, {
+                  isHumanAgent: true,
+                  humanAgentName: message.humanAgentName
+                });
+                console.log('✅ Human agent message added to chat successfully');
+              } else {
+                console.log('⚠️ Message not flagged as human agent');
+              }
+            } else {
+              console.log('❌ Widget message match failed - IDs do not match');
             }
+          } else {
+            console.log('🔍 Message not for this widget:', {
+              typeMatch: data.type === 'human_agent_message',
+              channelMatch: data.channelType === 'web',
+              actualType: data.type,
+              actualChannelType: data.channelType
+            });
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error);
         }
       };
       
