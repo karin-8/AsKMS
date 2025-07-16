@@ -439,15 +439,16 @@
               widgetKeyValue: widgetKey
             });
             
-            // Accept message if any of these conditions are true:
-            // 1. Exact session ID match
-            // 2. Widget key match
-            // 3. Broadcast message for this widget
-            if (userIdMatch || (channelIdMatch && isBroadcast) || (channelIdMatch && !data.userId)) {
+            // Accept message if widget key matches - this ensures messages reach the widget
+            // regardless of session ID differences
+            if (channelIdMatch) {
               const message = data.message;
               
-              console.log('✅ Message accepted for widget:', {
-                reason: userIdMatch ? 'session match' : (isBroadcast ? 'broadcast' : 'channel match'),
+              console.log('✅ Message accepted for widget (channel match):', {
+                widgetKey: widgetKey,
+                dataChannelId: data.channelId,
+                sessionId: sessionId,
+                dataUserId: data.userId,
                 messageContent: message?.content?.substring(0, 50) + '...'
               });
               
@@ -459,7 +460,10 @@
                 });
               }
             } else {
-              console.log('❌ Message rejected - no matching conditions');
+              console.log('❌ Message rejected - widget key mismatch:', {
+                expectedWidgetKey: widgetKey,
+                receivedChannelId: data.channelId
+              });
             }
           }
         } catch (error) {

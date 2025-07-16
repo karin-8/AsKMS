@@ -4583,57 +4583,8 @@ Memory management: Keep track of conversation context within the last ${agentCon
         return res.status(400).json({ message: "Missing required parameters" });
       }
 
-      // For web channel, check if there's a newer session ID for this widget
-      if (channelType === 'web') {
-        const latestSessionQuery = `
-          SELECT userId as user_id, MAX(created_at) as latest_message_time
-          FROM chat_history 
-          WHERE channel_type = 'web' 
-          AND channel_id = $1 
-          AND agent_id = $2
-          AND created_at > NOW() - INTERVAL '2 hours'
-          GROUP BY userId
-          ORDER BY latest_message_time DESC
-          LIMIT 1
-        `;
-        
-        try {
-          const latestSessionResult = await pool.query(latestSessionQuery, [channelId, parseInt(agentId)]);
-          
-          console.log('🔍 Session migration check results:', {
-            oldTargetUserId: targetUserId,
-            widgetKey: channelId,
-            agentId: parseInt(agentId),
-            latestSessionsFound: latestSessionResult.rows.length,
-            latestSessionData: latestSessionResult.rows.length > 0 ? latestSessionResult.rows[0] : null
-          });
-          
-          if (latestSessionResult.rows.length > 0) {
-            const latestSessionId = latestSessionResult.rows[0].user_id;
-            
-            if (latestSessionId !== targetUserId) {
-              console.log('🔄 Session migration detected:', {
-                oldSessionId: targetUserId,
-                newSessionId: latestSessionId,
-                widgetKey: channelId,
-                timeDiff: latestSessionResult.rows[0].latest_message_time
-              });
-              
-              // Update to use the latest session ID
-              targetUserId = latestSessionId;
-              
-              console.log('✅ Using migrated session ID:', latestSessionId);
-            } else {
-              console.log('ℹ️ Session ID is already current:', targetUserId);
-            }
-          } else {
-            console.log('⚠️ No recent sessions found for this widget in the last 2 hours');
-          }
-        } catch (sessionMigrationError) {
-          console.error('⚠️ Session migration check failed:', sessionMigrationError);
-          // Continue with original session ID
-        }
-      }
+      // For web channel, always broadcast to all active sessions for this widget
+      // This ensures messages reach the widget regardless of session ID mismatches
       
       // Store the human agent message in chat history
       console.log('💾 Storing human agent message in chat history...');
