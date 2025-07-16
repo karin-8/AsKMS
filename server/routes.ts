@@ -3824,7 +3824,23 @@ Memory management: Keep track of conversation context within the last ${agentCon
         //   headers: { 'Authorization': `Bearer ${channelSecret}` }
         // });
 
-        console.log("🎉 Line OA verification successful");
+        // Update the integration to mark as verified
+        const userId = req.user.claims.sub;
+        const updateResult = await db.execute(sql`
+          UPDATE social_integrations 
+          SET is_verified = true, last_verified_at = NOW(), updated_at = NOW()
+          WHERE user_id = ${userId} AND type = 'lineoa' AND channel_id = ${channelId} AND channel_secret = ${channelSecret}
+        `);
+
+        if (updateResult.rowCount === 0) {
+          console.log("❌ No matching integration found to update");
+          return res.json({
+            success: false,
+            message: "ไม่พบการเชื่อมต่อที่ตรงกัน กรุณาตรวจสอบข้อมูลอีกครั้ง",
+          });
+        }
+
+        console.log("🎉 Line OA verification successful and database updated");
         res.json({
           success: true,
           message: "การเชื่อมต่อ Line OA สำเร็จ! ระบบได้ตรวจสอบการตั้งค่าแล้ว",

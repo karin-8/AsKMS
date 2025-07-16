@@ -257,6 +257,37 @@ export default function Integrations() {
     createLineOaMutation.mutate(lineOaForm);
   };
 
+  // Verify integration mutation
+  const verifyIntegrationMutation = useMutation({
+    mutationFn: async (integration: SocialIntegration) => {
+      if (integration.type === 'lineoa') {
+        return await apiRequest("POST", "/api/social-integrations/lineoa/verify", {
+          channelId: integration.channelId,
+          channelSecret: integration.channelSecret
+        });
+      }
+      throw new Error('Unsupported integration type');
+    },
+    onSuccess: (response, integration) => {
+      toast({
+        title: "Verification Successful",
+        description: `${integration.name} has been verified successfully!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/social-integrations'] });
+    },
+    onError: (error, integration) => {
+      toast({
+        title: "Verification Failed",
+        description: `Failed to verify ${integration.name}. Please check your credentials.`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleVerifyIntegration = (integration: SocialIntegration) => {
+    verifyIntegrationMutation.mutate(integration);
+  };
+
   const socialPlatforms = [
     {
       id: 'lineoa',
@@ -353,9 +384,22 @@ export default function Integrations() {
                                         <div className={`w-2 h-2 rounded-full ${integration.isVerified ? 'bg-green-500' : 'bg-orange-500'}`} />
                                         <span className="text-sm font-medium">{integration.name}</span>
                                       </div>
-                                      <Badge variant="outline" className="text-xs">
-                                        {integration.agentName || 'No Agent'}
-                                      </Badge>
+                                      <div className="flex items-center gap-2">
+                                        {!integration.isVerified && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-xs h-6"
+                                            onClick={() => handleVerifyIntegration(integration)}
+                                          >
+                                            <Check className="w-3 h-3 mr-1" />
+                                            Verify
+                                          </Button>
+                                        )}
+                                        <Badge variant="outline" className="text-xs">
+                                          {integration.agentName || 'No Agent'}
+                                        </Badge>
+                                      </div>
                                     </div>
                                     <WebhookUrlDisplay integrationId={integration.id} />
                                   </div>
