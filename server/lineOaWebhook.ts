@@ -373,10 +373,10 @@ async function getAiResponseDirectly(
             userId,
           );
           if (document && document.content) {
-            // Limit content to first 2000 characters to avoid token limits
+            // Limit content to first 8000 characters to provide more context
             const truncatedContent =
-              document.content.length > 2000
-                ? document.content.substring(0, 2000) + "..."
+              document.content.length > 8000
+                ? document.content.substring(0, 8000) + "..."
                 : document.content;
 
             documentContents.push(

@@ -606,7 +606,7 @@ export default function AgentConsole() {
                 <Card className="col-span-3">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Active Users</CardTitle>
+                      <CardTitle className="text-lg">Select Channel</CardTitle>
                       <Filter className="w-4 h-4 text-gray-500" />
                     </div>
                     <div className="pt-2">
@@ -619,10 +619,10 @@ export default function AgentConsole() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Channels</SelectItem>
-                          <SelectItem value="lineoa">Line OA</SelectItem>
-                          <SelectItem value="facebook">Facebook</SelectItem>
-                          <SelectItem value="tiktok">TikTok</SelectItem>
-                          <SelectItem value="web">Web Widget</SelectItem>
+                          <SelectItem value="lineoa">📱 Line OA</SelectItem>
+                          <SelectItem value="facebook">📘 Facebook</SelectItem>
+                          <SelectItem value="tiktok">🎵 TikTok</SelectItem>
+                          <SelectItem value="web">🌐 Web Widget</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

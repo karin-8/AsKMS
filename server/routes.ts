@@ -4132,22 +4132,27 @@ Memory management: Keep track of conversation context within the last ${agentCon
       const channelFilter = req.query.channelFilter || 'all';
       
       // Get all unique users from chat history grouped by user, channel, and agent
+      // Fixed query to properly sort by last message time
       const query = `
-        SELECT DISTINCT ON (ch.channel_id, ch.channel_type, ch.agent_id)
-          ch.user_id,
-          ch.channel_type,
-          ch.channel_id,
-          ch.agent_id,
-          ac.name as agent_name,
-          ch.content as last_message,
-          ch.created_at as last_message_at,
-          COUNT(*) OVER (PARTITION BY ch.channel_id, ch.channel_type, ch.agent_id) as message_count
-        FROM chat_history ch
-        JOIN agent_chatbots ac ON ch.agent_id = ac.id
-        WHERE ac.user_id = $1
-        AND (ch.channel_id LIKE 'U%' OR ch.channel_type = 'web')
-        ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
-        ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
+        WITH latest_messages AS (
+          SELECT DISTINCT ON (ch.channel_id, ch.channel_type, ch.agent_id)
+            ch.user_id,
+            ch.channel_type,
+            ch.channel_id,
+            ch.agent_id,
+            ac.name as agent_name,
+            ch.content as last_message,
+            ch.created_at as last_message_at,
+            COUNT(*) OVER (PARTITION BY ch.channel_id, ch.channel_type, ch.agent_id) as message_count
+          FROM chat_history ch
+          JOIN agent_chatbots ac ON ch.agent_id = ac.id
+          WHERE ac.user_id = $1
+          AND (ch.channel_id LIKE 'U%' OR ch.channel_type = 'web')
+          ${channelFilter !== 'all' ? 'AND ch.channel_type = $2' : ''}
+          ORDER BY ch.channel_id, ch.channel_type, ch.agent_id, ch.created_at DESC
+        )
+        SELECT * FROM latest_messages
+        ORDER BY last_message_at DESC
       `;
       
       const params = channelFilter !== 'all' ? [userId, channelFilter] : [userId];

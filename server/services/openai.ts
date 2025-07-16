@@ -449,7 +449,7 @@ export async function generateChatResponse(
         } else {
           // Fallback to document summary and first part if no vector results
           const doc = documents[0];
-          documentContext = `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent Preview: ${doc.content?.substring(0, 2000)}`;
+          documentContext = `Document: ${doc.name}\nSummary: ${doc.summary}\nTags: ${doc.tags?.join(", ")}\nContent Preview: ${doc.content?.substring(0, 8000)}`;
         }
       } catch (vectorError) {
         console.error("Vector search failed for document chat, using fallback:", vectorError);

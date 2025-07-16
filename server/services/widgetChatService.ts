@@ -44,8 +44,8 @@ export class WidgetChatService {
           try {
             const document = await storage.getDocumentForWidget(agentDoc.documentId);
             if (document && document.content) {
-              const truncatedContent = document.content.length > 2000
-                ? document.content.substring(0, 2000) + "..."
+              const truncatedContent = document.content.length > 8000
+                ? document.content.substring(0, 8000) + "..."
                 : document.content;
 
               documentContents.push(
