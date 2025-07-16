@@ -466,15 +466,13 @@
               widgetKeyValue: widgetKey
             });
             
-            // Temporarily force display for debugging - REMOVE AFTER TESTING
-            const forceDisplay = true;
-            
-            if (userIdMatch || channelIdMatch || forceDisplay) {
-              if (forceDisplay && !userIdMatch && !channelIdMatch) {
-                console.log('🚨 FORCE DISPLAY: Message shown despite ID mismatch for debugging');
-              } else {
-                console.log('✅ Widget message match found!');
-              }
+            if (userIdMatch || channelIdMatch) {
+              console.log('✅ WIDGET: Message match found!');
+              console.log('✅ WIDGET: Match details:', {
+                userIdMatch,
+                channelIdMatch,
+                matchReason: userIdMatch ? 'User ID' : 'Channel ID'
+              });
               
               const message = data.message;
               console.log('💬 Processing message:', message);
@@ -533,6 +531,16 @@
 
   // Initialize widget with config loading
   async function initWidget() {
+    console.log("🚀 Starting widget initialization...");
+    console.log("🔑 Widget Key:", widgetKey);
+    console.log("🌐 Base URL:", baseUrl);
+
+    // Generate session ID
+    sessionId = localStorage.getItem(`ai-kms-session-${widgetKey}`) || generateVisitorId();
+    localStorage.setItem(`ai-kms-session-${widgetKey}`, sessionId);
+    
+    console.log("🆔 Generated sessionId:", sessionId);
+    
     await loadWidgetConfig();
     createWidget();
     initWebSocket();
