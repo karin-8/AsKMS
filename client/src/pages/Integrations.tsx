@@ -193,7 +193,7 @@ export default function Integrations() {
 
   // Verify Line OA connection mutation
   const verifyLineOaMutation = useMutation({
-    mutationFn: async (data: { channelId: string; channelSecret: string }) => {
+    mutationFn: async (data: { channelId: string; channelSecret: string; channelAccessToken?: string }) => {
       console.log("🔍 Frontend: Sending verification request", data);
       const response = await apiRequest("POST", "/api/social-integrations/lineoa/verify", data);
       const result = await response.json();
@@ -240,7 +240,8 @@ export default function Integrations() {
     
     verifyLineOaMutation.mutate({
       channelId: lineOaForm.channelId,
-      channelSecret: lineOaForm.channelSecret
+      channelSecret: lineOaForm.channelSecret,
+      channelAccessToken: lineOaForm.channelAccessToken
     });
   };
 
@@ -263,7 +264,9 @@ export default function Integrations() {
       if (integration.type === 'lineoa') {
         return await apiRequest("POST", "/api/social-integrations/lineoa/verify", {
           channelId: integration.channelId,
-          channelSecret: integration.channelSecret
+          channelSecret: integration.channelSecret,
+          channelAccessToken: integration.channelAccessToken,
+          integrationId: integration.id // Include integration ID for database update
         });
       }
       throw new Error('Unsupported integration type');

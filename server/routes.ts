@@ -3774,7 +3774,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
     isAuthenticated,
     async (req: any, res) => {
       try {
-        const { channelId, channelSecret } = req.body;
+        const { channelId, channelSecret, channelAccessToken, integrationId } = req.body;
 
         console.log("🔍 Debug: Line OA Verification Request");
         console.log(
@@ -3785,6 +3785,11 @@ Memory management: Keep track of conversation context within the last ${agentCon
           "🔑 Channel Secret:",
           channelSecret ? `${channelSecret.substring(0, 8)}...` : "Missing",
         );
+        console.log(
+          "🎫 Channel Access Token:",
+          channelAccessToken ? `${channelAccessToken.substring(0, 8)}...` : "Missing",
+        );
+        console.log("🆔 Integration ID:", integrationId || "None (creation mode)");
 
         if (!channelId || !channelSecret) {
           console.log("❌ Missing required fields");
@@ -3821,26 +3826,31 @@ Memory management: Keep track of conversation context within the last ${agentCon
         // Simulate LINE API verification
         // In production, you would make actual API call to LINE:
         // const response = await fetch('https://api.line.me/v2/bot/info', {
-        //   headers: { 'Authorization': `Bearer ${channelSecret}` }
+        //   headers: { 'Authorization': `Bearer ${channelAccessToken}` }
         // });
 
-        // Update the integration to mark as verified
-        const userId = req.user.claims.sub;
-        const updateResult = await db.execute(sql`
-          UPDATE social_integrations 
-          SET is_verified = true, last_verified_at = NOW(), updated_at = NOW()
-          WHERE user_id = ${userId} AND type = 'lineoa' AND channel_id = ${channelId} AND channel_secret = ${channelSecret}
-        `);
+        // If integrationId is provided, update the existing integration to mark as verified
+        if (integrationId) {
+          const userId = req.user.claims.sub;
+          const updateResult = await db.execute(sql`
+            UPDATE social_integrations 
+            SET is_verified = true, last_verified_at = NOW(), updated_at = NOW()
+            WHERE id = ${integrationId} AND user_id = ${userId} AND type = 'lineoa'
+          `);
 
-        if (updateResult.rowCount === 0) {
-          console.log("❌ No matching integration found to update");
-          return res.json({
-            success: false,
-            message: "ไม่พบการเชื่อมต่อที่ตรงกัน กรุณาตรวจสอบข้อมูลอีกครั้ง",
-          });
+          if (updateResult.rowCount === 0) {
+            console.log("❌ No matching integration found to update");
+            return res.json({
+              success: false,
+              message: "ไม่พบการเชื่อมต่อที่ตรงกัน กรุณาตรวจสอบข้อมูลอีกครั้ง",
+            });
+          }
+
+          console.log("🎉 Line OA verification successful and database updated");
+        } else {
+          console.log("🎉 Line OA verification successful (creation mode)");
         }
 
-        console.log("🎉 Line OA verification successful and database updated");
         res.json({
           success: true,
           message: "การเชื่อมต่อ Line OA สำเร็จ! ระบบได้ตรวจสอบการตั้งค่าแล้ว",
