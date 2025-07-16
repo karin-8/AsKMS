@@ -82,63 +82,6 @@
             widgetKey: 's7wpx4LcS-ECbkZI',
             baseUrl: window.location.origin
         };
-        
-        // Test WebSocket connection for human takeover
-        function testHumanTakeover() {
-            console.log('Testing human takeover...');
-            
-            // Connect to WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
-            
-            const ws = new WebSocket(wsUrl);
-            
-            ws.onopen = () => {
-                console.log('✅ WebSocket connected for test');
-                
-                // Simulate human agent message
-                const humanMessage = {
-                    type: 'human_agent_message',
-                    channelType: 'web',
-                    channelId: 's7wpx4LcS-ECbkZI',
-                    userId: '9WeULP_e0p5Hxof_',
-                    agentId: 6,
-                    message: {
-                        messageType: 'agent',
-                        content: 'สวัสดีครับ! ฉันเป็นเจ้าหน้าที่ที่จะช่วยเหลือคุณ มีอะไรให้ช่วยไหมครับ?',
-                        timestamp: new Date().toISOString(),
-                        humanAgent: true,
-                        humanAgentName: 'Test Human Agent'
-                    }
-                };
-                
-                // Send test message
-                ws.send(JSON.stringify(humanMessage));
-                console.log('📤 Sent test human agent message');
-            };
-            
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('📨 Received WebSocket message:', data);
-            };
-            
-            ws.onclose = () => {
-                console.log('🔌 WebSocket disconnected');
-            };
-            
-            ws.onerror = (error) => {
-                console.error('❌ WebSocket error:', error);
-            };
-        }
-        
-        // Add test button
-        document.addEventListener('DOMContentLoaded', function() {
-            const testButton = document.createElement('button');
-            testButton.textContent = 'Test Human Takeover';
-            testButton.onclick = testHumanTakeover;
-            testButton.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 10001;';
-            document.body.appendChild(testButton);
-        });
     </script>
     <script src="/widget/embed.js"></script>
 </body>
