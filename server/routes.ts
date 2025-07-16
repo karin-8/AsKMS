@@ -4591,7 +4591,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
           WHERE channel_type = 'web' 
           AND channel_id = $1 
           AND agent_id = $2
-          AND created_at > NOW() - INTERVAL '30 minutes'
+          AND created_at > NOW() - INTERVAL '2 hours'
           GROUP BY userId
           ORDER BY latest_message_time DESC
           LIMIT 1
@@ -4600,6 +4600,14 @@ Memory management: Keep track of conversation context within the last ${agentCon
         try {
           const latestSessionResult = await pool.query(latestSessionQuery, [channelId, parseInt(agentId)]);
           
+          console.log('🔍 Session migration check results:', {
+            oldTargetUserId: targetUserId,
+            widgetKey: channelId,
+            agentId: parseInt(agentId),
+            latestSessionsFound: latestSessionResult.rows.length,
+            latestSessionData: latestSessionResult.rows.length > 0 ? latestSessionResult.rows[0] : null
+          });
+          
           if (latestSessionResult.rows.length > 0) {
             const latestSessionId = latestSessionResult.rows[0].user_id;
             
@@ -4607,14 +4615,19 @@ Memory management: Keep track of conversation context within the last ${agentCon
               console.log('🔄 Session migration detected:', {
                 oldSessionId: targetUserId,
                 newSessionId: latestSessionId,
-                widgetKey: channelId
+                widgetKey: channelId,
+                timeDiff: latestSessionResult.rows[0].latest_message_time
               });
               
               // Update to use the latest session ID
               targetUserId = latestSessionId;
               
               console.log('✅ Using migrated session ID:', latestSessionId);
+            } else {
+              console.log('ℹ️ Session ID is already current:', targetUserId);
             }
+          } else {
+            console.log('⚠️ No recent sessions found for this widget in the last 2 hours');
           }
         } catch (sessionMigrationError) {
           console.error('⚠️ Session migration check failed:', sessionMigrationError);
@@ -4714,6 +4727,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
         });
         
         if (global.wsClients && global.wsClients.size > 0) {
+          // Create two different message formats for broader compatibility
           const wsMessage = {
             type: 'human_agent_message',
             channelType: 'web',
@@ -4729,7 +4743,24 @@ Memory management: Keep track of conversation context within the last ${agentCon
             }
           };
           
-          console.log('📡 Broadcasting web widget message:', JSON.stringify(wsMessage, null, 2));
+          // Also create a broadcast message that any widget with this channelId can receive
+          const broadcastMessage = {
+            type: 'human_agent_message',
+            channelType: 'web',
+            channelId: channelId, // Widget key - all widgets with this key should receive
+            agentId: parseInt(agentId),
+            userId: 'BROADCAST', // Special userId to indicate this is for any session
+            message: {
+              messageType: 'agent',
+              content: message,
+              timestamp: new Date().toISOString(),
+              humanAgent: true,
+              humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+            }
+          };
+          
+          console.log('📡 Broadcasting web widget message (specific):', JSON.stringify(wsMessage, null, 2));
+          console.log('📡 Broadcasting web widget message (broadcast):', JSON.stringify(broadcastMessage, null, 2));
           
           let sentCount = 0;
           let openConnections = 0;
@@ -4738,9 +4769,11 @@ Memory management: Keep track of conversation context within the last ${agentCon
             if (client.readyState === 1) { // WebSocket.OPEN
               openConnections++;
               try {
+                // Send both specific and broadcast messages
                 client.send(JSON.stringify(wsMessage));
+                client.send(JSON.stringify(broadcastMessage));
                 sentCount++;
-                console.log(`✅ Sent message to WebSocket client ${index + 1}`);
+                console.log(`✅ Sent messages to WebSocket client ${index + 1}`);
               } catch (error) {
                 console.log(`❌ Error sending to WebSocket client ${index + 1}:`, error);
               }

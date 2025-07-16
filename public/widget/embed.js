@@ -420,15 +420,15 @@
           if (data.type === 'human_agent_message' && 
               data.channelType === 'web') {
             
-
-            
             // Check both conditions with detailed logging
             const userIdMatch = data.userId === sessionId;
             const channelIdMatch = data.channelId === widgetKey;
+            const isBroadcast = data.userId === 'BROADCAST'; // Special broadcast message
             
             console.log('🔍 Detailed ID matching:', {
               userIdMatch,
               channelIdMatch,
+              isBroadcast,
               dataUserIdType: typeof data.userId,
               sessionIdType: typeof sessionId,
               dataChannelIdType: typeof data.channelId,
@@ -439,8 +439,17 @@
               widgetKeyValue: widgetKey
             });
             
-            if (userIdMatch || channelIdMatch) {
+            // Accept message if any of these conditions are true:
+            // 1. Exact session ID match
+            // 2. Widget key match
+            // 3. Broadcast message for this widget
+            if (userIdMatch || (channelIdMatch && isBroadcast) || (channelIdMatch && !data.userId)) {
               const message = data.message;
+              
+              console.log('✅ Message accepted for widget:', {
+                reason: userIdMatch ? 'session match' : (isBroadcast ? 'broadcast' : 'channel match'),
+                messageContent: message?.content?.substring(0, 50) + '...'
+              });
               
               if (message && message.humanAgent) {
                 // Add human agent message with special styling
@@ -449,6 +458,8 @@
                   humanAgentName: message.humanAgentName
                 });
               }
+            } else {
+              console.log('❌ Message rejected - no matching conditions');
             }
           }
         } catch (error) {
