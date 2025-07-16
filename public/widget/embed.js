@@ -435,14 +435,18 @@
           if (data.type === 'human_agent_message' && 
               data.channelType === 'web') {
             
-            console.log('🎯 Human agent message detected for web channel');
-            console.log('🔍 Matching check:', {
+            console.log('🎯 WIDGET: Human agent message detected for web channel');
+            console.log('🔍 WIDGET: Matching check:', {
               userIdMatch: data.userId === sessionId,
               channelIdMatch: data.channelId === widgetKey,
               sessionId: sessionId,
               widgetKey: widgetKey,
               dataUserId: data.userId,
               dataChannelId: data.channelId
+            });
+            console.log('🔍 WIDGET: Current widget state:', {
+              widgetExists: !!document.getElementById('ai-kms-chat-window'),
+              messagesContainer: !!document.getElementById('ai-kms-chat-messages')
             });
             
             // Check both conditions with detailed logging
@@ -476,24 +480,32 @@
               console.log('💬 Processing message:', message);
               
               if (message && message.humanAgent) {
-                console.log('👤 Adding human agent message to chat');
-                // Add human agent message with special styling
-                addMessage("agent", message.content, {
-                  isHumanAgent: true,
-                  humanAgentName: message.humanAgentName
-                });
-                console.log('✅ Human agent message added to chat successfully');
+                console.log('👤 WIDGET: Adding human agent message to chat');
+                console.log('👤 WIDGET: Message content:', message.content);
+                console.log('👤 WIDGET: addMessage function exists:', typeof addMessage);
+                
+                try {
+                  // Add human agent message with special styling
+                  addMessage("agent", message.content, {
+                    isHumanAgent: true,
+                    humanAgentName: message.humanAgentName
+                  });
+                  console.log('✅ WIDGET: Human agent message added to chat successfully');
+                } catch (error) {
+                  console.error('❌ WIDGET: Error adding message:', error);
+                }
               } else {
-                console.log('⚠️ Message not flagged as human agent or message is null:', {
+                console.log('⚠️ WIDGET: Message not flagged as human agent or message is null:', {
                   messageExists: !!message,
-                  humanAgentFlag: message ? message.humanAgent : 'message is null'
+                  humanAgentFlag: message ? message.humanAgent : 'message is null',
+                  fullMessage: message
                 });
               }
             } else {
-              console.log('❌ Widget message match failed - IDs do not match');
+              console.log('❌ WIDGET: Message match failed - IDs do not match');
             }
           } else {
-            console.log('🔍 Message not for this widget:', {
+            console.log('🔍 WIDGET: Message not for this widget:', {
               typeMatch: data.type === 'human_agent_message',
               channelMatch: data.channelType === 'web',
               actualType: data.type,
