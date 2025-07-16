@@ -642,61 +642,69 @@ export async function handleLineWebhook(req: Request, res: Response) {
     console.log("🔔 Line webhook received");
     console.log("📝 Body:", body);
 
-    // Find the Line OA integration by matching the destination (Channel ID)
-    const destination = webhookBody.destination;
-    console.log(
-      "🔍 Debug: Looking for integration with destination:",
-      destination,
-    );
+    let lineIntegration: any;
 
-    // Get all Line OA integrations to find the matching one
-    const allIntegrations = await storage.getAllSocialIntegrations();
-    console.log(
-      "✅ Found",
-      allIntegrations.length,
-      "total social integrations",
-    );
-
-    // In Line webhooks, the destination is the Bot's User ID, not Channel ID
-    // First try to match by Bot User ID, then fall back to any active integration
-    let lineIntegration = allIntegrations.find(
-      (integration) =>
-        integration.type === "lineoa" &&
-        integration.isActive &&
-        integration.botUserId === destination,
-    );
-
-    // If no exact match found by Bot User ID, try fallback to any active Line OA integration
-    if (!lineIntegration) {
-      lineIntegration = allIntegrations.find(
-        (integration) => integration.type === "lineoa" && integration.isActive,
-      );
-      if (lineIntegration) {
-        console.log(
-          "🔧 Using fallback matching - found active Line OA integration",
-        );
-        // Update the Bot User ID for future webhook calls using raw SQL
-        try {
-          await db.execute(sql`
-            UPDATE social_integrations 
-            SET bot_user_id = ${destination}, updated_at = NOW() 
-            WHERE id = ${lineIntegration.id}
-          `);
-          console.log("✅ Updated Bot User ID for future webhook calls");
-        } catch (error) {
-          console.log("⚠️ Could not update Bot User ID:", error);
-        }
-      }
-    }
-
-    if (!lineIntegration) {
+    // Check if integration is provided by dynamic webhook endpoint
+    if ((req as any).lineIntegration) {
+      lineIntegration = (req as any).lineIntegration;
+      console.log(`✅ Using provided integration: ${lineIntegration.name} (ID: ${lineIntegration.id})`);
+    } else {
+      // Legacy webhook handling - find integration by destination
+      const destination = webhookBody.destination;
       console.log(
-        "❌ No active Line OA integration found for destination:",
+        "🔍 Debug: Looking for integration with destination:",
         destination,
       );
-      return res
-        .status(404)
-        .json({ error: "No active Line OA integration found" });
+
+      // Get all Line OA integrations to find the matching one
+      const allIntegrations = await storage.getAllSocialIntegrations();
+      console.log(
+        "✅ Found",
+        allIntegrations.length,
+        "total social integrations",
+      );
+
+      // In Line webhooks, the destination is the Bot's User ID, not Channel ID
+      // First try to match by Bot User ID, then fall back to any active integration
+      lineIntegration = allIntegrations.find(
+        (integration) =>
+          integration.type === "lineoa" &&
+          integration.isActive &&
+          integration.botUserId === destination,
+      );
+
+      // If no exact match found by Bot User ID, try fallback to any active Line OA integration
+      if (!lineIntegration) {
+        lineIntegration = allIntegrations.find(
+          (integration) => integration.type === "lineoa" && integration.isActive,
+        );
+        if (lineIntegration) {
+          console.log(
+            "🔧 Using fallback matching - found active Line OA integration",
+          );
+          // Update the Bot User ID for future webhook calls using raw SQL
+          try {
+            await db.execute(sql`
+              UPDATE social_integrations 
+              SET bot_user_id = ${destination}, updated_at = NOW() 
+              WHERE id = ${lineIntegration.id}
+            `);
+            console.log("✅ Updated Bot User ID for future webhook calls");
+          } catch (error) {
+            console.log("⚠️ Could not update Bot User ID:", error);
+          }
+        }
+      }
+
+      if (!lineIntegration) {
+        console.log(
+          "❌ No active Line OA integration found for destination:",
+          destination,
+        );
+        return res
+          .status(404)
+          .json({ error: "No active Line OA integration found" });
+      }
     }
 
     console.log(

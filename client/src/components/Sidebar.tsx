@@ -97,14 +97,14 @@ export default function Sidebar() {
       {/* Logo & Brand */}
       <div className="p-6 border-b border-slate-200">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          {/* <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <BookType className="w-4 h-4 text-white" />
-          </div>
+          </div> */}
           <div>
-            <h1 className="text-lg font-semibold text-slate-800">
+            {/* <h1 className="text-lg font-semibold text-slate-800">
               4urney- AI-KMS
             </h1>
-            <p className="text-xs text-slate-500">Knowledge Management</p>
+            <p className="text-xs text-slate-500">Knowledge Management</p> */}
           </div>
         </div>
       </div>

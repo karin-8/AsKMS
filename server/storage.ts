@@ -163,6 +163,7 @@ export interface IStorage {
   getSocialIntegrations(userId: string): Promise<SocialIntegration[]>;
   getAllSocialIntegrations(): Promise<SocialIntegration[]>;
   getSocialIntegration(id: number, userId: string): Promise<SocialIntegration | undefined>;
+  getSocialIntegrationById(id: number): Promise<SocialIntegration | undefined>;
   createSocialIntegration(integration: InsertSocialIntegration): Promise<SocialIntegration>;
   updateSocialIntegration(id: number, integration: Partial<InsertSocialIntegration>, userId: string): Promise<SocialIntegration>;
   deleteSocialIntegration(id: number, userId: string): Promise<void>;
@@ -1470,6 +1471,48 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("💥 Error fetching all social integrations:", error);
       return [];
+    }
+  }
+
+  async getSocialIntegrationById(id: number): Promise<SocialIntegration | undefined> {
+    try {
+      const [integration] = await db
+        .select({
+          id: socialIntegrations.id,
+          userId: socialIntegrations.userId,
+          name: socialIntegrations.name,
+          description: socialIntegrations.description,
+          type: socialIntegrations.type,
+          channelId: socialIntegrations.channelId,
+          channelSecret: socialIntegrations.channelSecret,
+          channelAccessToken: socialIntegrations.channelAccessToken,
+          botUserId: socialIntegrations.botUserId,
+          agentId: socialIntegrations.agentId,
+          isActive: socialIntegrations.isActive,
+          isVerified: socialIntegrations.isVerified,
+          lastVerifiedAt: socialIntegrations.lastVerifiedAt,
+          facebookPageId: socialIntegrations.facebookPageId,
+          facebookAccessToken: socialIntegrations.facebookAccessToken,
+          tiktokChannelId: socialIntegrations.tiktokChannelId,
+          tiktokAccessToken: socialIntegrations.tiktokAccessToken,
+          webhookUrl: socialIntegrations.webhookUrl,
+          config: socialIntegrations.config,
+          createdAt: socialIntegrations.createdAt,
+          updatedAt: socialIntegrations.updatedAt,
+          agentName: agentChatbots.name,
+        })
+        .from(socialIntegrations)
+        .leftJoin(agentChatbots, eq(socialIntegrations.agentId, agentChatbots.id))
+        .where(eq(socialIntegrations.id, id));
+
+      if (!integration) {
+        return undefined;
+      }
+
+      return integration as SocialIntegration;
+    } catch (error) {
+      console.error("Error getting social integration by ID:", error);
+      return undefined;
     }
   }
 

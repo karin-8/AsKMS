@@ -18,7 +18,10 @@ import {
   ArrowLeft,
   Smartphone,
   MessageCircle,
-  Video
+  Video,
+  Copy,
+  Globe,
+  LinkIcon
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +34,72 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import Sidebar from "@/components/Sidebar";
+
+// WebhookUrlDisplay component for showing webhook URLs
+function WebhookUrlDisplay({ integrationId }: { integrationId: number }) {
+  const { toast } = useToast();
+  
+  const { data: webhookData } = useQuery({
+    queryKey: [`/api/social-integrations/${integrationId}/webhook-url`],
+    retry: false,
+  });
+
+  const copyToClipboard = (url: string, label: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: "Copied to clipboard",
+        description: `${label} webhook URL copied successfully`,
+        duration: 2000,
+      });
+    });
+  };
+
+  if (!webhookData) return null;
+
+  return (
+    <div className="space-y-2 px-2">
+      {/* Primary Webhook URL */}
+      <div className="flex items-center justify-between text-xs bg-blue-50 dark:bg-blue-950 p-2 rounded">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Globe className="w-3 h-3 text-blue-600 flex-shrink-0" />
+          <span className="font-medium text-blue-700 dark:text-blue-300">Webhook URL:</span>
+          <code className="text-blue-800 dark:text-blue-200 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded text-xs truncate">
+            {webhookData.webhookUrl}
+          </code>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+          onClick={() => copyToClipboard(webhookData.webhookUrl, "Primary")}
+        >
+          <Copy className="w-3 h-3" />
+        </Button>
+      </div>
+      
+      {/* Legacy Webhook URL */}
+      {webhookData.legacyWebhookUrl && (
+        <div className="flex items-center justify-between text-xs bg-orange-50 dark:bg-orange-950 p-2 rounded">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <LinkIcon className="w-3 h-3 text-orange-600 flex-shrink-0" />
+            <span className="font-medium text-orange-700 dark:text-orange-300">Legacy URL:</span>
+            <code className="text-orange-800 dark:text-orange-200 bg-orange-100 dark:bg-orange-900 px-1 py-0.5 rounded text-xs truncate">
+              {webhookData.legacyWebhookUrl}
+            </code>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-orange-600 hover:text-orange-800"
+            onClick={() => copyToClipboard(webhookData.legacyWebhookUrl, "Legacy")}
+          >
+            <Copy className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface SocialIntegration {
   id: number;
@@ -278,14 +347,17 @@ export default function Integrations() {
                             {existingIntegrations.length > 0 && (
                               <div className="space-y-2">
                                 {existingIntegrations.slice(0, 2).map((integration) => (
-                                  <div key={integration.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded">
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${integration.isVerified ? 'bg-green-500' : 'bg-orange-500'}`} />
-                                      <span className="text-sm font-medium">{integration.name}</span>
+                                  <div key={integration.id} className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${integration.isVerified ? 'bg-green-500' : 'bg-orange-500'}`} />
+                                        <span className="text-sm font-medium">{integration.name}</span>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs">
+                                        {integration.agentName || 'No Agent'}
+                                      </Badge>
                                     </div>
-                                    <Badge variant="outline" className="text-xs">
-                                      {integration.agentName || 'No Agent'}
-                                    </Badge>
+                                    <WebhookUrlDisplay integrationId={integration.id} />
                                   </div>
                                 ))}
                                 {existingIntegrations.length > 2 && (

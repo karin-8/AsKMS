@@ -3632,6 +3632,55 @@ Memory management: Keep track of conversation context within the last ${agentCon
   );
 
   // Social Integrations routes
+  
+  // Get webhook URL for a specific integration
+  app.get(
+    "/api/social-integrations/:id/webhook-url",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const integrationId = parseInt(req.params.id);
+        
+        if (isNaN(integrationId)) {
+          return res.status(400).json({ error: "Invalid integration ID" });
+        }
+
+        // Verify the integration belongs to the user
+        const integration = await storage.getSocialIntegration(integrationId, userId);
+        if (!integration) {
+          return res.status(404).json({ error: "Integration not found" });
+        }
+
+        // Generate webhook URL based on request domain
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        const host = req.headers['x-replit-domain'] || req.headers['host'];
+        const baseUrl = `${protocol}://${host}`;
+        
+        let webhookUrl: string;
+        
+        if (integration.type === 'lineoa') {
+          // Use the dynamic webhook endpoint for Line OA
+          webhookUrl = `${baseUrl}/api/line/webhook/${integrationId}`;
+        } else {
+          // For other platforms, use generic webhook (to be implemented)
+          webhookUrl = `${baseUrl}/api/webhook/${integration.type}/${integrationId}`;
+        }
+
+        res.json({ 
+          integrationId: integrationId,
+          type: integration.type,
+          name: integration.name,
+          webhookUrl: webhookUrl,
+          legacyWebhookUrl: integration.type === 'lineoa' ? `${baseUrl}/api/line/webhook` : null
+        });
+      } catch (error) {
+        console.error("Error generating webhook URL:", error);
+        res.status(500).json({ error: "Failed to generate webhook URL" });
+      }
+    }
+  );
+  
   app.get(
     "/api/social-integrations",
     isAuthenticated,
@@ -4381,6 +4430,34 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
   // Line OA Webhook endpoint (no authentication required)
   app.post("/api/line/webhook", handleLineWebhook);
+  
+  // Dynamic Line OA Webhook with integration ID for multiple channels
+  app.post("/api/line/webhook/:integrationId", async (req: Request, res: Response) => {
+    try {
+      const integrationId = parseInt(req.params.integrationId);
+      if (isNaN(integrationId)) {
+        return res.status(400).json({ error: "Invalid integration ID" });
+      }
+
+      // Get the specific Line OA integration
+      const integration = await storage.getSocialIntegrationById(integrationId);
+      if (!integration || integration.type !== "lineoa" || !integration.isActive) {
+        console.log(`❌ Line OA integration ${integrationId} not found or inactive`);
+        return res.status(404).json({ error: "Line OA integration not found or inactive" });
+      }
+
+      console.log(`🔔 Line webhook received for integration ${integrationId} (${integration.name})`);
+      
+      // Temporarily modify the request to include integration info for handleLineWebhook
+      (req as any).lineIntegration = integration;
+      
+      // Call the existing webhook handler
+      return await handleLineWebhook(req, res);
+    } catch (error) {
+      console.error("💥 Dynamic Line webhook error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   
