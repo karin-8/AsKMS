@@ -2831,23 +2831,17 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           .json({ message: "Widget not found or inactive" });
       }
 
-      // Get chat history for this session
-      const messages = await db
-        .select({
-          id: widgetChatMessages.id,
-          role: widgetChatMessages.role,
-          content: widgetChatMessages.content,
-          message_type: widgetChatMessages.messageType,
-          metadata: widgetChatMessages.metadata,
-          created_at: widgetChatMessages.createdAt,
-        })
-        .from(widgetChatMessages)
-        .where(eq(widgetChatMessages.sessionId, sessionId as string))
-        .orderBy(widgetChatMessages.createdAt);
+      // Get chat history for this session using raw SQL for direct database access
+      const messages = await pool.query(`
+        SELECT id, session_id, role, content, message_type, metadata, created_at
+        FROM widget_chat_messages
+        WHERE session_id = $1
+        ORDER BY created_at ASC
+      `, [sessionId]);
 
-      console.log(`📚 Retrieved ${messages.length} messages for session ${sessionId}`);
+      console.log(`📚 Retrieved ${messages.rows.length} messages for session ${sessionId}`);
 
-      res.json({ messages });
+      res.json({ messages: messages.rows });
     } catch (error) {
       console.error("Error fetching widget chat history:", error);
       res.status(500).json({ message: "Failed to fetch chat history" });

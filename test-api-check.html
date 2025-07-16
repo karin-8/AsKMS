@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Response</title>
+</head>
+<body>
+    <h1>Testing Chat History API</h1>
+    <div id="result"></div>
+    
+    <script>
+    async function testAPI() {
+        try {
+            const response = await fetch('/api/widget/2WXLiXyIjXJlREI1/chat-history?sessionId=visitor_vzds9jh00md6fx855');
+            const data = await response.json();
+            
+            document.getElementById('result').innerHTML = `
+                <h2>API Response:</h2>
+                <p>Status: ${response.status}</p>
+                <p>Message Count: ${data.messages ? data.messages.length : 0}</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            
+            console.log('Full API Response:', data);
+        } catch (error) {
+            document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            console.error('Error:', error);
+        }
+    }
+    
+    // Test on page load
+    testAPI();
+    </script>
+</body>
+</html>
