@@ -4666,8 +4666,8 @@ Memory management: Keep track of conversation context within the last ${agentCon
           console.error('❌ Error sending Line message:', error);
         }
       } else if (channelType === 'web') {
-        // For web channel, we need to notify the widget through WebSocket
-        // The widget will be listening for messages from human agents
+        // For web channel, we need to store the message in widget_chat_messages table too
+        // because the widget reads from this table
         console.log('🌐 Processing web channel message:', {
           targetUserId,
           channelId,
@@ -4676,6 +4676,37 @@ Memory management: Keep track of conversation context within the last ${agentCon
           globalWsClientsExists: !!(global.wsClients),
           messageContent: message.substring(0, 50) + '...'
         });
+
+        // CRITICAL: Also store human agent message in widget_chat_messages table
+        // This is what the widget actually reads from!
+        try {
+          console.log('💾 Storing human agent message in widget_chat_messages table...');
+          
+          // Insert into widget_chat_messages table
+          const widgetMessageQuery = `
+            INSERT INTO widget_chat_messages (session_id, role, content, message_type, metadata, created_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            RETURNING id
+          `;
+          
+          const widgetMessageValues = [
+            targetUserId, // session_id (this is the visitor session ID)
+            'agent', // role
+            message, // content
+            'agent', // message_type
+            JSON.stringify({
+              sentBy: req.user.claims.sub,
+              humanAgent: true,
+              humanAgentName: req.user.claims.first_name || req.user.claims.email || 'Human Agent'
+            }) // metadata
+          ];
+          
+          const widgetMessageResult = await pool.query(widgetMessageQuery, widgetMessageValues);
+          console.log('✅ Human agent message stored in widget_chat_messages with ID:', widgetMessageResult.rows[0].id);
+          
+        } catch (widgetStoreError) {
+          console.error('❌ Error storing human agent message in widget_chat_messages:', widgetStoreError);
+        }
         
         if (global.wsClients && global.wsClients.size > 0) {
           // Create two different message formats for broader compatibility
