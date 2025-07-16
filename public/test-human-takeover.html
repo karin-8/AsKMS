@@ -218,6 +218,16 @@
             widgetArea.appendChild(script);
             
             log('Widget loaded with key: 2WXLiXyIjXJlREI1', 'success');
+            
+            // Add a debug function to check widget variables
+            setTimeout(() => {
+                if (window.aiKmsWidgetDebug) {
+                    const debugInfo = window.aiKmsWidgetDebug();
+                    log(`Widget debug info: ${JSON.stringify(debugInfo)}`, 'success');
+                } else {
+                    log('Widget debug function not available', 'warning');
+                }
+            }, 2000);
         }
 
         // Auto-connect WebSocket on page load

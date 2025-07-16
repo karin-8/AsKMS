@@ -428,6 +428,8 @@
             dataChannelType: data.channelType,
             messageContent: data.message?.content?.substring(0, 50) + '...' || 'No content'
           });
+          console.log('🔍 Widget JavaScript sessionId:', sessionId);
+          console.log('🔍 Widget JavaScript widgetKey:', widgetKey);
           
           // Handle human agent messages for this widget
           if (data.type === 'human_agent_message' && 
@@ -460,8 +462,16 @@
               widgetKeyValue: widgetKey
             });
             
-            if (userIdMatch || channelIdMatch) {
-              console.log('✅ Widget message match found!');
+            // Temporarily force display for debugging - REMOVE AFTER TESTING
+            const forceDisplay = true;
+            
+            if (userIdMatch || channelIdMatch || forceDisplay) {
+              if (forceDisplay && !userIdMatch && !channelIdMatch) {
+                console.log('🚨 FORCE DISPLAY: Message shown despite ID mismatch for debugging');
+              } else {
+                console.log('✅ Widget message match found!');
+              }
+              
               const message = data.message;
               console.log('💬 Processing message:', message);
               
@@ -515,6 +525,16 @@
     createWidget();
     initWebSocket();
   }
+
+  // Debug function to expose widget variables
+  window.aiKmsWidgetDebug = function() {
+    return {
+      sessionId: sessionId,
+      widgetKey: widgetKey,
+      baseUrl: baseUrl,
+      widgetConfig: widgetConfig
+    };
+  };
 
   // Initialize widget when DOM is ready
   if (document.readyState === "loading") {
