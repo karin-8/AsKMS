@@ -2798,6 +2798,62 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     }
   });
 
+  // Widget chat history endpoint for public use
+  app.get("/api/widget/:widgetKey/chat-history", async (req, res) => {
+    try {
+      const { widgetKey } = req.params;
+      const { sessionId } = req.query;
+      const {
+        chatWidgets,
+        widgetChatMessages,
+      } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
+      }
+
+      // Find widget to verify it exists and is active
+      const [widget] = await db
+        .select({
+          id: chatWidgets.id,
+          name: chatWidgets.name,
+          widgetKey: chatWidgets.widgetKey,
+          isActive: chatWidgets.isActive,
+        })
+        .from(chatWidgets)
+        .where(eq(chatWidgets.widgetKey, widgetKey))
+        .limit(1);
+
+      if (!widget || !widget.isActive) {
+        return res
+          .status(404)
+          .json({ message: "Widget not found or inactive" });
+      }
+
+      // Get chat history for this session
+      const messages = await db
+        .select({
+          id: widgetChatMessages.id,
+          role: widgetChatMessages.role,
+          content: widgetChatMessages.content,
+          message_type: widgetChatMessages.messageType,
+          metadata: widgetChatMessages.metadata,
+          created_at: widgetChatMessages.createdAt,
+        })
+        .from(widgetChatMessages)
+        .where(eq(widgetChatMessages.sessionId, sessionId as string))
+        .orderBy(widgetChatMessages.createdAt);
+
+      console.log(`📚 Retrieved ${messages.length} messages for session ${sessionId}`);
+
+      res.json({ messages });
+    } catch (error) {
+      console.error("Error fetching widget chat history:", error);
+      res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+
   // Widget chat endpoints for public use
   app.post("/api/widget/:widgetKey/chat", async (req, res) => {
     try {
@@ -4691,9 +4747,9 @@ Memory management: Keep track of conversation context within the last ${agentCon
           
           const widgetMessageValues = [
             targetUserId, // session_id (this is the visitor session ID)
-            'agent', // role
+            'assistant', // role (must be 'assistant' to pass DB constraint, but message_type will be 'agent')
             message, // content
-            'agent', // message_type
+            'agent', // message_type (this distinguishes human agent from AI assistant)
             JSON.stringify({
               sentBy: req.user.claims.sub,
               humanAgent: true,

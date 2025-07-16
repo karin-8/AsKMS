@@ -228,13 +228,6 @@
         sendMessage();
       }
     });
-
-    // Add welcome message from widget configuration
-    if (widgetConfig && widgetConfig.welcomeMessage) {
-      addMessage("assistant", widgetConfig.welcomeMessage);
-    } else {
-      addMessage("assistant", "สวัสดีค่ะ! มีอะไรให้ช่วยเหลือไหมคะ?");
-    }
   }
 
   function toggleChat() {
@@ -485,6 +478,75 @@
     }
   }
 
+  // Load chat history from database
+  async function loadChatHistory() {
+    try {
+      console.log("📚 Loading chat history for session:", sessionId);
+      
+      const response = await fetch(`${baseUrl}/api/widget/${widgetKey}/chat-history?sessionId=${sessionId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("📚 Retrieved chat history:", data);
+        
+        if (data.messages && data.messages.length > 0) {
+          // Clear any existing welcome message first
+          const messagesContainer = document.getElementById("ai-kms-chat-messages");
+          if (messagesContainer) {
+            messagesContainer.innerHTML = '';
+          }
+          
+          // Add all historical messages
+          data.messages.forEach(message => {
+            let role, metadata = {};
+            
+            if (message.role === 'user') {
+              role = 'user';
+            } else if (message.message_type === 'agent') {
+              // This is a human agent message
+              role = 'agent';
+              const messageMetadata = message.metadata ? JSON.parse(message.metadata) : {};
+              metadata = {
+                isHumanAgent: true,
+                humanAgentName: messageMetadata.humanAgentName || 'Human Agent'
+              };
+            } else {
+              // This is an AI assistant message
+              role = 'assistant';
+            }
+            
+            addMessage(role, message.content, metadata);
+          });
+          
+          console.log(`✅ Loaded ${data.messages.length} messages from chat history`);
+        } else {
+          // Add welcome message if no history exists
+          if (widgetConfig && widgetConfig.welcomeMessage) {
+            addMessage("assistant", widgetConfig.welcomeMessage);
+          } else {
+            addMessage("assistant", "สวัสดีค่ะ! มีอะไรให้ช่วยเหลือไหมคะ?");
+          }
+        }
+      } else {
+        console.log("⚠️ Failed to load chat history, adding welcome message");
+        // Add welcome message as fallback
+        if (widgetConfig && widgetConfig.welcomeMessage) {
+          addMessage("assistant", widgetConfig.welcomeMessage);
+        } else {
+          addMessage("assistant", "สวัสดีค่ะ! มีอะไรให้ช่วยเหลือไหมคะ?");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error loading chat history:", error);
+      // Add welcome message as fallback
+      if (widgetConfig && widgetConfig.welcomeMessage) {
+        addMessage("assistant", widgetConfig.welcomeMessage);
+      } else {
+        addMessage("assistant", "สวัสดีค่ะ! มีอะไรให้ช่วยเหลือไหมคะ?");
+      }
+    }
+  }
+
   // Initialize widget with config loading
   async function initWidget() {
     console.log("🚀 Starting widget initialization...");
@@ -499,6 +561,7 @@
     
     await loadWidgetConfig();
     createWidget();
+    await loadChatHistory();
     initWebSocket();
   }
 
