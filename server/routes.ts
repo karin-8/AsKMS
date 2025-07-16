@@ -2621,6 +2621,35 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
     }
   });
 
+  // Widget config endpoint for embed script
+  app.get("/api/widget/:widgetKey/config", async (req, res) => {
+    try {
+      const { widgetKey } = req.params;
+      const { chatWidgets } = await import("@shared/schema");
+
+      const [widget] = await db
+        .select({
+          name: chatWidgets.name,
+          welcomeMessage: chatWidgets.welcomeMessage,
+          primaryColor: chatWidgets.primaryColor,
+          textColor: chatWidgets.textColor,
+          position: chatWidgets.position,
+        })
+        .from(chatWidgets)
+        .where(eq(chatWidgets.widgetKey, widgetKey))
+        .limit(1);
+
+      if (!widget) {
+        return res.status(404).json({ message: "Widget not found" });
+      }
+
+      res.json(widget);
+    } catch (error) {
+      console.error("Error fetching widget config:", error);
+      res.status(500).json({ message: "Failed to fetch widget config" });
+    }
+  });
+
   // Chat Widget API endpoints
   app.get("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
@@ -2844,73 +2873,43 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       // If widget has an AI agent, use it for responses
       if (widget.agentId) {
         try {
-          // Get agent configuration
-          const [agent] = await db
-            .select()
-            .from(agentChatbots)
-            .where(eq(agentChatbots.id, widget.agentId))
-            .limit(1);
+          // Get recent chat history for context
+          const recentMessages = await db
+            .select({
+              role: widgetChatMessages.role,
+              content: widgetChatMessages.content,
+              createdAt: widgetChatMessages.createdAt,
+            })
+            .from(widgetChatMessages)
+            .where(eq(widgetChatMessages.sessionId, session.sessionId))
+            .orderBy(desc(widgetChatMessages.createdAt))
+            .limit(20);
 
-          if (agent) {
-            // Get recent chat history for context
-            const recentMessages = await db
-              .select({
-                role: widgetChatMessages.role,
-                content: widgetChatMessages.content,
-                createdAt: widgetChatMessages.createdAt,
-              })
-              .from(widgetChatMessages)
-              .where(eq(widgetChatMessages.sessionId, session.sessionId))
-              .orderBy(desc(widgetChatMessages.createdAt))
-              .limit(20);
+          // Build conversation context
+          const conversationHistory = recentMessages.reverse().map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
 
-            // Build conversation context
-            const conversationHistory = recentMessages.reverse().map(msg => ({
-              role: msg.role,
-              content: msg.content
-            }));
+          // Use dedicated widget chat service
+          const { WidgetChatService } = await import('./services/widgetChatService');
+          const aiResult = await WidgetChatService.generateAgentResponse(
+            message,
+            widget.agentId,
+            widget.userId,
+            session.sessionId,
+            conversationHistory
+          );
 
-            // Get agent's document context
-            const agentDocuments = await db
-              .select({
-                documentId: agentChatbotDocuments.documentId,
-                content: documents.content,
-                name: documents.name,
-              })
-              .from(agentChatbotDocuments)
-              .innerJoin(documents, eq(agentChatbotDocuments.documentId, documents.id))
-              .where(eq(agentChatbotDocuments.agentId, agent.id))
-              .limit(10);
-
-            // Build document context
-            const documentContext = agentDocuments.map(doc => 
-              `Document: ${doc.name}\n${doc.content}`
-            ).join('\n\n');
-
-            // Generate AI response using full Agent Chatbot system
-            const { getAiResponseDirectly } = await import('./lineOaWebhook');
-            
-            const aiResponse = await getAiResponseDirectly(
-              message,
-              agent.id,
-              widget.userId,
-              'chat_widget',
-              session.sessionId
-            );
-
-            response = aiResponse || "ขออภัยค่ะ ขณะนี้ระบบมีปัญหา กรุณาลองใหม่อีกครั้งค่ะ";
-            messageType = "ai_response";
-            metadata = { 
-              agentId: agent.id, 
-              agentName: agent.name,
-              hasDocuments: agentDocuments.length > 0,
-              documentCount: agentDocuments.length
-            };
-          }
+          response = aiResult.response;
+          messageType = aiResult.messageType;
+          metadata = aiResult.metadata;
         } catch (error) {
-          console.error("Agent AI response error:", error);
-          // Fallback to default response if AI fails
-          response = widget.welcomeMessage || "I'm sorry, I'm having trouble processing your request right now. Please try again.";
+          console.error("Widget Agent AI response error:", error);
+          // Fallback to welcome message if AI fails
+          response = widget.welcomeMessage || "ขออภัย เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง";
+          messageType = "error";
+          metadata = { error: "AI service unavailable" };
         }
       } else if (widget.enableHrLookup && message) {
         // Check if message contains Thai Citizen ID pattern

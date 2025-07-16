@@ -33,6 +33,19 @@
     );
   }
 
+  // Load widget configuration
+  async function loadWidgetConfig() {
+    try {
+      const response = await fetch(`${baseUrl}/api/widget/${widgetKey}/config`);
+      if (response.ok) {
+        widgetConfig = await response.json();
+        console.log("Widget config loaded:", widgetConfig);
+      }
+    } catch (error) {
+      console.error("Failed to load widget config:", error);
+    }
+  }
+
   // Create widget HTML
   function createWidget() {
     const widgetContainer = document.createElement("div");
@@ -86,18 +99,21 @@
 
     // Chat header
     const chatHeader = document.createElement("div");
+    const headerBg = (widgetConfig && widgetConfig.primaryColor) ? widgetConfig.primaryColor : '#2563eb';
+    const headerText = (widgetConfig && widgetConfig.textColor) ? widgetConfig.textColor : 'white';
     chatHeader.style.cssText = `
-      background: #2563eb;
-      color: white;
+      background: ${headerBg};
+      color: ${headerText};
       padding: 16px;
       font-weight: 600;
       display: flex;
       justify-content: space-between;
       align-items: center;
     `;
+    const widgetTitle = (widgetConfig && widgetConfig.name) ? widgetConfig.name : 'AI Assistant';
     chatHeader.innerHTML = `
       <div>
-        <div style="font-size: 16px;">AI Assistant</div>
+        <div style="font-size: 16px;">${widgetTitle}</div>
         <div style="font-size: 12px; opacity: 0.8;">We're online</div>
       </div>
       <div id="ai-kms-close-btn" style="cursor: pointer; padding: 4px;">✕</div>
@@ -164,11 +180,12 @@
       }
     });
 
-    // Add welcome message
-    addMessage(
-      "assistant",
-      "Hi! How can I help you today? You can also check employee status by providing a Thai Citizen ID (13 digits).",
-    );
+    // Add welcome message from widget configuration
+    if (widgetConfig && widgetConfig.welcomeMessage) {
+      addMessage("assistant", widgetConfig.welcomeMessage);
+    } else {
+      addMessage("assistant", "สวัสดีค่ะ! มีอะไรให้ช่วยเหลือไหมคะ?");
+    }
   }
 
   function toggleChat() {
@@ -296,11 +313,17 @@
     }
   }
 
+  // Initialize widget with config loading
+  async function initWidget() {
+    await loadWidgetConfig();
+    createWidget();
+  }
+
   // Initialize widget when DOM is ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", createWidget);
+    document.addEventListener("DOMContentLoaded", initWidget);
   } else {
-    createWidget();
+    initWidget();
   }
 
   // Add CSS animation keyframes
