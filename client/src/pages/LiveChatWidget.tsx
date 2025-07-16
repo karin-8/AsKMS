@@ -124,11 +124,12 @@ export default function LiveChatWidget() {
 
   const generateEmbedCode = (widget: ChatWidget) => {
     const baseUrl = window.location.origin;
+    const version = Date.now(); // Cache busting parameter
     return `<!-- AI-KMS Live Chat Widget -->
 <script>
   (function() {
     var script = document.createElement('script');
-    script.src = '${baseUrl}/widget/${widget.widgetKey}/embed.js';
+    script.src = '${baseUrl}/widget/${widget.widgetKey}/embed.js?v=${version}';
     script.async = true;
     document.head.appendChild(script);
   })();

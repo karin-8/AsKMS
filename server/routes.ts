@@ -407,7 +407,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       res.setHeader("Content-Type", "application/javascript");
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      // Disable cache in development for easier debugging
+      if (process.env.NODE_ENV === "development") {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      } else {
+        res.setHeader("Cache-Control", "public, max-age=3600");
+      }
       res.send(embedScript);
     } catch (error) {
       console.error("Error serving widget embed script:", error);

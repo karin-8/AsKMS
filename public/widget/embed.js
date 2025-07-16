@@ -46,65 +46,53 @@
     }
   }
 
-  // Simple but effective markdown parser for chat messages
+  // Comprehensive markdown parser specifically for Thai chat messages
   function parseMarkdown(text) {
-    if (!text) return '';
+    if (!text || typeof text !== 'string') return text || '';
     
-    // First, handle double line breaks for paragraph separation
-    let lines = text.split('\n\n');
-    let result = [];
+    console.log("🔍 Input text:", text);
     
-    for (let paragraph of lines) {
-      if (!paragraph.trim()) continue;
-      
-      // Split paragraph into lines for list processing
-      let paragraphLines = paragraph.split('\n');
-      let processedLines = [];
-      
-      for (let line of paragraphLines) {
-        if (!line.trim()) continue;
-        
-        // Process numbered lists (1. 2. 3. etc)
-        if (/^\d+\.\s+/.test(line)) {
-          let match = line.match(/^(\d+)\.\s+(.+)$/);
-          if (match) {
-            processedLines.push(`<div style="margin: 6px 0; padding-left: 24px; position: relative; line-height: 1.5;"><span style="position: absolute; left: 0; font-weight: bold; color: #2563eb;">${match[1]}.</span> ${processMarkdownInline(match[2])}</div>`);
-            continue;
-          }
-        }
-        
-        // Process bullet points
-        if (/^[-*]\s+/.test(line)) {
-          let match = line.match(/^[-*]\s+(.+)$/);
-          if (match) {
-            processedLines.push(`<div style="margin: 6px 0; padding-left: 20px; position: relative; line-height: 1.5;"><span style="position: absolute; left: 0; color: #2563eb; font-weight: bold;">•</span> ${processMarkdownInline(match[1])}</div>`);
-            continue;
-          }
-        }
-        
-        // Regular line - process inline markdown
-        processedLines.push(processMarkdownInline(line));
-      }
-      
-      // Join processed lines with <br> and wrap in paragraph
-      if (processedLines.length > 0) {
-        result.push(`<div style="margin-bottom: 12px; line-height: 1.6;">${processedLines.join('<br>')}</div>`);
-      }
+    // Escape HTML entities to prevent XSS
+    let escapedText = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    console.log("🔒 Escaped text:", escapedText);
+    
+    // Step 1: Process bold text **text** first 
+    let processed = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600; color: #1f2937;">$1</strong>');
+    console.log("💪 After bold processing:", processed);
+    
+    // Step 2: Process numbered lists
+    processed = processed.replace(/^(\d+)\.\s+(.+)$/gm, function(match, num, content) {
+      console.log("📝 Found numbered list:", num, content);
+      return `<div style="margin: 8px 0; padding-left: 28px; position: relative; line-height: 1.6;"><span style="position: absolute; left: 0; font-weight: 600; color: #2563eb;">${num}.</span> ${content}</div>`;
+    });
+    console.log("📋 After numbered lists:", processed);
+    
+    // Step 3: Process bullet points
+    processed = processed.replace(/^[-*]\s+(.+)$/gm, function(match, content) {
+      console.log("🔸 Found bullet point:", content);
+      return `<div style="margin: 6px 0; padding-left: 24px; position: relative; line-height: 1.6;"><span style="position: absolute; left: 0; color: #2563eb; font-weight: 600;">•</span> ${content}</div>`;
+    });
+    console.log("🔹 After bullet points:", processed);
+    
+    // Step 4: Convert line breaks
+    processed = processed.replace(/\n\n+/g, '</p><p style="margin: 12px 0;">').replace(/\n/g, '<br>');
+    
+    // Step 5: Wrap in paragraph if not already wrapped
+    if (!processed.includes('<div') && !processed.includes('<p>')) {
+      processed = `<p style="margin: 0; line-height: 1.6;">${processed}</p>`;
+    } else if (processed.includes('<div')) {
+      // Already has div structure, just wrap in container
+      processed = `<div style="line-height: 1.6;">${processed}</div>`;
+    } else {
+      processed = `<p style="margin: 0; line-height: 1.6;">${processed}</p>`;
     }
     
-    return result.join('');
-  }
-  
-  // Process inline markdown (bold, italic)
-  function processMarkdownInline(text) {
-    return text
-      // Convert **bold** to <strong> first
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
-      // Convert single *italic* - simplified approach without lookbehind
-      .replace(/\b\*([^*\s][^*]*[^*\s])\*\b/g, '<em>$1</em>')
-      // Convert headers
-      .replace(/^###\s+(.+)$/, '<strong style="font-size: 15px; color: #1f2937; display: block; margin: 8px 0 4px 0;">$1</strong>')
-      .replace(/^##\s+(.+)$/, '<strong style="font-size: 16px; color: #111827; display: block; margin: 12px 0 6px 0;">$1</strong>');
+    console.log("✨ Final result:", processed);
+    return processed;
   }
 
   // Create widget HTML
@@ -290,10 +278,20 @@
     } else {
       if (role === "assistant") {
         // Parse markdown for assistant messages
-        console.log("Original content:", content);
+        console.log("🔄 Processing AI message:", content);
+        
+        // Direct markdown processing
         const parsed = parseMarkdown(content);
-        console.log("Parsed content:", parsed);
+        console.log("✅ Final parsed result:", parsed);
+        
+        // Set both innerHTML AND add visual debugging
         messageBubble.innerHTML = parsed;
+        
+        // Optional: Add debug indicator in development
+        if (window.location.hostname === 'localhost' && content.includes('**') && !parsed.includes('**')) {
+          console.log("✅ Markdown parsing successful - bold text converted");
+        }
+        
       } else {
         // Use plain text for user messages
         messageBubble.textContent = content;
