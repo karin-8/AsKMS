@@ -4566,7 +4566,7 @@ Memory management: Keep track of conversation context within the last ${agentCon
 
   app.post('/api/agent-console/send-message', isAuthenticated, async (req: any, res) => {
     try {
-      const { userId: targetUserId, channelType, channelId, agentId, message, messageType } = req.body;
+      let { userId: targetUserId, channelType, channelId, agentId, message, messageType } = req.body;
       
       console.log('📤 Agent Console send-message endpoint called:', {
         targetUserId,
@@ -4581,6 +4581,45 @@ Memory management: Keep track of conversation context within the last ${agentCon
       if (!targetUserId || !channelType || !channelId || !agentId || !message) {
         console.log('❌ Missing required parameters:', { targetUserId, channelType, channelId, agentId, hasMessage: !!message });
         return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      // For web channel, check if there's a newer session ID for this widget
+      if (channelType === 'web') {
+        const latestSessionQuery = `
+          SELECT userId as user_id, MAX(created_at) as latest_message_time
+          FROM chat_history 
+          WHERE channel_type = 'web' 
+          AND channel_id = $1 
+          AND agent_id = $2
+          AND created_at > NOW() - INTERVAL '30 minutes'
+          GROUP BY userId
+          ORDER BY latest_message_time DESC
+          LIMIT 1
+        `;
+        
+        try {
+          const latestSessionResult = await pool.query(latestSessionQuery, [channelId, parseInt(agentId)]);
+          
+          if (latestSessionResult.rows.length > 0) {
+            const latestSessionId = latestSessionResult.rows[0].user_id;
+            
+            if (latestSessionId !== targetUserId) {
+              console.log('🔄 Session migration detected:', {
+                oldSessionId: targetUserId,
+                newSessionId: latestSessionId,
+                widgetKey: channelId
+              });
+              
+              // Update to use the latest session ID
+              targetUserId = latestSessionId;
+              
+              console.log('✅ Using migrated session ID:', latestSessionId);
+            }
+          }
+        } catch (sessionMigrationError) {
+          console.error('⚠️ Session migration check failed:', sessionMigrationError);
+          // Continue with original session ID
+        }
       }
       
       // Store the human agent message in chat history
