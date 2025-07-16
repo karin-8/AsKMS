@@ -30,6 +30,8 @@ interface ChatWidget {
   name: string;
   widgetKey: string;
   isActive: boolean;
+  agentId: number | null;
+  agentName?: string;
   primaryColor: string;
   textColor: string;
   position: string;
@@ -51,6 +53,7 @@ export default function LiveChatWidget() {
   // Form state for creating/editing widgets
   const [formData, setFormData] = useState({
     name: "",
+    agentId: null as number | null,
     primaryColor: "#2563eb",
     textColor: "#ffffff",
     position: "bottom-right",
@@ -67,6 +70,13 @@ export default function LiveChatWidget() {
     retry: false,
   });
 
+  // Get available agents
+  const { data: agents, isLoading: agentsLoading } = useQuery({
+    queryKey: ["/api/agent-chatbots"],
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
   // Create widget mutation
   const createWidgetMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -78,6 +88,7 @@ export default function LiveChatWidget() {
       setIsCreating(false);
       setFormData({
         name: "",
+        agentId: null,
         primaryColor: "#2563eb",
         textColor: "#ffffff",
         position: "bottom-right",
@@ -208,12 +219,22 @@ export default function LiveChatWidget() {
                               <div>
                                 <h3 className="font-medium">{widget.name}</h3>
                                 <p className="text-sm text-gray-500">Key: {widget.widgetKey}</p>
+                                {widget.agentName && (
+                                  <p className="text-sm text-blue-600 font-medium">
+                                    AI Agent: {widget.agentName}
+                                  </p>
+                                )}
                                 <div className="flex items-center space-x-2 mt-2">
                                   <Badge variant={widget.isActive ? "default" : "secondary"}>
                                     {widget.isActive ? "Active" : "Inactive"}
                                   </Badge>
                                   {widget.enableHrLookup && (
                                     <Badge variant="outline">HR Lookup</Badge>
+                                  )}
+                                  {widget.agentName && (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                      AI-Powered
+                                    </Badge>
                                   )}
                                 </div>
                               </div>
@@ -279,6 +300,26 @@ export default function LiveChatWidget() {
                             onChange={(e) => setFormData({...formData, name: e.target.value})}
                             placeholder="My Website Chat"
                           />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="agentId">AI Agent</Label>
+                          <select
+                            id="agentId"
+                            value={formData.agentId || ""}
+                            onChange={(e) => setFormData({...formData, agentId: e.target.value ? parseInt(e.target.value) : null})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          >
+                            <option value="">Select an AI Agent (Optional)</option>
+                            {agents?.map((agent: any) => (
+                              <option key={agent.id} value={agent.id}>
+                                {agent.name} - {agent.description}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Choose an AI agent to power your chat widget with advanced capabilities
+                          </p>
                         </div>
 
                         <div>

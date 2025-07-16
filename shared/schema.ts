@@ -263,6 +263,9 @@ export const chatWidgets = pgTable("chat_widgets", {
   widgetKey: varchar("widget_key").notNull().unique(),
   isActive: boolean("is_active").default(true),
   
+  // AI Agent integration
+  agentId: integer("agent_id").references(() => agentChatbots.id),
+  
   // Widget styling
   primaryColor: varchar("primary_color").default("#2563eb"),
   textColor: varchar("text_color").default("#ffffff"),
@@ -309,6 +312,10 @@ export const chatWidgetsRelations = relations(chatWidgets, ({ one, many }) => ({
   user: one(users, {
     fields: [chatWidgets.userId],
     references: [users.id],
+  }),
+  agent: one(agentChatbots, {
+    fields: [chatWidgets.agentId],
+    references: [agentChatbots.id],
   }),
   sessions: many(widgetChatSessions),
 }));

@@ -2625,12 +2625,30 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.get("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { chatWidgets } = await import("@shared/schema");
+      const { chatWidgets, agentChatbots } = await import("@shared/schema");
 
       const widgets = await db
-        .select()
+        .select({
+          id: chatWidgets.id,
+          name: chatWidgets.name,
+          widgetKey: chatWidgets.widgetKey,
+          isActive: chatWidgets.isActive,
+          agentId: chatWidgets.agentId,
+          agentName: agentChatbots.name,
+          primaryColor: chatWidgets.primaryColor,
+          textColor: chatWidgets.textColor,
+          position: chatWidgets.position,
+          welcomeMessage: chatWidgets.welcomeMessage,
+          offlineMessage: chatWidgets.offlineMessage,
+          enableHrLookup: chatWidgets.enableHrLookup,
+          hrApiEndpoint: chatWidgets.hrApiEndpoint,
+          createdAt: chatWidgets.createdAt,
+        })
         .from(chatWidgets)
-        .where(eq(chatWidgets.userId, userId));
+        .leftJoin(agentChatbots, eq(chatWidgets.agentId, agentChatbots.id))
+        .where(eq(chatWidgets.userId, userId))
+        .orderBy(desc(chatWidgets.createdAt));
+
       res.json(widgets);
     } catch (error) {
       console.error("Error fetching chat widgets:", error);
@@ -2645,6 +2663,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
       const { chatWidgets } = await import("@shared/schema");
       const {
         name,
+        agentId,
         primaryColor,
         textColor,
         position,
@@ -2666,6 +2685,7 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
           userId,
           name,
           widgetKey,
+          agentId: agentId || null,
           primaryColor: primaryColor || "#2563eb",
           textColor: textColor || "#ffffff",
           position: position || "bottom-right",
@@ -2768,13 +2788,29 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         widgetChatSessions,
         widgetChatMessages,
         hrEmployees,
+        agentChatbots,
+        agentChatbotDocuments,
+        documents,
       } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { eq, desc } = await import("drizzle-orm");
       const { nanoid } = await import("nanoid");
 
-      // Find widget
+      // Find widget with agent information
       const [widget] = await db
-        .select()
+        .select({
+          id: chatWidgets.id,
+          name: chatWidgets.name,
+          widgetKey: chatWidgets.widgetKey,
+          isActive: chatWidgets.isActive,
+          agentId: chatWidgets.agentId,
+          primaryColor: chatWidgets.primaryColor,
+          textColor: chatWidgets.textColor,
+          position: chatWidgets.position,
+          welcomeMessage: chatWidgets.welcomeMessage,
+          offlineMessage: chatWidgets.offlineMessage,
+          enableHrLookup: chatWidgets.enableHrLookup,
+          hrApiEndpoint: chatWidgets.hrApiEndpoint,
+        })
         .from(chatWidgets)
         .where(eq(chatWidgets.widgetKey, widgetKey))
         .limit(1);
@@ -2816,12 +2852,77 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
         content: message,
       });
 
-      // Check if this is an HR lookup request
-      let response = "Thank you for your message. How can I help you today?";
+      // Generate AI response based on widget configuration
+      let response = widget.welcomeMessage || "Thank you for your message. How can I help you today?";
       let messageType = "text";
       let metadata = null;
 
-      if (widget.enableHrLookup && message) {
+      // If widget has an AI agent, use it for responses
+      if (widget.agentId) {
+        try {
+          // Get agent configuration
+          const [agent] = await db
+            .select()
+            .from(agentChatbots)
+            .where(eq(agentChatbots.id, widget.agentId))
+            .limit(1);
+
+          if (agent) {
+            // Get recent chat history for context
+            const recentMessages = await db
+              .select({
+                role: widgetChatMessages.role,
+                content: widgetChatMessages.content,
+                createdAt: widgetChatMessages.createdAt,
+              })
+              .from(widgetChatMessages)
+              .where(eq(widgetChatMessages.sessionId, session.sessionId))
+              .orderBy(desc(widgetChatMessages.createdAt))
+              .limit(20);
+
+            // Build conversation context
+            const conversationHistory = recentMessages.reverse().map(msg => ({
+              role: msg.role,
+              content: msg.content
+            }));
+
+            // Get agent's document context
+            const agentDocuments = await db
+              .select({
+                documentId: agentChatbotDocuments.documentId,
+                content: documents.content,
+                name: documents.name,
+              })
+              .from(agentChatbotDocuments)
+              .innerJoin(documents, eq(agentChatbotDocuments.documentId, documents.id))
+              .where(eq(agentChatbotDocuments.agentId, agent.id))
+              .limit(10);
+
+            // Build document context
+            const documentContext = agentDocuments.map(doc => 
+              `Document: ${doc.name}\n${doc.content}`
+            ).join('\n\n');
+
+            // Generate AI response using agent configuration
+            const { generateChatResponse } = await import('./services/openai');
+            const aiResponse = await generateChatResponse({
+              systemPrompt: agent.systemPrompt || `You are ${agent.name}, a helpful AI assistant. ${agent.description || ''}`,
+              userMessage: message,
+              conversationHistory,
+              documentContext,
+              memoryLimit: agent.memoryLimit || 10
+            });
+
+            response = aiResponse;
+            messageType = "ai_response";
+            metadata = { agentId: agent.id, agentName: agent.name };
+          }
+        } catch (error) {
+          console.error("Agent AI response error:", error);
+          // Fallback to default response if AI fails
+          response = widget.welcomeMessage || "I'm sorry, I'm having trouble processing your request right now. Please try again.";
+        }
+      } else if (widget.enableHrLookup && message) {
         // Check if message contains Thai Citizen ID pattern
         const citizenIdMatch = message.match(/\b\d{13}\b/);
         if (citizenIdMatch) {
