@@ -1387,6 +1387,7 @@ export class DatabaseStorage implements IStorage {
           type: socialIntegrations.type,
           channelId: socialIntegrations.channelId,
           channelSecret: socialIntegrations.channelSecret,
+          channelAccessToken: socialIntegrations.channelAccessToken,
           agentId: socialIntegrations.agentId,
           isActive: socialIntegrations.isActive,
           isVerified: socialIntegrations.isVerified,
@@ -1410,7 +1411,7 @@ export class DatabaseStorage implements IStorage {
         type: row.type as 'lineoa' | 'facebook' | 'tiktok',
         channelId: row.channelId,
         channelSecret: row.channelSecret,
-        channelAccessToken: null,
+        channelAccessToken: row.channelAccessToken,
         agentId: row.agentId,
         isActive: row.isActive,
         isVerified: row.isVerified,
@@ -1529,6 +1530,7 @@ export class DatabaseStorage implements IStorage {
           type: socialIntegrations.type,
           channelId: socialIntegrations.channelId,
           channelSecret: socialIntegrations.channelSecret,
+          channelAccessToken: socialIntegrations.channelAccessToken,
           agentId: socialIntegrations.agentId,
           isActive: socialIntegrations.isActive,
           isVerified: socialIntegrations.isVerified,
@@ -1556,7 +1558,7 @@ export class DatabaseStorage implements IStorage {
         type: integration.type as 'lineoa' | 'facebook' | 'tiktok',
         channelId: integration.channelId,
         channelSecret: integration.channelSecret,
-        channelAccessToken: null,
+        channelAccessToken: integration.channelAccessToken,
         agentId: integration.agentId,
         isActive: integration.isActive,
         isVerified: integration.isVerified,
@@ -1583,7 +1585,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db.execute(sql`
         INSERT INTO social_integrations (
           name, description, user_id, type, channel_id, channel_secret, 
-          agent_id, is_active, is_verified, created_at, updated_at
+          channel_access_token, agent_id, is_active, is_verified, created_at, updated_at
         ) VALUES (
           ${integration.name}, 
           ${integration.description || null}, 
@@ -1591,6 +1593,7 @@ export class DatabaseStorage implements IStorage {
           ${integration.type}, 
           ${integration.channelId || null}, 
           ${integration.channelSecret || null}, 
+          ${integration.channelAccessToken || null}, 
           ${integration.agentId || null}, 
           ${integration.isActive ?? true}, 
           ${integration.isVerified ?? false}, 
@@ -1610,7 +1613,7 @@ export class DatabaseStorage implements IStorage {
         type: newIntegration.type as 'lineoa' | 'facebook' | 'tiktok',
         channelId: newIntegration.channel_id,
         channelSecret: newIntegration.channel_secret,
-        channelAccessToken: null,
+        channelAccessToken: newIntegration.channel_access_token,
         agentId: newIntegration.agent_id,
         isActive: newIntegration.is_active,
         isVerified: newIntegration.is_verified,
@@ -1641,6 +1644,7 @@ export class DatabaseStorage implements IStorage {
     if (integration.type !== undefined) updateData.type = integration.type;
     if (integration.channelId !== undefined) updateData.channel_id = integration.channelId;
     if (integration.channelSecret !== undefined) updateData.channel_secret = integration.channelSecret;
+    if (integration.channelAccessToken !== undefined) updateData.channel_access_token = integration.channelAccessToken;
     if (integration.agentId !== undefined) updateData.agent_id = integration.agentId;
     if (integration.isActive !== undefined) updateData.is_active = integration.isActive;
     if (integration.isVerified !== undefined) updateData.is_verified = integration.isVerified;
