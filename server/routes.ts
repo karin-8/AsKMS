@@ -2625,29 +2625,13 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
   app.get("/api/chat-widgets", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { chatWidgets, agentChatbots } = await import("@shared/schema");
+      const { chatWidgets } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
 
       const widgets = await db
-        .select({
-          id: chatWidgets.id,
-          name: chatWidgets.name,
-          widgetKey: chatWidgets.widgetKey,
-          isActive: chatWidgets.isActive,
-          agentId: chatWidgets.agentId,
-          agentName: agentChatbots.name,
-          primaryColor: chatWidgets.primaryColor,
-          textColor: chatWidgets.textColor,
-          position: chatWidgets.position,
-          welcomeMessage: chatWidgets.welcomeMessage,
-          offlineMessage: chatWidgets.offlineMessage,
-          enableHrLookup: chatWidgets.enableHrLookup,
-          hrApiEndpoint: chatWidgets.hrApiEndpoint,
-          createdAt: chatWidgets.createdAt,
-        })
+        .select()
         .from(chatWidgets)
-        .leftJoin(agentChatbots, eq(chatWidgets.agentId, agentChatbots.id))
-        .where(eq(chatWidgets.userId, userId))
-        .orderBy(desc(chatWidgets.createdAt));
+        .where(eq(chatWidgets.userId, userId));
 
       res.json(widgets);
     } catch (error) {
