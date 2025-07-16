@@ -4552,23 +4552,35 @@ Memory management: Keep track of conversation context within the last ${agentCon
       // Send the message via the appropriate channel
       if (channelType === 'lineoa') {
         try {
-          // Get Line channel access token from agent using direct DB query since we need to bypass user check
-          const query = `SELECT lineoa_config FROM agent_chatbots WHERE id = $1`;
-          const result = await pool.query(query, [parseInt(agentId)]);
+          // Get Line channel access token from the specific social integration
+          const integrationQuery = `
+            SELECT si.channel_access_token, si.channel_id, si.name
+            FROM social_integrations si
+            WHERE si.agent_id = $1 
+            AND si.type = 'lineoa'
+            AND si.is_verified = true
+            ORDER BY si.created_at DESC
+            LIMIT 1
+          `;
+          const integrationResult = await pool.query(integrationQuery, [parseInt(agentId)]);
           
-          if (result.rows.length > 0) {
-            const lineoaConfig = result.rows[0].lineoa_config;
-            console.log('🔍 Agent lineoa_config:', lineoaConfig);
+          if (integrationResult.rows.length > 0) {
+            const integration = integrationResult.rows[0];
+            console.log('🔍 Found Line integration:', {
+              name: integration.name,
+              channelId: integration.channel_id?.substring(0, 8) + '...',
+              hasToken: !!integration.channel_access_token
+            });
             
-            if (lineoaConfig?.accessToken) {
+            if (integration.channel_access_token) {
               const { sendLinePushMessage } = await import('./lineOaWebhook');
-              await sendLinePushMessage(channelId, message, lineoaConfig.accessToken);
-              console.log('✅ Successfully sent Line message:', message);
+              await sendLinePushMessage(channelId, message, integration.channel_access_token);
+              console.log('✅ Successfully sent Line message via integration:', integration.name);
             } else {
-              console.log('⚠️ No Line Channel Access Token found in lineoa_config for agent:', agentId);
+              console.log('⚠️ No Channel Access Token found in integration:', integration.name);
             }
           } else {
-            console.log('⚠️ Agent not found:', agentId);
+            console.log('⚠️ No verified Line integration found for agent:', agentId);
           }
         } catch (error) {
           console.error('❌ Error sending Line message:', error);
@@ -4576,13 +4588,20 @@ Memory management: Keep track of conversation context within the last ${agentCon
       } else if (channelType === 'web') {
         // For web channel, we need to notify the widget through WebSocket
         // The widget will be listening for messages from human agents
+        console.log('🌐 Sending web channel message:', {
+          targetUserId,
+          channelId,
+          agentId: parseInt(agentId),
+          wsClientsCount: global.wsClients ? global.wsClients.size : 0
+        });
+        
         if (global.wsClients && global.wsClients.size > 0) {
           const wsMessage = {
             type: 'human_agent_message',
             channelType: 'web',
-            channelId: channelId,
+            channelId: channelId, // This is the widget_key
             agentId: parseInt(agentId),
-            userId: targetUserId,
+            userId: targetUserId, // This is the visitor session ID
             message: {
               messageType: 'agent',
               content: message,
@@ -4592,12 +4611,19 @@ Memory management: Keep track of conversation context within the last ${agentCon
             }
           };
           
+          console.log('📡 Broadcasting web widget message:', wsMessage);
+          
+          let sentCount = 0;
           global.wsClients.forEach(client => {
             if (client.readyState === 1) { // WebSocket.OPEN
               client.send(JSON.stringify(wsMessage));
+              sentCount++;
             }
           });
-          console.log('✅ Successfully sent web channel message via WebSocket');
+          
+          console.log(`✅ Successfully sent web channel message to ${sentCount} WebSocket clients`);
+        } else {
+          console.log('⚠️ No WebSocket clients connected for web channel message');
         }
       }
       

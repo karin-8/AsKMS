@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Agent Console Human Takeover</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        .send-btn { background: #28a745; }
+        .log { background: #fff; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .warning { border-left-color: #ffc107; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        .inline-input { width: 200px; display: inline-block; margin-right: 10px; }
+        .flex { display: flex; gap: 20px; }
+        .flex-item { flex: 1; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Agent Console Human Takeover</h1>
+        
+        <div class="test-section">
+            <h2>1. Configuration</h2>
+            <div class="flex">
+                <div class="flex-item">
+                    <h3>Line OA Test</h3>
+                    <p>User ID: <input type="text" id="lineoa-user-id" value="43981095" class="inline-input"></p>
+                    <p>Channel Type: <input type="text" id="lineoa-channel-type" value="lineoa" class="inline-input"></p>
+                    <p>Channel ID: <input type="text" id="lineoa-channel-id" value="U672d3afb11fa9ef4c95bf38145f44a98" class="inline-input"></p>
+                    <p>Agent ID: <input type="text" id="lineoa-agent-id" value="2" class="inline-input"></p>
+                    <p>Message: <input type="text" id="lineoa-message" value="สวัสดีค่ะ ฉันเป็น Human Agent มาช่วยคุณแล้วค่ะ" class="inline-input"></p>
+                    <button onclick="sendLineOAMessage()" class="send-btn">Send Line OA Message</button>
+                </div>
+                <div class="flex-item">
+                    <h3>Web Widget Test</h3>
+                    <p>User ID: <input type="text" id="web-user-id" value="visitor-123" class="inline-input"></p>
+                    <p>Channel Type: <input type="text" id="web-channel-type" value="web" class="inline-input"></p>
+                    <p>Channel ID: <input type="text" id="web-channel-id" value="demowidget" class="inline-input"></p>
+                    <p>Agent ID: <input type="text" id="web-agent-id" value="1" class="inline-input"></p>
+                    <p>Message: <input type="text" id="web-message" value="Hello! I am a human agent taking over this chat." class="inline-input"></p>
+                    <button onclick="sendWebMessage()" class="send-btn">Send Web Message</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. WebSocket Connection</h2>
+            <button onclick="connectWebSocket()">Connect WebSocket</button>
+            <button onclick="disconnectWebSocket()">Disconnect</button>
+            <div id="ws-status" class="log">Not connected</div>
+            <h3>WebSocket Messages</h3>
+            <div id="ws-messages" style="height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: white;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. API Response Logs</h2>
+            <div id="api-logs" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: white;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. Test Widget (for Web Channel)</h2>
+            <div id="widget-container">
+                <p>Widget will be loaded here...</p>
+            </div>
+            <button onclick="loadWidget()">Load Test Widget</button>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            document.getElementById('api-logs').appendChild(logDiv);
+            document.getElementById('api-logs').scrollTop = document.getElementById('api-logs').scrollHeight;
+        }
+        
+        function wsLog(message, type = 'info') {
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            document.getElementById('ws-messages').appendChild(logDiv);
+            document.getElementById('ws-messages').scrollTop = document.getElementById('ws-messages').scrollHeight;
+        }
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                document.getElementById('ws-status').textContent = 'Connected to WebSocket';
+                document.getElementById('ws-status').className = 'log success';
+                wsLog('WebSocket connected', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    wsLog(`Received: ${JSON.stringify(data, null, 2)}`, 'info');
+                } catch (error) {
+                    wsLog(`Raw message: ${event.data}`, 'warning');
+                }
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('ws-status').textContent = 'Disconnected from WebSocket';
+                document.getElementById('ws-status').className = 'log error';
+                wsLog('WebSocket disconnected', 'error');
+            };
+            
+            ws.onerror = (error) => {
+                wsLog(`WebSocket error: ${error}`, 'error');
+            };
+        }
+        
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        async function sendLineOAMessage() {
+            const userId = document.getElementById('lineoa-user-id').value;
+            const channelType = document.getElementById('lineoa-channel-type').value;
+            const channelId = document.getElementById('lineoa-channel-id').value;
+            const agentId = document.getElementById('lineoa-agent-id').value;
+            const message = document.getElementById('lineoa-message').value;
+            
+            log(`Sending Line OA message to ${userId}...`);
+            
+            try {
+                const response = await fetch('/api/agent-console/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        channelType,
+                        channelId,
+                        agentId,
+                        message,
+                        messageType: 'agent'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Line OA message sent successfully: ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Failed to send Line OA message: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error sending Line OA message: ${error.message}`, 'error');
+            }
+        }
+        
+        async function sendWebMessage() {
+            const userId = document.getElementById('web-user-id').value;
+            const channelType = document.getElementById('web-channel-type').value;
+            const channelId = document.getElementById('web-channel-id').value;
+            const agentId = document.getElementById('web-agent-id').value;
+            const message = document.getElementById('web-message').value;
+            
+            log(`Sending Web message to ${userId}...`);
+            
+            try {
+                const response = await fetch('/api/agent-console/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        channelType,
+                        channelId,
+                        agentId,
+                        message,
+                        messageType: 'agent'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Web message sent successfully: ${JSON.stringify(result)}`, 'success');
+                } else {
+                    log(`❌ Failed to send Web message: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error sending Web message: ${error.message}`, 'error');
+            }
+        }
+        
+        function loadWidget() {
+            const widgetContainer = document.getElementById('widget-container');
+            widgetContainer.innerHTML = `
+                <script src="/widget/embed.js?widgetKey=demowidget"></script>
+                <div style="margin-top: 10px;">
+                    <em>Widget loaded with key: demowidget</em>
+                </div>
+            `;
+        }
+        
+        // Auto-connect on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>
