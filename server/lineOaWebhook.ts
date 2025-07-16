@@ -281,31 +281,48 @@ async function getAiResponseDirectly(
     console.log(`🖼️ Image-related query detected: ${isImageQuery}`);
     console.log(`🔍 User message for analysis: "${userMessage}"`);
 
-    // Get chat history if memory is enabled using new memory strategy
+    // Get chat history if memory is enabled
     let chatHistory: any[] = [];
     if (agent.memoryEnabled) {
       const memoryLimit = agent.memoryLimit || 10;
       console.log(
-        `📚 Fetching chat history with memory strategy (limit: ${memoryLimit})`,
+        `📚 Fetching chat history (limit: ${memoryLimit}) for channel type: ${channelType}`,
       );
 
       try {
-        // Use new memory strategy that includes ALL message types
-        chatHistory = await storage.getChatHistoryWithMemoryStrategy(
-          userId,
-          channelType,
-          channelId,
-          agentId,
-          memoryLimit,
-        );
-        console.log(
-          `📝 Found ${chatHistory.length} previous messages (all types included)`,
-        );
-      } catch (error) {
-        console.error("⚠️ Error fetching chat history:", error);
-        // Fallback to original method if new method fails
-        try {
-          chatHistory = await storage.getChatHistory(
+        if (channelType === 'chat_widget') {
+          // For widget chat, fetch from widgetChatMessages table
+          const { widgetChatMessages } = await import('@shared/schema');
+          const { db } = await import('./db');
+          const { desc, eq } = await import('drizzle-orm');
+
+          const widgetMessages = await db
+            .select({
+              role: widgetChatMessages.role,
+              content: widgetChatMessages.content,
+              messageType: widgetChatMessages.messageType,
+              metadata: widgetChatMessages.metadata,
+              createdAt: widgetChatMessages.createdAt,
+            })
+            .from(widgetChatMessages)
+            .where(eq(widgetChatMessages.sessionId, channelId))
+            .orderBy(desc(widgetChatMessages.createdAt))
+            .limit(memoryLimit);
+
+          // Convert widget messages to chat history format
+          chatHistory = widgetMessages.reverse().map(msg => ({
+            messageType: msg.role,
+            content: msg.content,
+            metadata: msg.metadata,
+            createdAt: msg.createdAt,
+          }));
+
+          console.log(
+            `📝 Found ${chatHistory.length} widget chat messages`,
+          );
+        } else {
+          // Use regular chat history for Line OA and other channels
+          chatHistory = await storage.getChatHistoryWithMemoryStrategy(
             userId,
             channelType,
             channelId,
@@ -313,10 +330,27 @@ async function getAiResponseDirectly(
             memoryLimit,
           );
           console.log(
-            `📝 Fallback: Found ${chatHistory.length} previous messages`,
+            `📝 Found ${chatHistory.length} previous messages (all types included)`,
           );
-        } catch (fallbackError) {
-          console.error("⚠️ Fallback error:", fallbackError);
+        }
+      } catch (error) {
+        console.error("⚠️ Error fetching chat history:", error);
+        if (channelType !== 'chat_widget') {
+          // Fallback to original method for non-widget channels
+          try {
+            chatHistory = await storage.getChatHistory(
+              userId,
+              channelType,
+              channelId,
+              agentId,
+              memoryLimit,
+            );
+            console.log(
+              `📝 Fallback: Found ${chatHistory.length} previous messages`,
+            );
+          } catch (fallbackError) {
+            console.error("⚠️ Fallback error:", fallbackError);
+          }
         }
       }
     }

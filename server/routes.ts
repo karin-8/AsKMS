@@ -2887,19 +2887,25 @@ Respond with JSON: {"result": "positive" or "fallback", "confidence": 0.0-1.0, "
               `Document: ${doc.name}\n${doc.content}`
             ).join('\n\n');
 
-            // Generate AI response using agent configuration
-            const { generateChatResponse } = await import('./services/openai');
-            const aiResponse = await generateChatResponse({
-              systemPrompt: agent.systemPrompt || `You are ${agent.name}, a helpful AI assistant. ${agent.description || ''}`,
-              userMessage: message,
-              conversationHistory,
-              documentContext,
-              memoryLimit: agent.memoryLimit || 10
-            });
+            // Generate AI response using full Agent Chatbot system
+            const { getAiResponseDirectly } = await import('./lineOaWebhook');
+            
+            const aiResponse = await getAiResponseDirectly(
+              message,
+              agent.id,
+              widget.userId,
+              'chat_widget',
+              session.sessionId
+            );
 
-            response = aiResponse;
+            response = aiResponse || "ขออภัยค่ะ ขณะนี้ระบบมีปัญหา กรุณาลองใหม่อีกครั้งค่ะ";
             messageType = "ai_response";
-            metadata = { agentId: agent.id, agentName: agent.name };
+            metadata = { 
+              agentId: agent.id, 
+              agentName: agent.name,
+              hasDocuments: agentDocuments.length > 0,
+              documentCount: agentDocuments.length
+            };
           }
         } catch (error) {
           console.error("Agent AI response error:", error);
