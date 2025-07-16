@@ -308,11 +308,47 @@ export default function Integrations() {
       comingSoon: true
     },
     {
-      id: 'tiktok',
-      name: 'TikTok',
-      description: 'Connect with TikTok for content and messaging',
-      icon: Video,
-      color: 'bg-pink-500',
+      id: 'instagram',
+      name: 'Instagram',
+      description: 'Connect with customers through Instagram Direct Messages',
+      icon: Smartphone,
+      color: 'bg-gradient-to-r from-purple-500 to-pink-500',
+      available: false,
+      comingSoon: true
+    },
+    {
+      id: 'whatsapp',
+      name: 'WhatsApp Business',
+      description: 'Integrate with WhatsApp Business API for customer messaging',
+      icon: MessageCircle,
+      color: 'bg-green-600',
+      available: false,
+      comingSoon: true
+    },
+    {
+      id: 'slack',
+      name: 'Slack',
+      description: 'Connect with Slack workspaces for internal communications',
+      icon: MessageSquare,
+      color: 'bg-purple-600',
+      available: false,
+      comingSoon: true
+    },
+    {
+      id: 'teams',
+      name: 'Microsoft Teams',
+      description: 'Integrate with Microsoft Teams for enterprise communication',
+      icon: Users,
+      color: 'bg-blue-600',
+      available: false,
+      comingSoon: true
+    },
+    {
+      id: 'discord',
+      name: 'Discord',
+      description: 'Connect with Discord servers for community support',
+      icon: MessageSquare,
+      color: 'bg-indigo-600',
       available: false,
       comingSoon: true
     }
