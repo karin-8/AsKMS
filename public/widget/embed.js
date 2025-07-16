@@ -46,41 +46,65 @@
     }
   }
 
-  // Enhanced markdown to HTML converter for widget messages
+  // Simple but effective markdown parser for chat messages
   function parseMarkdown(text) {
     if (!text) return '';
     
-    // Escape HTML entities first
-    let html = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    // First, handle double line breaks for paragraph separation
+    let lines = text.split('\n\n');
+    let result = [];
     
-    // Convert markdown to HTML
-    html = html
-      // Convert **bold** to <strong>
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // Convert *italic* to <em> (but avoid conflict with **bold**)
-      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-      // Convert numbered lists with Thai/English numbers (1. 2. 3.)
-      .replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin: 8px 0; padding-left: 20px; position: relative;"><span style="position: absolute; left: 0; font-weight: bold; color: #2563eb;">$1.</span> $2</div>')
-      // Convert bullet points (- or * at start of line)
-      .replace(/^[-*]\s+(.+)$/gm, '<div style="margin: 6px 0; padding-left: 20px; position: relative;"><span style="position: absolute; left: 0; color: #2563eb;">•</span> $1</div>')
-      // Convert headers (## or ###)
-      .replace(/^###\s+(.+)$/gm, '<div style="font-weight: bold; margin: 12px 0 8px 0; font-size: 14px; color: #1f2937;">$1</div>')
-      .replace(/^##\s+(.+)$/gm, '<div style="font-weight: bold; margin: 16px 0 8px 0; font-size: 16px; color: #111827;">$1</div>')
-      // Convert line breaks (preserve paragraphs)
-      .replace(/\n\n/g, '</p><p style="margin: 12px 0;">')
-      .replace(/\n/g, '<br>');
-    
-    // Wrap in paragraph if content exists
-    if (html.trim()) {
-      html = '<p style="margin: 0;">' + html + '</p>';
-      // Clean up empty paragraphs
-      html = html.replace(/<p[^>]*><\/p>/g, '');
+    for (let paragraph of lines) {
+      if (!paragraph.trim()) continue;
+      
+      // Split paragraph into lines for list processing
+      let paragraphLines = paragraph.split('\n');
+      let processedLines = [];
+      
+      for (let line of paragraphLines) {
+        if (!line.trim()) continue;
+        
+        // Process numbered lists (1. 2. 3. etc)
+        if (/^\d+\.\s+/.test(line)) {
+          let match = line.match(/^(\d+)\.\s+(.+)$/);
+          if (match) {
+            processedLines.push(`<div style="margin: 6px 0; padding-left: 24px; position: relative; line-height: 1.5;"><span style="position: absolute; left: 0; font-weight: bold; color: #2563eb;">${match[1]}.</span> ${processMarkdownInline(match[2])}</div>`);
+            continue;
+          }
+        }
+        
+        // Process bullet points
+        if (/^[-*]\s+/.test(line)) {
+          let match = line.match(/^[-*]\s+(.+)$/);
+          if (match) {
+            processedLines.push(`<div style="margin: 6px 0; padding-left: 20px; position: relative; line-height: 1.5;"><span style="position: absolute; left: 0; color: #2563eb; font-weight: bold;">•</span> ${processMarkdownInline(match[1])}</div>`);
+            continue;
+          }
+        }
+        
+        // Regular line - process inline markdown
+        processedLines.push(processMarkdownInline(line));
+      }
+      
+      // Join processed lines with <br> and wrap in paragraph
+      if (processedLines.length > 0) {
+        result.push(`<div style="margin-bottom: 12px; line-height: 1.6;">${processedLines.join('<br>')}</div>`);
+      }
     }
     
-    return html;
+    return result.join('');
+  }
+  
+  // Process inline markdown (bold, italic)
+  function processMarkdownInline(text) {
+    return text
+      // Convert **bold** to <strong> first
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
+      // Convert single *italic* - simplified approach without lookbehind
+      .replace(/\b\*([^*\s][^*]*[^*\s])\*\b/g, '<em>$1</em>')
+      // Convert headers
+      .replace(/^###\s+(.+)$/, '<strong style="font-size: 15px; color: #1f2937; display: block; margin: 8px 0 4px 0;">$1</strong>')
+      .replace(/^##\s+(.+)$/, '<strong style="font-size: 16px; color: #111827; display: block; margin: 12px 0 6px 0;">$1</strong>');
   }
 
   // Create widget HTML
@@ -266,7 +290,10 @@
     } else {
       if (role === "assistant") {
         // Parse markdown for assistant messages
-        messageBubble.innerHTML = parseMarkdown(content);
+        console.log("Original content:", content);
+        const parsed = parseMarkdown(content);
+        console.log("Parsed content:", parsed);
+        messageBubble.innerHTML = parsed;
       } else {
         // Use plain text for user messages
         messageBubble.textContent = content;
