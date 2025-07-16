@@ -66,6 +66,7 @@
             div.innerHTML = `[${timestamp}] ${message}`;
             logs.appendChild(div);
             logs.scrollTop = logs.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
         }
 
         function connectWebSocket() {
