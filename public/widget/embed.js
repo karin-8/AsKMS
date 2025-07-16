@@ -443,12 +443,29 @@
               dataChannelId: data.channelId
             });
             
-            if (data.userId === sessionId || data.channelId === widgetKey) {
+            // Check both conditions with detailed logging
+            const userIdMatch = data.userId === sessionId;
+            const channelIdMatch = data.channelId === widgetKey;
+            
+            console.log('🔍 Detailed ID matching:', {
+              userIdMatch,
+              channelIdMatch,
+              dataUserIdType: typeof data.userId,
+              sessionIdType: typeof sessionId,
+              dataChannelIdType: typeof data.channelId,
+              widgetKeyType: typeof widgetKey,
+              dataUserIdValue: data.userId,
+              sessionIdValue: sessionId,
+              dataChannelIdValue: data.channelId,
+              widgetKeyValue: widgetKey
+            });
+            
+            if (userIdMatch || channelIdMatch) {
               console.log('✅ Widget message match found!');
               const message = data.message;
               console.log('💬 Processing message:', message);
               
-              if (message.humanAgent) {
+              if (message && message.humanAgent) {
                 console.log('👤 Adding human agent message to chat');
                 // Add human agent message with special styling
                 addMessage("agent", message.content, {
@@ -457,7 +474,10 @@
                 });
                 console.log('✅ Human agent message added to chat successfully');
               } else {
-                console.log('⚠️ Message not flagged as human agent');
+                console.log('⚠️ Message not flagged as human agent or message is null:', {
+                  messageExists: !!message,
+                  humanAgentFlag: message ? message.humanAgent : 'message is null'
+                });
               }
             } else {
               console.log('❌ Widget message match failed - IDs do not match');

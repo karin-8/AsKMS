@@ -4507,6 +4507,63 @@ Memory management: Keep track of conversation context within the last ${agentCon
     }
   });
 
+  // Debug endpoint to test WebSocket broadcasting
+  app.post('/api/debug/websocket-test', async (req: any, res) => {
+    try {
+      const { message, userId, channelId } = req.body;
+      
+      console.log('🧪 Debug WebSocket test initiated:', {
+        message,
+        userId,
+        channelId,
+        wsClientsCount: global.wsClients ? global.wsClients.size : 0
+      });
+      
+      if (global.wsClients && global.wsClients.size > 0) {
+        const testMessage = {
+          type: 'human_agent_message',
+          channelType: 'web',
+          channelId: channelId,
+          userId: userId,
+          message: {
+            messageType: 'agent',
+            content: message || 'Test message from debug endpoint',
+            timestamp: new Date().toISOString(),
+            humanAgent: true,
+            humanAgentName: 'Debug Agent'
+          }
+        };
+        
+        console.log('🧪 Broadcasting test message:', JSON.stringify(testMessage, null, 2));
+        
+        let sentCount = 0;
+        global.wsClients.forEach((client, index) => {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify(testMessage));
+            sentCount++;
+            console.log(`🧪 Test message sent to client ${index + 1}`);
+          }
+        });
+        
+        res.json({ 
+          success: true, 
+          message: 'Test message broadcast', 
+          clientsCount: global.wsClients.size,
+          sentCount: sentCount
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: 'No WebSocket clients connected',
+          clientsCount: 0
+        });
+      }
+    } catch (error) {
+      console.error('🧪 Debug WebSocket test error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   app.post('/api/agent-console/send-message', isAuthenticated, async (req: any, res) => {
     try {
       const { userId: targetUserId, channelType, channelId, agentId, message, messageType } = req.body;
