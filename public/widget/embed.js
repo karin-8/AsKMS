@@ -415,39 +415,12 @@
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📨 Widget WebSocket received:', data);
-          console.log('🔍 Widget session info:', { 
-            sessionId, 
-            widgetKey, 
-            baseUrl: window.location.origin
-          });
-          console.log('🔍 Message data:', { 
-            dataUserId: data.userId, 
-            dataChannelId: data.channelId, 
-            dataType: data.type,
-            dataChannelType: data.channelType,
-            messageContent: data.message?.content?.substring(0, 50) + '...' || 'No content'
-          });
-          console.log('🔍 Widget JavaScript sessionId:', sessionId);
-          console.log('🔍 Widget JavaScript widgetKey:', widgetKey);
           
           // Handle human agent messages for this widget
           if (data.type === 'human_agent_message' && 
               data.channelType === 'web') {
             
-            console.log('🎯 WIDGET: Human agent message detected for web channel');
-            console.log('🔍 WIDGET: Matching check:', {
-              userIdMatch: data.userId === sessionId,
-              channelIdMatch: data.channelId === widgetKey,
-              sessionId: sessionId,
-              widgetKey: widgetKey,
-              dataUserId: data.userId,
-              dataChannelId: data.channelId
-            });
-            console.log('🔍 WIDGET: Current widget state:', {
-              widgetExists: !!document.getElementById('ai-kms-chat-window'),
-              messagesContainer: !!document.getElementById('ai-kms-chat-messages')
-            });
+
             
             // Check both conditions with detailed logging
             const userIdMatch = data.userId === sessionId;
@@ -467,48 +440,16 @@
             });
             
             if (userIdMatch || channelIdMatch) {
-              console.log('✅ WIDGET: Message match found!');
-              console.log('✅ WIDGET: Match details:', {
-                userIdMatch,
-                channelIdMatch,
-                matchReason: userIdMatch ? 'User ID' : 'Channel ID'
-              });
-              
               const message = data.message;
-              console.log('💬 Processing message:', message);
               
               if (message && message.humanAgent) {
-                console.log('👤 WIDGET: Adding human agent message to chat');
-                console.log('👤 WIDGET: Message content:', message.content);
-                console.log('👤 WIDGET: addMessage function exists:', typeof addMessage);
-                
-                try {
-                  // Add human agent message with special styling
-                  addMessage("agent", message.content, {
-                    isHumanAgent: true,
-                    humanAgentName: message.humanAgentName
-                  });
-                  console.log('✅ WIDGET: Human agent message added to chat successfully');
-                } catch (error) {
-                  console.error('❌ WIDGET: Error adding message:', error);
-                }
-              } else {
-                console.log('⚠️ WIDGET: Message not flagged as human agent or message is null:', {
-                  messageExists: !!message,
-                  humanAgentFlag: message ? message.humanAgent : 'message is null',
-                  fullMessage: message
+                // Add human agent message with special styling
+                addMessage("agent", message.content, {
+                  isHumanAgent: true,
+                  humanAgentName: message.humanAgentName
                 });
               }
-            } else {
-              console.log('❌ WIDGET: Message match failed - IDs do not match');
             }
-          } else {
-            console.log('🔍 WIDGET: Message not for this widget:', {
-              typeMatch: data.type === 'human_agent_message',
-              channelMatch: data.channelType === 'web',
-              actualType: data.type,
-              actualChannelType: data.channelType
-            });
           }
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error);
