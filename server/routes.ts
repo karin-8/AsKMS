@@ -4576,6 +4576,13 @@ Memory management: Keep track of conversation context within the last ${agentCon
       } else if (channelType === 'web') {
         // For web channel, we need to notify the widget through WebSocket
         // The widget will be listening for messages from human agents
+        console.log('🌐 Processing web channel message:', { 
+          channelId, 
+          targetUserId, 
+          agentId, 
+          message: message.substring(0, 50) + '...' 
+        });
+        
         if (global.wsClients && global.wsClients.size > 0) {
           const wsMessage = {
             type: 'human_agent_message',
@@ -4592,12 +4599,21 @@ Memory management: Keep track of conversation context within the last ${agentCon
             }
           };
           
+          console.log('📡 Broadcasting WebSocket message to', global.wsClients.size, 'clients:', wsMessage);
+          
           global.wsClients.forEach(client => {
             if (client.readyState === 1) { // WebSocket.OPEN
-              client.send(JSON.stringify(wsMessage));
+              try {
+                client.send(JSON.stringify(wsMessage));
+                console.log('✅ Sent WebSocket message to client');
+              } catch (error) {
+                console.error('❌ Error sending WebSocket message:', error);
+              }
             }
           });
           console.log('✅ Successfully sent web channel message via WebSocket');
+        } else {
+          console.log('⚠️ No WebSocket clients connected for web channel message');
         }
       }
       
